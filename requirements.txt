@@ -1,0 +1,59 @@
+# Core dependencies
+pyrogram>=2.0.106
+aiortc>=1.6.0
+aiofiles>=23.1.0
+aiohttp>=3.8.4
+
+# Media processing
+ffmpeg-python>=0.2.0
+opencv-python-headless>=4.7.0
+numpy>=1.24.0
+Pillow>=9.5.0
+
+# Audio processing
+pyaudio>=0.2.11
+soundfile>=0.12.1
+librosa>=0.10.0
+
+# Video processing
+imageio>=2.28.0
+imageio-ffmpeg>=0.4.8
+
+# YouTube and streaming
+yt-dlp>=2023.6.22
+requests>=2.31.0
+
+# Performance optimization
+numba>=0.57.0
+cython>=0.29.35
+
+# Async and concurrency
+asyncio-throttle>=1.0.2
+uvloop>=0.17.0; sys_platform != "win32"
+
+# Logging and monitoring
+loguru>=0.7.0
+psutil>=5.9.5
+
+# Configuration
+pydantic>=1.10.8
+python-dotenv>=1.0.0
+
+# Cryptography and security
+cryptography>=41.0.1
+pynacl>=1.5.0
+
+# Development tools (optional)
+black>=23.3.0; extra == "dev"
+isort>=5.12.0; extra == "dev"
+pytest>=7.3.1; extra == "dev"
+pytest-asyncio>=0.21.0; extra == "dev"
+
+# AI features (optional)
+torch>=2.0.0; extra == "ai"
+torchaudio>=2.0.0; extra == "ai"
+transformers>=4.30.0; extra == "ai"
+speechrecognition>=3.10.0; extra == "ai"
+
+# GPU acceleration (optional)
+cupy-cuda11x>=12.0.0; extra == "gpu"
