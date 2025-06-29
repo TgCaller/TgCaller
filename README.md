@@ -1,4 +1,4 @@
-# 🎵 TgCaller - Modern Telegram Group Calls Library
+# TgCaller
 
 <div align="center">
 
