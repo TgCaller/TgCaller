@@ -8,7 +8,7 @@ import os
 import asyncio
 import logging
 from pyrogram import Client
-from quantumtgcalls import QuantumTgCalls, AudioParameters
+from tgcall import QuantumTgCalls, AudioParameters
 
 # Setup logging
 logging.basicConfig(

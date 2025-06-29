@@ -7,7 +7,7 @@ Following pytgcalls usage patterns
 import asyncio
 import logging
 from pyrogram import Client
-from quantumtgcalls import QuantumTgCalls, AudioParameters, VideoParameters
+from tgcall import QuantumTgCalls, AudioParameters, VideoParameters
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -7,7 +7,7 @@ Demonstrating advanced features
 import asyncio
 import logging
 from pyrogram import Client
-from quantumtgcalls import (
+from tgcall import (
     QuantumTgCalls, 
     AudioParameters, 
     VideoParameters,
