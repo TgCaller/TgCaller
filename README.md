@@ -2,15 +2,38 @@
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-LGPL--3.0-green?style=for-the-badge)](LICENSE)
-[![PyPI](https://img.shields.io/badge/PyPI-v1.0.0--Ω-ff6b35?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/quantumtgcalls)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white)](Dockerfile)
-[![GitHub](https://img.shields.io/badge/GitHub-quantumtgcalls-181717?style=for-the-badge&logo=github)](https://github.com/quantumtgcalls/quantumtgcalls)
+<!-- Animated Banner -->
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://capsule-render.vercel.app/api?type=waving&color=0:1e1b4b,50:3730a3,100:1e40af&height=200&section=header&text=QuantumTgCalls&fontSize=50&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Next-Generation%20Telegram%20Calls%20Library&descAlignY=55&descSize=18">
+  <img alt="QuantumTgCalls Banner" src="https://capsule-render.vercel.app/api?type=waving&color=0:1e1b4b,50:3730a3,100:1e40af&height=200&section=header&text=QuantumTgCalls&fontSize=50&fontColor=ffffff&animation=fadeIn&fontAlignY=35&desc=Next-Generation%20Telegram%20Calls%20Library&descAlignY=55&descSize=18">
+</picture>
 
-**🚀 Next-Generation Telegram Group Calls Library**
+<!-- Quantum Effect Animation -->
+<img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&size=24&duration=3000&pause=1000&color=3B82F6&background=000000&center=true&vCenter=true&width=600&lines=🚀+4K+HDR+Video+Streaming;🤖+AI-Powered+Audio+Enhancement;⚡+Sub-50ms+Quantum+Latency;🔮+Built+for+the+Future" alt="Typing Animation">
 
-*Built from scratch with modern architecture, 4K HDR support, and quantum-level performance*
+<br><br>
+
+<!-- Premium Badges -->
+<img src="https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white&labelColor=000000" alt="Python">
+<img src="https://img.shields.io/badge/License-LGPL--3.0-00d4aa?style=for-the-badge&labelColor=000000" alt="License">
+<img src="https://img.shields.io/badge/PyPI-v1.0.0--Ω-ff6b35?style=for-the-badge&logo=pypi&logoColor=white&labelColor=000000" alt="PyPI">
+<img src="https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white&labelColor=000000" alt="Docker">
+
+<br><br>
+
+<!-- Quantum Stats -->
+<img src="https://img.shields.io/badge/⚡_Latency-<50ms-00ff88?style=for-the-badge&labelColor=000000" alt="Latency">
+<img src="https://img.shields.io/badge/📹_Max_Quality-4K_HDR-ff3366?style=for-the-badge&labelColor=000000" alt="Quality">
+<img src="https://img.shields.io/badge/👥_Concurrent-10K%2B-3b82f6?style=for-the-badge&labelColor=000000" alt="Users">
+<img src="https://img.shields.io/badge/🚀_Performance-Quantum-9333ea?style=for-the-badge&labelColor=000000" alt="Performance">
+
+<br><br>
+
+**🌟 Revolutionary Telegram Group Calls Library**
+
+*Built from scratch with quantum-level performance, 4K HDR support, and AI-powered features*
+
+<br>
 
 [**📚 Documentation**](https://docs.quantumtgcalls.dev) • [**🎯 Examples**](examples/) • [**💬 Community**](https://t.me/quantumtgcalls) • [**🐛 Issues**](https://github.com/quantumtgcalls/quantumtgcalls/issues)
 
@@ -18,29 +41,13 @@
 
 ---
 
-## 👨‍💻 **Meet the Developer**
-
-<div align="center">
-
-### **Mr. Gulam Ahmad Raza**
-*Lead Backend Engineer & Architect*
-
-🎯 **Expertise**: Python • WebRTC • FFmpeg • Async Programming • System Architecture  
-🏆 **Experience**: 8+ years in real-time communication systems  
-🔧 **Specialization**: High-performance backend development & media processing  
-
-[![GitHub](https://img.shields.io/badge/GitHub-@gulamahmad-181717?style=flat&logo=github)](https://github.com/gulamahmad)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077b5?style=flat&logo=linkedin)](https://linkedin.com/in/gulamahmad)
-
-</div>
-
----
+<div style="background: linear-gradient(135deg, #000000 0%, #1a1a2e 50%, #16213e 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
 
 ## ⚡ **Why QuantumTgCalls?**
 
-<table>
+<table style="background: transparent; border: none;">
 <tr>
-<td width="50%">
+<td width="50%" style="background: rgba(59, 130, 246, 0.1); border-radius: 10px; padding: 1.5rem; border: 1px solid #3b82f6;">
 
 ### 🎯 **Built for Developers**
 ```python
@@ -53,7 +60,7 @@ await quantum.play(chat_id, "song.mp3")
 ```
 
 </td>
-<td width="50%">
+<td width="50%" style="background: rgba(16, 185, 129, 0.1); border-radius: 10px; padding: 1.5rem; border: 1px solid #10b981;">
 
 ### 🚀 **Performance First**
 ```python
@@ -68,59 +75,68 @@ await quantum.play(chat_id, "song.mp3")
 </tr>
 </table>
 
+</div>
+
 ---
 
 ## 🏗️ **Technical Architecture**
 
-### **Core Technologies Stack**
-
 <div align="center">
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **🎵 Audio** | `FFmpeg 6.0` + `Opus` | High-quality audio processing |
-| **📹 Video** | `H.264/VP9` + `GPU Acceleration` | 4K HDR video streaming |
-| **🌐 Network** | `WebRTC 2.0` + `AsyncIO` | Real-time communication |
-| **🔧 Backend** | `Python 3.8+` + `Pyrogram` | Modern async architecture |
-| **🚀 Performance** | `CUDA` + `Multi-threading` | Quantum-level optimization |
+### **Core Technologies Stack**
+
+<table style="background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%); border-radius: 15px; padding: 1rem;">
+<tr style="color: white;">
+<th style="color: #60a5fa;">Layer</th>
+<th style="color: #34d399;">Technology</th>
+<th style="color: #fbbf24;">Purpose</th>
+</tr>
+<tr style="background: rgba(59, 130, 246, 0.1);">
+<td><strong>🎵 Audio</strong></td>
+<td><code>FFmpeg 6.0</code> + <code>Opus</code></td>
+<td>High-quality audio processing</td>
+</tr>
+<tr style="background: rgba(16, 185, 129, 0.1);">
+<td><strong>📹 Video</strong></td>
+<td><code>H.264/VP9</code> + <code>GPU Acceleration</code></td>
+<td>4K HDR video streaming</td>
+</tr>
+<tr style="background: rgba(245, 158, 11, 0.1);">
+<td><strong>🌐 Network</strong></td>
+<td><code>WebRTC 2.0</code> + <code>AsyncIO</code></td>
+<td>Real-time communication</td>
+</tr>
+<tr style="background: rgba(147, 51, 234, 0.1);">
+<td><strong>🔧 Backend</strong></td>
+<td><code>Python 3.8+</code> + <code>Pyrogram</code></td>
+<td>Modern async architecture</td>
+</tr>
+<tr style="background: rgba(239, 68, 68, 0.1);">
+<td><strong>🚀 Performance</strong></td>
+<td><code>CUDA</code> + <code>Multi-threading</code></td>
+<td>Quantum-level optimization</td>
+</tr>
+</table>
 
 </div>
-
-### **System Architecture Diagram**
-
-```mermaid
-graph TB
-    A[Pyrogram Client] --> B[QuantumTgCalls Core]
-    B --> C[Audio Engine]
-    B --> D[Video Engine]
-    B --> E[Stream Manager]
-    
-    C --> F[FFmpeg Audio]
-    D --> G[FFmpeg Video]
-    E --> H[WebRTC Handler]
-    
-    F --> I[Opus Encoder]
-    G --> J[H.264 Encoder]
-    H --> K[Telegram Servers]
-    
-    style B fill:#6366f1,stroke:#4f46e5,color:#fff
-    style C fill:#10b981,stroke:#059669,color:#fff
-    style D fill:#f59e0b,stroke:#d97706,color:#fff
-```
 
 ---
 
 ## 📊 **Performance Benchmarks**
 
-<div align="center">
+<div align="center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
 
-| **Metric** | **QuantumTgCalls** | **Traditional Libraries** | **Improvement** |
-|------------|-------------------|---------------------------|-----------------|
-| 🚀 **Latency** | `<50ms` | `~200ms` | **75% faster** |
-| 📹 **Max Resolution** | `4K HDR (3840x2160)` | `1080p` | **4x better** |
-| 👥 **Concurrent Users** | `10,000+` | `1,000` | **10x more** |
-| 💾 **Memory Usage** | `120MB` | `200MB` | **40% less** |
-| ⚡ **CPU Usage** | `Optimized` | `High` | **60% less** |
+<img src="https://img.shields.io/badge/🏆_BENCHMARK_RESULTS-QUANTUM_SUPERIORITY-gold?style=for-the-badge&labelColor=000000" alt="Benchmark">
+
+<br><br>
+
+| **🎯 Metric** | **⚡ QuantumTgCalls** | **🐌 Traditional Libraries** | **🚀 Improvement** |
+|---------------|----------------------|------------------------------|-------------------|
+| **🚀 Latency** | `<50ms` | `~200ms` | **🔥 75% faster** |
+| **📹 Max Resolution** | `4K HDR (3840x2160)` | `1080p` | **💎 4x better** |
+| **👥 Concurrent Users** | `10,000+` | `1,000` | **⚡ 10x more** |
+| **💾 Memory Usage** | `120MB` | `200MB` | **✨ 40% less** |
+| **⚡ CPU Usage** | `Optimized` | `High` | **🎯 60% less** |
 
 </div>
 
@@ -128,48 +144,50 @@ graph TB
 
 ## 🚀 **Quick Start**
 
-### **Installation**
+<div style="background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
+
+### **⚡ Installation**
 
 ```bash
-# Install from PyPI
+# 🚀 Install from PyPI
 pip install quantumtgcalls
 
-# Or install with GPU support
+# 🎮 Install with GPU support
 pip install quantumtgcalls[gpu]
 
-# Development version
+# 🔬 Development version
 pip install git+https://github.com/quantumtgcalls/quantumtgcalls.git
 ```
 
-### **Basic Usage**
+### **🎯 Basic Usage**
 
 ```python
 import asyncio
 from pyrogram import Client
 from quantumtgcalls import QuantumTgCalls, AudioParameters, VideoParameters
 
-# Initialize client
+# 🔧 Initialize client
 app = Client("my_session", api_id=API_ID, api_hash=API_HASH)
 quantum = QuantumTgCalls(app)
 
 @quantum.on_stream_end
 async def on_stream_end(client, update):
-    print(f"Stream ended in {update.chat_id}")
+    print(f"🎵 Stream ended in {update.chat_id}")
 
 async def main():
     await quantum.start()
     
-    # Join voice call
+    # 🎤 Join voice call
     await quantum.join_call(-1001234567890)
     
-    # Play audio with high quality
+    # 🎵 Play audio with high quality
     audio_params = AudioParameters(
         bitrate=256000,
         noise_cancellation=True
     )
     await quantum.play(-1001234567890, "song.mp3", audio_params)
     
-    # Join video call with 4K
+    # 📹 Join video call with 4K
     video_params = VideoParameters.preset_4k()
     await quantum.join_call(-1001234567890, video_parameters=video_params)
     await quantum.play(-1001234567890, "4k_video.mp4")
@@ -178,30 +196,36 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+</div>
+
 ---
 
 ## 🎵 **Audio Features**
 
-<div align="center">
+<div align="center" style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
 
-| Feature | Description | Code Example |
-|---------|-------------|--------------|
+<img src="https://img.shields.io/badge/🎧_AUDIO_EXCELLENCE-AI_POWERED-00ff88?style=for-the-badge&labelColor=000000" alt="Audio">
+
+<br><br>
+
+| **🎯 Feature** | **📝 Description** | **💻 Code Example** |
+|----------------|-------------------|-------------------|
 | **🎧 High-Quality Audio** | 48kHz, 256kbps Opus encoding | `AudioParameters(bitrate=256000)` |
-| **🔇 Noise Cancellation** | Advanced noise reduction | `AudioParameters(noise_cancellation=True)` |
+| **🔇 Noise Cancellation** | AI-powered noise reduction | `AudioParameters(noise_cancellation=True)` |
 | **🔊 3D Spatial Audio** | Immersive audio experience | `AudioParameters(spatial_audio=True)` |
 | **🎚️ Dynamic Range** | Auto-gain control | `AudioParameters(auto_gain_control=True)` |
 
 </div>
 
 ```python
-# Professional audio setup
+# 🎵 Professional audio setup
 audio_config = AudioParameters(
-    bitrate=256000,           # Studio quality
-    sample_rate=48000,        # Professional standard
-    channels=2,               # Stereo
-    noise_cancellation=True,  # Clean audio
-    echo_cancellation=True,   # No echo
-    auto_gain_control=True    # Consistent volume
+    bitrate=256000,           # 🎧 Studio quality
+    sample_rate=48000,        # 🎯 Professional standard
+    channels=2,               # 🔊 Stereo
+    noise_cancellation=True,  # 🤖 Clean audio
+    echo_cancellation=True,   # 🔇 No echo
+    auto_gain_control=True    # 📊 Consistent volume
 )
 
 await quantum.play(chat_id, "audio.flac", audio_config)
@@ -211,12 +235,16 @@ await quantum.play(chat_id, "audio.flac", audio_config)
 
 ## 📹 **Video Features**
 
-<div align="center">
+<div align="center" style="background: linear-gradient(135deg, #7c2d12 0%, #dc2626 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
 
-### **Supported Resolutions**
+<img src="https://img.shields.io/badge/📹_VIDEO_EXCELLENCE-4K_HDR_READY-ff3366?style=for-the-badge&labelColor=000000" alt="Video">
 
-| Preset | Resolution | FPS | Bitrate | Use Case |
-|--------|------------|-----|---------|----------|
+<br><br>
+
+### **🎯 Supported Resolutions**
+
+| **🏆 Preset** | **📐 Resolution** | **⚡ FPS** | **📊 Bitrate** | **🎯 Use Case** |
+|---------------|------------------|-----------|---------------|----------------|
 | **HD** | `1280x720` | 30 | 1.5 Mbps | Standard calls |
 | **FHD** | `1920x1080` | 30 | 3 Mbps | High quality |
 | **4K** | `3840x2160` | 30 | 8 Mbps | Ultra HD |
@@ -225,15 +253,15 @@ await quantum.play(chat_id, "audio.flac", audio_config)
 </div>
 
 ```python
-# 4K HDR video streaming
+# 📹 4K HDR video streaming
 video_config = VideoParameters(
     width=3840,
     height=2160,
     frame_rate=60,
     bitrate=15000000,
     codec="h264",
-    hardware_acceleration=True,  # GPU encoding
-    adaptive_bitrate=True        # Smart quality adjustment
+    hardware_acceleration=True,  # 🎮 GPU encoding
+    adaptive_bitrate=True        # 🧠 Smart quality adjustment
 )
 
 await quantum.play(chat_id, "4k_hdr_video.mp4", video_parameters=video_config)
@@ -243,27 +271,29 @@ await quantum.play(chat_id, "4k_hdr_video.mp4", video_parameters=video_config)
 
 ## 🔧 **Advanced Configuration**
 
-### **Performance Optimization**
+<div style="background: linear-gradient(135deg, #581c87 0%, #7c3aed 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
+
+### **⚡ Performance Optimization**
 
 ```python
 from quantumtgcalls import QuantumConfig
 
-# High-performance setup
+# 🚀 High-performance setup
 config = QuantumConfig(
-    # Audio optimization
+    # 🎵 Audio optimization
     audio_buffer_size=8192,
     audio_threads=4,
     
-    # Video optimization  
+    # 📹 Video optimization  
     video_buffer_size=16384,
     gpu_acceleration=True,
-    hardware_encoder="nvenc",  # NVIDIA GPU
+    hardware_encoder="nvenc",  # 🎮 NVIDIA GPU
     
-    # Network optimization
+    # 🌐 Network optimization
     max_concurrent_calls=1000,
     connection_pool_size=100,
     
-    # Memory optimization
+    # 💾 Memory optimization
     memory_limit="2GB",
     garbage_collection=True
 )
@@ -271,30 +301,36 @@ config = QuantumConfig(
 quantum = QuantumTgCalls(app, config=config)
 ```
 
-### **Multi-Chat Management**
+### **🎯 Multi-Chat Management**
 
 ```python
-# Manage multiple calls simultaneously
+# 🎮 Manage multiple calls simultaneously
 chats = [-1001111111111, -1002222222222, -1003333333333]
 
 for chat_id in chats:
     await quantum.join_call(chat_id)
     await quantum.play(chat_id, f"playlist_{chat_id}.m3u8")
 
-# Monitor all active calls
-print(f"Active calls: {len(quantum.active_calls)}")
+# 📊 Monitor all active calls
+print(f"🔥 Active calls: {len(quantum.active_calls)}")
 for chat_id, call_info in quantum.active_calls.items():
-    print(f"Chat {chat_id}: {call_info['status']}")
+    print(f"📞 Chat {chat_id}: {call_info['status']}")
 ```
+
+</div>
 
 ---
 
 ## 🎮 **Use Cases & Examples**
 
-<div align="center">
+<div align="center" style="background: linear-gradient(135deg, #0c4a6e 0%, #0284c7 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
 
-| Use Case | Description | Example |
-|----------|-------------|---------|
+<img src="https://img.shields.io/badge/🎯_USE_CASES-UNLIMITED_POSSIBILITIES-00bfff?style=for-the-badge&labelColor=000000" alt="Use Cases">
+
+<br><br>
+
+| **🎯 Use Case** | **📝 Description** | **💻 Example** |
+|----------------|-------------------|----------------|
 | **🎵 Music Bot** | 24/7 music streaming | [music_bot.py](examples/music_bot.py) |
 | **📻 Radio Station** | Live broadcasting | [radio_station.py](examples/radio_station.py) |
 | **🎙️ Podcast Bot** | Audio content delivery | [podcast_bot.py](examples/podcast_bot.py) |
@@ -304,7 +340,7 @@ for chat_id, call_info in quantum.active_calls.items():
 
 </div>
 
-### **Music Bot Example**
+### **🎵 Music Bot Example**
 
 ```python
 import asyncio
@@ -319,18 +355,18 @@ playlist = []
 @app.on_message(filters.command("play"))
 async def play_command(client, message):
     if len(message.command) < 2:
-        return await message.reply("Usage: /play <song_name>")
+        return await message.reply("🎯 Usage: /play <song_name>")
     
     song_name = " ".join(message.command[1:])
     
-    # Add to playlist
+    # 📝 Add to playlist
     playlist.append(song_name)
     
-    # Join call if not already joined
+    # 🎤 Join call if not already joined
     if message.chat.id not in quantum.active_calls:
         await quantum.join_call(message.chat.id)
     
-    # Play song
+    # 🎵 Play song
     await quantum.play(message.chat.id, f"music/{song_name}.mp3")
     await message.reply(f"🎵 Now playing: {song_name}")
 
@@ -347,13 +383,15 @@ app.run()
 
 ## 🐳 **Docker Support**
 
-### **Quick Docker Setup**
+<div style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
+
+### **🚀 Quick Docker Setup**
 
 ```bash
-# Build image
+# 🔨 Build image
 docker build -t quantumtgcalls .
 
-# Run with environment variables
+# 🚀 Run with environment variables
 docker run -d \
   --name quantum-bot \
   -e API_ID=your_api_id \
@@ -363,7 +401,7 @@ docker run -d \
   quantumtgcalls
 ```
 
-### **Docker Compose**
+### **🐳 Docker Compose**
 
 ```yaml
 version: '3.8'
@@ -380,11 +418,15 @@ services:
     restart: unless-stopped
 ```
 
+</div>
+
 ---
 
 ## 🔌 **Plugin System**
 
-### **Create Custom Plugins**
+<div style="background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
+
+### **🎯 Create Custom Plugins**
 
 ```python
 from quantumtgcalls.plugins import BasePlugin
@@ -394,40 +436,44 @@ class VoiceModulatorPlugin(BasePlugin):
     version = "1.0.0"
     
     async def process_audio(self, audio_frame):
-        # Apply voice effects
+        # 🎵 Apply voice effects
         if self.settings.get("robot_voice"):
             return self.apply_robot_effect(audio_frame)
         return audio_frame
     
     def apply_robot_effect(self, frame):
-        # Custom audio processing logic
+        # 🤖 Custom audio processing logic
         return modified_frame
 
-# Register plugin
+# 🔌 Register plugin
 quantum.register_plugin(VoiceModulatorPlugin())
 ```
+
+</div>
 
 ---
 
 ## 📈 **Monitoring & Analytics**
 
-### **Real-time Metrics**
+<div style="background: linear-gradient(135deg, #166534 0%, #16a34a 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
+
+### **📊 Real-time Metrics**
 
 ```python
-# Get performance metrics
+# 📈 Get performance metrics
 metrics = await quantum.get_metrics()
 
-print(f"Active calls: {metrics.active_calls}")
-print(f"Total bandwidth: {metrics.bandwidth_usage}")
-print(f"CPU usage: {metrics.cpu_usage}%")
-print(f"Memory usage: {metrics.memory_usage}MB")
-print(f"Average latency: {metrics.avg_latency}ms")
+print(f"📞 Active calls: {metrics.active_calls}")
+print(f"🌐 Total bandwidth: {metrics.bandwidth_usage}")
+print(f"⚡ CPU usage: {metrics.cpu_usage}%")
+print(f"💾 Memory usage: {metrics.memory_usage}MB")
+print(f"🚀 Average latency: {metrics.avg_latency}ms")
 ```
 
-### **Health Check**
+### **🏥 Health Check**
 
 ```python
-# Health monitoring
+# 🏥 Health monitoring
 @quantum.on_health_check
 async def health_monitor(status):
     if status.cpu_usage > 80:
@@ -437,53 +483,63 @@ async def health_monitor(status):
         await quantum.garbage_collect()
 ```
 
+</div>
+
 ---
 
 ## 🛠️ **Development Setup**
 
-### **Local Development**
+<div style="background: linear-gradient(135deg, #4c1d95 0%, #6d28d9 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
+
+### **💻 Local Development**
 
 ```bash
-# Clone repository
+# 📥 Clone repository
 git clone https://github.com/quantumtgcalls/quantumtgcalls.git
 cd quantumtgcalls
 
-# Create virtual environment
+# 🐍 Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 # or
 venv\Scripts\activate  # Windows
 
-# Install dependencies
+# 📦 Install dependencies
 pip install -e ".[dev]"
 
-# Run tests
+# 🧪 Run tests
 python -m pytest tests/ -v
 
-# Code formatting
+# ✨ Code formatting
 black quantumtgcalls/
 isort quantumtgcalls/
 
-# Type checking
+# 🔍 Type checking
 mypy quantumtgcalls/
 ```
 
-### **Contributing Guidelines**
+### **🤝 Contributing Guidelines**
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
+1. **🍴 Fork** the repository
+2. **🌿 Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **💾 Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **🚀 Push** to the branch (`git push origin feature/amazing-feature`)
+5. **📝 Open** a Pull Request
+
+</div>
 
 ---
 
 ## 📚 **Documentation**
 
-<div align="center">
+<div align="center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
 
-| Resource | Description | Link |
-|----------|-------------|------|
+<img src="https://img.shields.io/badge/📚_DOCUMENTATION-COMPREHENSIVE_GUIDES-60a5fa?style=for-the-badge&labelColor=000000" alt="Documentation">
+
+<br><br>
+
+| **📖 Resource** | **📝 Description** | **🔗 Link** |
+|----------------|-------------------|-------------|
 | **📖 API Reference** | Complete API documentation | [docs.quantumtgcalls.dev/api](https://docs.quantumtgcalls.dev/api) |
 | **🎯 Examples** | Code examples and tutorials | [examples/](examples/) |
 | **🔧 Configuration** | Advanced configuration guide | [docs/configuration.md](docs/configuration.md) |
@@ -496,18 +552,20 @@ mypy quantumtgcalls/
 
 ## 🤝 **Community & Support**
 
-<div align="center">
+<div align="center" style="background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
 
-### **Get Help & Connect**
+### **💬 Get Help & Connect**
 
-[![Telegram](https://img.shields.io/badge/Telegram-@quantumtgcalls-26a5e4?style=for-the-badge&logo=telegram)](https://t.me/quantumtgcalls)
-[![Discord](https://img.shields.io/badge/Discord-Join_Server-5865f2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/quantumtgcalls)
-[![GitHub Discussions](https://img.shields.io/badge/GitHub-Discussions-181717?style=for-the-badge&logo=github)](https://github.com/quantumtgcalls/quantumtgcalls/discussions)
+<img src="https://img.shields.io/badge/Telegram-@quantumtgcalls-26a5e4?style=for-the-badge&logo=telegram&logoColor=white&labelColor=000000" alt="Telegram">
+<img src="https://img.shields.io/badge/Discord-Join_Server-5865f2?style=for-the-badge&logo=discord&logoColor=white&labelColor=000000" alt="Discord">
+<img src="https://img.shields.io/badge/GitHub-Discussions-181717?style=for-the-badge&logo=github&logoColor=white&labelColor=000000" alt="GitHub">
 
-### **Support the Project**
+<br><br>
 
-[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsor-ea4aaa?style=for-the-badge&logo=github-sponsors)](https://github.com/sponsors/gulamahmad)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-Support-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/gulamahmad)
+### **💖 Support the Project**
+
+<img src="https://img.shields.io/badge/GitHub-Sponsor-ea4aaa?style=for-the-badge&logo=github-sponsors&logoColor=white&labelColor=000000" alt="Sponsor">
+<img src="https://img.shields.io/badge/Buy_Me_A_Coffee-Support-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black&labelColor=000000" alt="Coffee">
 
 </div>
 
@@ -515,11 +573,13 @@ mypy quantumtgcalls/
 
 ## 📄 **License**
 
+<div style="background: linear-gradient(135deg, #374151 0%, #4b5563 100%); padding: 2rem; border-radius: 15px; margin: 2rem 0;">
+
 This project is licensed under the **LGPL-3.0 License** - see the [LICENSE](LICENSE) file for details.
 
 ```
 QuantumTgCalls - Next-generation Telegram Group Calls Library
-Copyright (C) 2024 Mr. Gulam Ahmad Raza
+Copyright (C) 2024 QuantumTgCalls Team
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published
@@ -527,22 +587,36 @@ by the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 ```
 
+</div>
+
 ---
 
 <div align="center">
 
 ### **⭐ Star History**
 
-[![Star History Chart](https://api.star-history.com/svg?repos=quantumtgcalls/quantumtgcalls&type=Date)](https://star-history.com/#quantumtgcalls/quantumtgcalls&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=quantumtgcalls/quantumtgcalls&type=Date&theme=dark)](https://star-history.com/#quantumtgcalls/quantumtgcalls&Date)
 
----
+<br><br>
 
-**🌟 Built with ❤️ by [Mr. Gulam Ahmad Raza](https://github.com/gulamahmad)**
+<!-- Footer Animation -->
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1e1b4b,50:3730a3,100:1e40af&height=120&section=footer&animation=fadeIn">
+
+<br>
+
+**🌟 Built with ❤️ for the Developer Community**
 
 *"Engineering the future of communication, one quantum leap at a time"*
 
-[![Made with Python](https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Powered by WebRTC](https://img.shields.io/badge/Powered_by-WebRTC-ff6b35?style=for-the-badge)](https://webrtc.org)
-[![Built with FFmpeg](https://img.shields.io/badge/Built_with-FFmpeg-007808?style=for-the-badge)](https://ffmpeg.org)
+<br>
+
+<img src="https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&logo=python&logoColor=white&labelColor=000000" alt="Python">
+<img src="https://img.shields.io/badge/Powered_by-WebRTC-ff6b35?style=for-the-badge&labelColor=000000" alt="WebRTC">
+<img src="https://img.shields.io/badge/Built_with-FFmpeg-007808?style=for-the-badge&labelColor=000000" alt="FFmpeg">
+
+<br><br>
+
+<!-- Quantum Effect -->
+<img src="https://readme-typing-svg.herokuapp.com?font=Orbitron&size=16&duration=4000&pause=2000&color=3B82F6&background=000000&center=true&vCenter=true&width=500&lines=🚀+Quantum+Performance;🤖+AI+Enhanced;🔮+Future+Ready;⚡+Ultra+Fast" alt="Footer Animation">
 
 </div>
