@@ -1,5 +1,5 @@
 """
-QuantumTgCalls Methods
+TgCaller Methods
 """
 
 from .call_methods import CallMethods

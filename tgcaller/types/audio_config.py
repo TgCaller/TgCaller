@@ -1,5 +1,5 @@
 """
-Audio Parameters Type
+Audio Configuration
 """
 
 from typing import Optional
@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 
 @dataclass
-class AudioParameters:
-    """Audio parameters for calls"""
+class AudioConfig:
+    """Audio configuration for calls"""
     
     bitrate: int = 48000
     """Audio bitrate in bps"""
@@ -20,10 +20,10 @@ class AudioParameters:
     """Audio sample rate in Hz"""
     
     codec: str = "opus"
-    """Audio codec (opus, aac, mp3)"""
+    """Audio codec (opus, aac)"""
     
-    noise_cancellation: bool = False
-    """Enable AI noise cancellation"""
+    noise_suppression: bool = False
+    """Enable noise suppression"""
     
     echo_cancellation: bool = True
     """Enable echo cancellation"""
@@ -42,5 +42,15 @@ class AudioParameters:
         if self.sample_rate not in [8000, 16000, 24000, 48000]:
             raise ValueError("Sample rate must be 8000, 16000, 24000, or 48000")
         
-        if self.codec not in ["opus", "aac", "mp3"]:
-            raise ValueError("Codec must be opus, aac, or mp3")
+        if self.codec not in ["opus", "aac"]:
+            raise ValueError("Codec must be opus or aac")
+    
+    @classmethod
+    def high_quality(cls) -> 'AudioConfig':
+        """High quality audio preset"""
+        return cls(bitrate=128000, sample_rate=48000, channels=2)
+    
+    @classmethod
+    def low_bandwidth(cls) -> 'AudioConfig':
+        """Low bandwidth audio preset"""
+        return cls(bitrate=32000, sample_rate=24000, channels=1)

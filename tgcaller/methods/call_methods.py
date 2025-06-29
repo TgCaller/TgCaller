@@ -1,11 +1,11 @@
 """
-Call Methods - Following pytgcalls patterns
+Call Management Methods
 """
 
 import asyncio
-from typing import Optional, Union
+from typing import Optional
 
-from ..types import AudioParameters, VideoParameters, CallUpdate, CallStatus
+from ..types import AudioConfig, VideoConfig, CallUpdate, CallStatus
 from ..exceptions import CallError, ConnectionError
 
 
@@ -15,49 +15,43 @@ class CallMethods:
     async def join_call(
         self,
         chat_id: int,
-        audio_parameters: Optional[AudioParameters] = None,
-        video_parameters: Optional[VideoParameters] = None,
-        invite_hash: Optional[str] = None
+        audio_config: Optional[AudioConfig] = None,
+        video_config: Optional[VideoConfig] = None
     ) -> bool:
         """
         Join a voice/video call
         
         Args:
             chat_id: Chat ID to join
-            audio_parameters: Audio configuration
-            video_parameters: Video configuration (optional)
-            invite_hash: Invite hash for private calls
+            audio_config: Audio configuration
+            video_config: Video configuration (optional)
             
         Returns:
             True if successful
-            
-        Raises:
-            CallError: If join fails
         """
         if not self._is_connected:
-            raise ConnectionError("QuantumTgCalls not started")
+            raise ConnectionError("TgCaller not started")
         
         if chat_id in self._active_calls:
-            raise CallError(f"Already in call for chat {chat_id}")
+            return True  # Already in call
         
         try:
             # Set default parameters
-            if audio_parameters is None:
-                audio_parameters = AudioParameters()
+            if audio_config is None:
+                audio_config = AudioConfig()
             
             # Create call session
             call_session = {
                 'chat_id': chat_id,
-                'audio_parameters': audio_parameters,
-                'video_parameters': video_parameters,
-                'status': CallStatus.CONNECTING,
-                'invite_hash': invite_hash
+                'audio_config': audio_config,
+                'video_config': video_config,
+                'status': CallStatus.CONNECTING
             }
             
             self._active_calls[chat_id] = call_session
             
-            # Simulate connection process
-            await asyncio.sleep(0.5)  # Connection delay
+            # Simulate connection
+            await asyncio.sleep(0.5)
             
             # Update status
             call_session['status'] = CallStatus.CONNECTED
@@ -74,33 +68,20 @@ class CallMethods:
             return True
             
         except Exception as e:
-            # Cleanup on error
             self._active_calls.pop(chat_id, None)
             raise CallError(f"Failed to join call: {e}")
     
     async def leave_call(self, chat_id: int) -> bool:
-        """
-        Leave a voice/video call
-        
-        Args:
-            chat_id: Chat ID to leave
-            
-        Returns:
-            True if successful
-        """
+        """Leave a call"""
         if chat_id not in self._active_calls:
             return False
         
         try:
             call_session = self._active_calls[chat_id]
-            
-            # Update status
             call_session['status'] = CallStatus.ENDED
             
-            # Cleanup
             del self._active_calls[chat_id]
             
-            # Emit event
             update = CallUpdate(
                 chat_id=chat_id,
                 status=CallStatus.ENDED,
@@ -115,21 +96,12 @@ class CallMethods:
             self._logger.error(f"Error leaving call {chat_id}: {e}")
             return False
     
-    async def pause_stream(self, chat_id: int) -> bool:
-        """
-        Pause stream in call
-        
-        Args:
-            chat_id: Chat ID
-            
-        Returns:
-            True if successful
-        """
+    async def pause(self, chat_id: int) -> bool:
+        """Pause stream"""
         if chat_id not in self._active_calls:
-            raise CallError(f"Not in call for chat {chat_id}")
+            return False
         
         call_session = self._active_calls[chat_id]
-        
         if call_session['status'] != CallStatus.PLAYING:
             return False
         
@@ -144,21 +116,12 @@ class CallMethods:
         
         return True
     
-    async def resume_stream(self, chat_id: int) -> bool:
-        """
-        Resume stream in call
-        
-        Args:
-            chat_id: Chat ID
-            
-        Returns:
-            True if successful
-        """
+    async def resume(self, chat_id: int) -> bool:
+        """Resume stream"""
         if chat_id not in self._active_calls:
-            raise CallError(f"Not in call for chat {chat_id}")
+            return False
         
         call_session = self._active_calls[chat_id]
-        
         if call_session['status'] != CallStatus.PAUSED:
             return False
         
@@ -173,40 +136,16 @@ class CallMethods:
         
         return True
     
-    async def mute_stream(self, chat_id: int) -> bool:
-        """
-        Mute audio stream
-        
-        Args:
-            chat_id: Chat ID
-            
-        Returns:
-            True if successful
-        """
+    async def set_volume(self, chat_id: int, volume: float) -> bool:
+        """Set volume (0.0 to 1.0)"""
         if chat_id not in self._active_calls:
-            raise CallError(f"Not in call for chat {chat_id}")
+            return False
+        
+        if not 0.0 <= volume <= 1.0:
+            raise ValueError("Volume must be between 0.0 and 1.0")
         
         call_session = self._active_calls[chat_id]
-        call_session['muted'] = True
+        call_session['volume'] = volume
         
-        self._logger.info(f"Muted stream in chat {chat_id}")
-        return True
-    
-    async def unmute_stream(self, chat_id: int) -> bool:
-        """
-        Unmute audio stream
-        
-        Args:
-            chat_id: Chat ID
-            
-        Returns:
-            True if successful
-        """
-        if chat_id not in self._active_calls:
-            raise CallError(f"Not in call for chat {chat_id}")
-        
-        call_session = self._active_calls[chat_id]
-        call_session['muted'] = False
-        
-        self._logger.info(f"Unmuted stream in chat {chat_id}")
+        self._logger.info(f"Set volume to {volume} in chat {chat_id}")
         return True

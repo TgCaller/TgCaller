@@ -1,29 +1,16 @@
 #!/usr/bin/env python3
 """
-QuantumTgCalls - Next-generation alternative to pytgcalls
-Copyright (C) 2025 xAI Quantum Team
-
-This file is part of QuantumTgCalls.
-
-QuantumTgCalls is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published
-by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-QuantumTgCalls is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Lesser General Public License for more details.
+TgCaller - Modern Telegram Group Calls Library
 """
 
 import re
 from setuptools import setup, find_packages
 
-# Read version from __init__.py
-with open("quantumtgcalls/__init__.py", encoding="utf-8") as f:
+# Read version
+with open("tgcaller/__init__.py", encoding="utf-8") as f:
     version = re.search(r'__version__ = "([^"]+)"', f.read()).group(1)
 
-# Read README for long description
+# Read README
 with open("README.md", encoding="utf-8") as f:
     long_description = f.read()
 
@@ -32,25 +19,25 @@ with open("requirements.txt", encoding="utf-8") as f:
     requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 setup(
-    name="quantumtgcalls",
+    name="tgcaller",
     version=version,
-    author="xAI Quantum Team",
-    author_email="quantum@xai.dev",
-    description="Next-generation alternative to pytgcalls with 4K HDR, AI features, and quantum-level complexity",
+    author="TgCaller Team",
+    author_email="team@tgcaller.dev",
+    description="Modern, fast, and reliable Telegram group calls library",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/quantumtgcalls/quantumtgcalls",
+    url="https://github.com/tgcaller/tgcaller",
     project_urls={
-        "Documentation": "https://quantumtgcalls.readthedocs.io",
-        "Source": "https://github.com/quantumtgcalls/quantumtgcalls",
-        "Tracker": "https://github.com/quantumtgcalls/quantumtgcalls/issues",
-        "Community": "https://t.me/quantumtgcalls",
+        "Documentation": "https://tgcaller.readthedocs.io",
+        "Source": "https://github.com/tgcaller/tgcaller",
+        "Tracker": "https://github.com/tgcaller/tgcaller/issues",
+        "Community": "https://t.me/tgcaller",
     },
     packages=find_packages(),
     classifiers=[
-        "Development Status :: 5 - Production/Stable",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
@@ -62,12 +49,11 @@ setup(
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Multimedia :: Sound/Audio",
         "Topic :: Multimedia :: Video",
-        "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     keywords=[
-        "telegram", "calls", "voip", "webrtc", "streaming", "audio", "video",
-        "4k", "hdr", "ai", "quantum", "pytgcalls", "alternative", "plugins"
+        "telegram", "calls", "voip", "streaming", "audio", "video",
+        "pytgcalls", "alternative", "modern", "fast", "reliable"
     ],
     python_requires=">=3.8",
     install_requires=requirements,
@@ -79,40 +65,17 @@ setup(
             "isort>=5.10.0",
             "flake8>=4.0.0",
             "mypy>=0.950",
-            "sphinx>=4.5.0",
-            "sphinx-rtd-theme>=1.0.0",
         ],
-        "gpu": [
-            "cupy-cuda11x>=10.0.0",
-            "opencv-python-headless[gpu]>=4.7.0",
-        ],
-        "ai": [
-            "torch>=1.13.0",
-            "torchaudio>=0.13.0",
-            "transformers>=4.20.0",
-            "speechrecognition>=3.10.0",
-        ],
-        "full": [
-            "cupy-cuda11x>=10.0.0",
-            "opencv-python-headless[gpu]>=4.7.0",
-            "torch>=1.13.0",
-            "torchaudio>=0.13.0",
-            "transformers>=4.20.0",
-            "speechrecognition>=3.10.0",
+        "video": [
+            "opencv-python>=4.7.0",
+            "imageio>=2.28.0",
         ],
     },
     entry_points={
         "console_scripts": [
-            "quantumtgcalls=quantumtgcalls.cli:main",
+            "tgcaller=tgcaller.cli:main",
         ],
     },
     include_package_data=True,
-    package_data={
-        "quantumtgcalls": [
-            "ai/models/*.pth",
-            "plugins/templates/*.py",
-            "assets/*.json",
-        ],
-    },
     zip_safe=False,
 )

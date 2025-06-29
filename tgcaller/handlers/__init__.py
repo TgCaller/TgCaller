@@ -1,5 +1,5 @@
 """
-QuantumTgCalls Event Handlers
+TgCaller Event Handlers
 """
 
 from .event_handler import EventHandler

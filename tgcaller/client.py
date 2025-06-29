@@ -1,56 +1,49 @@
 """
-QuantumTgCalls Core Implementation
-Following pytgcalls architecture patterns
+TgCaller Main Client
 """
 
 import asyncio
 import logging
 from typing import Optional, Union, Callable, Dict, Any
 from pyrogram import Client
-from pyrogram.types import Message
 
-from .types import AudioParameters, VideoParameters, MediaStream, CallUpdate
-from .exceptions import QuantumError, ConnectionError, MediaError
+from .types import AudioConfig, VideoConfig, MediaStream, CallUpdate, CallStatus
+from .exceptions import TgCallerError, ConnectionError, MediaError
 from .handlers import EventHandler
-from .media_devices import MediaDeviceManager
 from .methods import CallMethods, StreamMethods
 
 logger = logging.getLogger(__name__)
 
 
-class QuantumTgCalls:
+class TgCaller:
     """
-    QuantumTgCalls main class - following pytgcalls patterns
+    TgCaller main client for Telegram group calls
     """
     
     def __init__(
         self,
         client: Client,
-        log_mode: int = logging.WARNING,
-        cache_duration: int = 120
+        log_level: int = logging.WARNING
     ):
         """
-        Initialize QuantumTgCalls
+        Initialize TgCaller
         
         Args:
             client: Pyrogram client instance
-            log_mode: Logging level
-            cache_duration: Cache duration in seconds
+            log_level: Logging level
         """
         self._client = client
-        self._cache_duration = cache_duration
         self._active_calls: Dict[int, Any] = {}
         self._event_handlers: Dict[str, list] = {}
         
         # Setup logging
-        logging.basicConfig(level=log_mode)
+        logging.basicConfig(level=log_level)
         self._logger = logger
         
         # Initialize components
         self._event_handler = EventHandler(self)
-        self._media_manager = MediaDeviceManager()
         
-        # Mix in methods (following pytgcalls pattern)
+        # Mix in methods
         self._setup_methods()
         
         # Connection state
@@ -73,7 +66,7 @@ class QuantumTgCalls:
                     setattr(self, method_name, method.__get__(self, self.__class__))
     
     async def start(self):
-        """Start QuantumTgCalls"""
+        """Start TgCaller"""
         if self._is_connected:
             return
             
@@ -86,13 +79,13 @@ class QuantumTgCalls:
             await self._event_handler.setup()
             
             self._is_connected = True
-            self._logger.info("QuantumTgCalls started successfully")
+            self._logger.info("TgCaller started successfully")
             
         except Exception as e:
-            raise ConnectionError(f"Failed to start QuantumTgCalls: {e}")
+            raise ConnectionError(f"Failed to start TgCaller: {e}")
     
     async def stop(self):
-        """Stop QuantumTgCalls"""
+        """Stop TgCaller"""
         if not self._is_connected:
             return
             
@@ -105,10 +98,10 @@ class QuantumTgCalls:
             await self._event_handler.cleanup()
             self._is_connected = False
             
-            self._logger.info("QuantumTgCalls stopped")
+            self._logger.info("TgCaller stopped")
             
         except Exception as e:
-            self._logger.error(f"Error stopping QuantumTgCalls: {e}")
+            self._logger.error(f"Error stopping TgCaller: {e}")
     
     def on_stream_end(self, func: Callable = None):
         """Decorator for stream end events"""
@@ -128,6 +121,13 @@ class QuantumTgCalls:
         """Decorator for left events"""
         def decorator(f):
             self._add_handler('left', f)
+            return f
+        return decorator(func) if func else decorator
+    
+    def on_error(self, func: Callable = None):
+        """Decorator for error events"""
+        def decorator(f):
+            self._add_handler('error', f)
             return f
         return decorator(func) if func else decorator
     
@@ -154,12 +154,17 @@ class QuantumTgCalls:
         """Get Pyrogram client"""
         return self._client
     
-    @property
-    def active_calls(self) -> Dict[int, Any]:
+    def get_active_calls(self) -> Dict[int, Any]:
         """Get active calls"""
         return self._active_calls.copy()
     
+    def is_connected(self, chat_id: Optional[int] = None) -> bool:
+        """Check if connected to call"""
+        if chat_id is None:
+            return self._is_connected
+        return chat_id in self._active_calls
+    
     @property
-    def is_connected(self) -> bool:
-        """Check if connected"""
+    def is_running(self) -> bool:
+        """Check if TgCaller is running"""
         return self._is_connected
