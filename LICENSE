@@ -1,18 +1,58 @@
-MIT License
+MIT License  
+Copyright © 2024 TgCaller Team
 
-Copyright (c) 2024 TgCaller Team
+Permission is hereby granted, free of charge, to any individual or organization (hereinafter referred to as the “Licensee”), to obtain a copy of this software and associated documentation files (collectively, the “Software”), and to use the Software without restriction, including, but not limited to, the rights to:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+1. Use – for any lawful purpose, personal or commercial.  
+2. Copy – including backups and distribution.  
+3. Modify – adapt, enhance, or transform the Software.  
+4. Merge – incorporate into other software.  
+5. Publish – release the original or modified version publicly.  
+6. Distribute – share with others via any means.  
+7. Sublicense – permit others to use under this same license.  
+8. Sell – monetize the Software or derivative works.
 
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+Conditions:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+To exercise the rights granted above, the Licensee must:
 
-By using this software, you acknowledge and agree that:
+- Include the copyright notice and this license in all copies  
+  or substantial portions of the Software.  
+- Attribute the original authorship to the TgCaller Team.  
+- Ensure any derivative works retain this same license unless otherwise stated.
 
-1. The software is licensed “as-is,” without any express or implied warranty.
-2. The authors are not liable for any damages resulting from the use or inability to use this software, including but not limited to data loss, system failure, or economic loss.
-3. You are responsible for complying with local laws regarding software use and distribution.
-4. The software may be used in commercial and non-commercial projects with or without modifications, provided that proper attribution is maintained.
+Disclaimer:
 
-Any usage of this software must retain the above notice and these conditions. If you do not agree to these terms, do not use this software.
+The Software is provided “AS IS”, without warranty of any kind.  
+The TgCaller Team disclaims all express or implied warranties, including but not limited to:
+
+- Merchantability  
+- Fitness for a particular purpose  
+- Non-infringement of third-party rights
+
+Liability Waiver:
+
+In no event shall the TgCaller Team or contributors be liable for any claim, damages, or other liabilities, whether in an action of contract, tort, or otherwise, arising from:
+
+- Use or misuse of the Software  
+- Inability to use the Software  
+- Loss of data, revenue, or business
+
+Licensee Responsibilities:
+
+By accessing or using the Software, the Licensee agrees to:
+
+1. Acknowledge and accept that the Software is provided without warranties.  
+2. Comply with all local and international laws regarding use and distribution.  
+3. Maintain attribution in any modified or redistributed versions.  
+4. Accept that violating these terms will result in automatic termination of all rights granted.
+
+Acceptance of Terms:
+
+By using, copying, modifying, or distributing the Software, the Licensee irrevocably agrees to be bound by the terms of this License.  
+If the Licensee does not agree to these terms, they are prohibited from any such use.
+
+Attribution (Optional):
+
+Developed and maintained by the TgCaller Team.  
+Learn more: https://github.com/TgCaller
