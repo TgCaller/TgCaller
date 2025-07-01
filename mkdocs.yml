@@ -1,0 +1,3 @@
+site_name: TgCaller Docs
+nav:
+  - Home: docs/migration.md
