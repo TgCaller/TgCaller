@@ -304,7 +304,7 @@ pytest tests/ -v
 
 ## 🤝 **Community**
 
-- **[Telegram Group](https://t.me/tgcaller)** - Get help and discuss
+- **[Telegram Group](https://t.me/tgcaller_support)** - Get help and discuss
 - **[GitHub Discussions](https://github.com/tgcaller/tgcaller/discussions)** - Feature requests and ideas
 - **[Discord Server](https://discord.gg/tgcaller)** - Real-time chat
 
