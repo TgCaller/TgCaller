@@ -3,9 +3,9 @@
 <div align="center">
 
 ![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)
-<img src="https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python">
-<img src="https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge" alt="License">
-<img src="https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge" alt="Downloads">
+![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)
+![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge)
 
 **🎯 Modern, Fast, and Reliable Telegram Group Calls Library**
 
@@ -39,7 +39,28 @@ TgCaller is a modern alternative to pytgcalls, designed with developer experienc
 pip install tgcaller
 
 # Install with video support
-pip install tgcaller[video]
+pip install tgcaller[media]
+
+# Install with all features
+pip install tgcaller[dev,media,audio]
+```
+
+### **Verify Installation**
+
+```bash
+# Test installation
+tgcaller test
+
+# Check system info
+tgcaller info
+```
+
+**Expected Output:**
+```
+🧪 Testing TgCaller installation...
+✅ Pyrogram imported successfully
+✅ TgCaller types imported successfully
+🎉 TgCaller installation test completed successfully!
 ```
 
 ### **Basic Usage**
@@ -108,6 +129,28 @@ video_config = VideoConfig(
 
 await caller.play(chat_id, "video.mp4", video_config=video_config)
 ```
+
+---
+
+## 🛠️ **CLI Tool**
+
+TgCaller comes with a built-in CLI tool for testing and management:
+
+```bash
+# Show help
+tgcaller --help
+
+# Test installation
+tgcaller test --api-id YOUR_API_ID --api-hash YOUR_API_HASH
+
+# Show system information
+tgcaller info
+```
+
+**CLI Commands:**
+- `tgcaller test` - Test TgCaller installation
+- `tgcaller info` - Show system information
+- `tgcaller --version` - Show version
 
 ---
 
@@ -231,6 +274,28 @@ caller.register_plugin(VoiceEffectsPlugin())
 
 ---
 
+## 📦 **Dependencies**
+
+**Core Dependencies:**
+- `pyrogram>=2.0.106` - Telegram client
+- `aiortc>=1.6.0` - WebRTC support
+- `aiofiles>=23.1.0` - Async file operations
+- `aiohttp>=3.8.4` - HTTP client
+
+**Media Processing:**
+- `ffmpeg-python>=0.2.0` - Media processing
+- `numpy>=1.24.0` - Audio/video arrays
+- `opencv-python>=4.7.0` - Video processing
+
+**Audio Processing:**
+- `pyaudio>=0.2.11` - Audio I/O
+- `soundfile>=0.12.1` - Audio file handling
+
+**Optional:**
+- `TgCrypto` - For faster Pyrogram performance
+
+---
+
 ## 🐳 **Docker Support**
 
 ```dockerfile
@@ -243,7 +308,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install TgCaller
-RUN pip install tgcaller[video]
+RUN pip install tgcaller[media]
 
 # Copy your bot
 COPY . /app
@@ -284,6 +349,19 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
+### **Testing**
+
+```bash
+# Run all tests
+pytest
+
+# Test with coverage
+pytest --cov=tgcaller tests/
+
+# Test installation
+tgcaller test
+```
+
 ### **Contributing**
 
 1. Fork the repository
@@ -321,7 +399,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for the Telegram developer community**
 
-<img src="https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python">
-<img src="https://img.shields.io/badge/Powered_by-FFmpeg-007808?style=for-the-badge" alt="FFmpeg">
+![Made with Python](https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&logo=python&logoColor=white)
+![Powered by FFmpeg](https://img.shields.io/badge/Powered_by-FFmpeg-007808?style=for-the-badge)
 
 </div>
