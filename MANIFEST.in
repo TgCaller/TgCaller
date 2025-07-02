@@ -1,13 +1,19 @@
 include README.md
 include LICENSE
-include requirements.txt
+include CHANGELOG.md
+include CONTRIBUTING.md
 include pyproject.toml
+include setup.py
 recursive-include tgcaller *.py
 recursive-include docs *.md
 recursive-include examples *.py
+recursive-include tests *.py
 exclude .gitignore
 exclude .readthedocs.yaml
 exclude mkdocs.yml
 global-exclude __pycache__
 global-exclude *.py[co]
 global-exclude .DS_Store
+global-exclude *.so
+global-exclude *.dylib
+global-exclude *.dll
