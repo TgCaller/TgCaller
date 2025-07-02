@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  tgcaller-bot:
+    build: .
+    container_name: tgcaller-bot
+    restart: unless-stopped
+    environment:
+      - API_ID=${API_ID}
+      - API_HASH=${API_HASH}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./downloads:/app/downloads
+      - ./logs:/app/logs
+      - ./sessions:/app/sessions
+    ports:
+      - "8080:8080"
+    networks:
+      - tgcaller-network
+    depends_on:
+      - redis
+    command: python examples/music_bot.py
+
+  tgcaller-advanced:
+    build: .
+    container_name: tgcaller-advanced
+    restart: unless-stopped
+    environment:
+      - API_ID=${API_ID}
+      - API_HASH=${API_HASH}
+      - BOT_TOKEN=${BOT_TOKEN}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./downloads:/app/downloads
+      - ./logs:/app/logs
+      - ./sessions:/app/sessions
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    ports:
+      - "8081:8080"
+    networks:
+      - tgcaller-network
+    depends_on:
+      - redis
+    environment:
+      - DISPLAY=:99
+    command: >
+      sh -c "
+        Xvfb :99 -screen 0 1920x1080x24 &
+        python examples/advanced_examples/screen_sharing_example.py
+      "
+
+  redis:
+    image: redis:7-alpine
+    container_name: tgcaller-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - tgcaller-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: tgcaller-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - tgcaller-network
+    depends_on:
+      - tgcaller-bot
+      - tgcaller-advanced
+
+volumes:
+  redis_data:
+
+networks:
+  tgcaller-network:
+    driver: bridge

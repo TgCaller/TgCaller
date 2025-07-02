@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tgcaller"
 version = "1.0.0"
-description = "Modern, fast, and reliable Telegram group calls library"
+description = "Modern, fast, and reliable Telegram group calls library with advanced features"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -16,7 +16,9 @@ maintainers = [
 ]
 keywords = [
     "telegram", "calls", "voip", "streaming", "audio", "video",
-    "pytgcalls", "alternative", "modern", "fast", "reliable"
+    "pytgcalls", "alternative", "modern", "fast", "reliable",
+    "screen-sharing", "transcription", "youtube", "microphone",
+    "bridged-calls", "filters", "advanced"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -38,6 +40,7 @@ classifiers = [
 requires-python = ">=3.8"
 dependencies = [
     "pyrogram>=2.0.106",
+    "aiortc>=1.6.0",
     "aiofiles>=23.1.0",
     "aiohttp>=3.8.4",
     "requests>=2.31.0",
@@ -67,6 +70,14 @@ media = [
 audio = [
     "pyaudio>=0.2.11",
     "soundfile>=0.12.1",
+]
+advanced = [
+    "openai-whisper>=20231117",
+    "mss>=9.0.1",
+    "torch>=2.0.0",
+]
+all = [
+    "tgcaller[dev,media,audio,advanced]"
 ]
 
 [project.urls]

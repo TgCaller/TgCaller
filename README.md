@@ -27,6 +27,7 @@ TgCaller is a modern alternative to pytgcalls, designed with developer experienc
 - **📹 HD Support** - High-quality audio and video streaming
 - **🔌 Extensible** - Plugin system for custom features
 - **📚 Well Documented** - Comprehensive guides and examples
+- **🎛️ Advanced Features** - Professional-grade capabilities
 
 ---
 
@@ -132,6 +133,89 @@ await caller.play(chat_id, "video.mp4", video_config=video_config)
 
 ---
 
+## 🎛️ **Advanced Features**
+
+### **🌉 Bridged Calls**
+Connect multiple chats for conference calls:
+
+```python
+from tgcaller.advanced import BridgedCallManager
+
+bridge_manager = BridgedCallManager(caller)
+await bridge_manager.create_bridge("conference", [chat1, chat2, chat3])
+```
+
+### **🎤 Microphone Streaming**
+Stream live microphone input:
+
+```python
+from tgcaller.advanced import MicrophoneStreamer
+
+mic_streamer = MicrophoneStreamer(caller, chat_id)
+await mic_streamer.start_streaming()
+```
+
+### **🖥️ Screen Sharing**
+Share your screen in video calls:
+
+```python
+from tgcaller.advanced import ScreenShareStreamer
+
+screen_streamer = ScreenShareStreamer(caller, chat_id)
+await screen_streamer.start_streaming(monitor_index=1)
+```
+
+### **🎬 YouTube Integration**
+Stream YouTube videos directly:
+
+```python
+from tgcaller.advanced import YouTubeStreamer
+
+youtube = YouTubeStreamer(caller)
+await youtube.play_youtube_url(chat_id, "https://youtube.com/watch?v=...")
+```
+
+### **🎤 Speech Transcription**
+Real-time speech-to-text with Whisper:
+
+```python
+from tgcaller.advanced import WhisperTranscription
+
+transcriber = WhisperTranscription("base")
+await transcriber.start_transcription()
+```
+
+### **🎛️ Audio/Video Filters**
+Apply real-time effects:
+
+```python
+from tgcaller.advanced import AudioFilters, VideoFilters
+
+audio_filters = AudioFilters()
+video_filters = VideoFilters()
+
+# Add echo effect
+filtered_audio = audio_filters.apply_echo(audio_data, delay=0.3)
+
+# Add blur effect
+filtered_video = video_filters.apply_blur(video_frame, kernel_size=15)
+```
+
+### **🔌 Custom API**
+Extend with REST API:
+
+```python
+from tgcaller.advanced import CustomAPIHandler
+
+api = CustomAPIHandler(caller, port=8080)
+await api.start_server()
+
+# Now you can control via HTTP:
+# POST /play {"chat_id": -1001234567890, "source": "song.mp3"}
+```
+
+---
+
 ## 🛠️ **CLI Tool**
 
 TgCaller comes with a built-in CLI tool for testing and management:
@@ -188,111 +272,19 @@ async def next_song(client, update):
 app.run()
 ```
 
-### **Video Streaming Bot**
+### **Advanced Conference Bot**
 
 ```python
-@app.on_message(filters.command("stream"))
-async def stream_video(client, message):
-    if len(message.command) < 2:
-        return await message.reply("Usage: /stream <video_url>")
-    
-    video_url = message.command[1]
-    
-    await caller.join_call(message.chat.id)
-    await caller.play(message.chat.id, video_url)
-    await message.reply(f"📺 Streaming: {video_url}")
+from tgcaller.advanced import BridgedCallManager, WhisperTranscription
+
+# Create conference bridge
+bridge_manager = BridgedCallManager(caller)
+await bridge_manager.create_bridge("meeting", [chat1, chat2, chat3])
+
+# Add real-time transcription
+transcriber = WhisperTranscription("base")
+await transcriber.start_transcription()
 ```
-
----
-
-## 🔧 **Advanced Features**
-
-### **Stream Controls**
-
-```python
-# Pause/Resume
-await caller.pause(chat_id)
-await caller.resume(chat_id)
-
-# Volume control
-await caller.set_volume(chat_id, 0.8)  # 80% volume
-
-# Seek to position
-await caller.seek(chat_id, 60.0)  # Seek to 1 minute
-
-# Get current position
-position = await caller.get_position(chat_id)
-```
-
-### **Multiple Chats**
-
-```python
-# Manage multiple calls
-chats = [-1001111111111, -1002222222222]
-
-for chat_id in chats:
-    await caller.join_call(chat_id)
-    await caller.play(chat_id, f"playlist_{chat_id}.m3u8")
-
-# Check active calls
-active_calls = caller.get_active_calls()
-print(f"Managing {len(active_calls)} calls")
-```
-
-### **Error Handling**
-
-```python
-@caller.on_error
-async def handle_error(client, error):
-    print(f"Error occurred: {error}")
-    # Auto-recovery logic
-    if error.recoverable:
-        await caller.reconnect(error.chat_id)
-```
-
----
-
-## 🔌 **Plugin System**
-
-Create custom plugins to extend functionality:
-
-```python
-from tgcaller.plugins import BasePlugin
-
-class VoiceEffectsPlugin(BasePlugin):
-    name = "voice_effects"
-    
-    async def process_audio(self, audio_frame):
-        # Apply voice effects
-        if self.config.get("robot_voice"):
-            return self.apply_robot_effect(audio_frame)
-        return audio_frame
-
-# Register plugin
-caller.register_plugin(VoiceEffectsPlugin())
-```
-
----
-
-## 📦 **Dependencies**
-
-**Core Dependencies:**
-- `pyrogram>=2.0.106` - Telegram client
-- `aiortc>=1.6.0` - WebRTC support
-- `aiofiles>=23.1.0` - Async file operations
-- `aiohttp>=3.8.4` - HTTP client
-
-**Media Processing:**
-- `ffmpeg-python>=0.2.0` - Media processing
-- `numpy>=1.24.0` - Audio/video arrays
-- `opencv-python>=4.7.0` - Video processing
-
-**Audio Processing:**
-- `pyaudio>=0.2.11` - Audio I/O
-- `soundfile>=0.12.1` - Audio file handling
-
-**Optional:**
-- `TgCrypto` - For faster Pyrogram performance
 
 ---
 
@@ -317,6 +309,23 @@ WORKDIR /app
 CMD ["python", "bot.py"]
 ```
 
+**Docker Compose:**
+
+```yaml
+version: '3.8'
+services:
+  tgcaller-bot:
+    build: .
+    environment:
+      - API_ID=${API_ID}
+      - API_HASH=${API_HASH}
+      - BOT_TOKEN=${BOT_TOKEN}
+    volumes:
+      - ./downloads:/app/downloads
+    ports:
+      - "8080:8080"
+```
+
 ---
 
 ## 📊 **Performance**
@@ -327,6 +336,70 @@ CMD ["python", "bot.py"]
 | **Memory Usage** | 80MB | 150MB | 47% less |
 | **CPU Usage** | Low | High | 60% less |
 | **Error Rate** | <2% | ~8% | 4x more reliable |
+| **Features** | 25+ | 10 | 2.5x more |
+
+---
+
+## 🔧 **Advanced Configuration**
+
+### **FFmpeg Parameters**
+
+```python
+from tgcaller import TgCaller
+
+caller = TgCaller(app, ffmpeg_parameters={
+    'before_options': '-re',
+    'options': '-vn -preset ultrafast'
+})
+```
+
+### **Multiple Clients**
+
+```python
+# Manage multiple Telegram accounts
+clients = [Client(f"session_{i}") for i in range(5)]
+callers = [TgCaller(client) for client in clients]
+
+# Start all
+for caller in callers:
+    await caller.start()
+```
+
+### **P2P Calls**
+
+```python
+from tgcaller.advanced import P2PCallManager
+
+p2p = P2PCallManager(caller)
+await p2p.create_direct_call(user1_id, user2_id)
+```
+
+---
+
+## 📦 **Dependencies**
+
+**Core Dependencies:**
+- `pyrogram>=2.0.106` - Telegram client
+- `aiortc>=1.6.0` - WebRTC support
+- `aiofiles>=23.1.0` - Async file operations
+- `aiohttp>=3.8.4` - HTTP client
+
+**Media Processing:**
+- `ffmpeg-python>=0.2.0` - Media processing
+- `numpy>=1.24.0` - Audio/video arrays
+- `opencv-python>=4.7.0` - Video processing
+
+**Audio Processing:**
+- `pyaudio>=0.2.11` - Audio I/O
+- `soundfile>=0.12.1` - Audio file handling
+
+**Advanced Features:**
+- `openai-whisper` - Speech transcription
+- `yt-dlp>=2023.6.22` - YouTube downloading
+- `mss` - Screen capture
+
+**Optional:**
+- `TgCrypto` - For faster Pyrogram performance
 
 ---
 
@@ -378,6 +451,7 @@ tgcaller test
 - **[Examples](examples/)** - Code examples and tutorials
 - **[Migration Guide](docs/migration.md)** - Migrate from pytgcalls
 - **[Plugin Development](docs/plugins.md)** - Create custom plugins
+- **[Advanced Features](docs/advanced.md)** - Professional features guide
 
 ---
 
