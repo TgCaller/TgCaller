@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)
+[![PyPI](https://img.shields.io/pypi/v/tgcaller)](https://pypi.org/project/tgcaller/)
 ![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)
 ![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge)
@@ -459,7 +459,7 @@ tgcaller test
 
 - **[Telegram Group](https://t.me/tgcaller_support)** - Get help and discuss
 - **[GitHub Discussions](https://github.com/tgcaller/tgcaller/discussions)** - Feature requests and ideas
-- **[Discord Server](https://discord.gg/tgcaller)** - Real-time chat
+  
 
 ---
 
