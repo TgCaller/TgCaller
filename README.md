@@ -2,16 +2,16 @@
 
 <div align="center">
 
-[![PyPI](https://img.shields.io/pypi/v/tgcaller)](https://pypi.org/project/tgcaller/)
-![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)
-![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge)
+[![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)](https://pypi.org/project/tgcaller/)
+[![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/tgcaller/tgcaller/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge)](https://pypi.org/project/tgcaller/)
 
 **🎯 Modern, Fast, and Reliable Telegram Group Calls Library**
 
 *Built for developers who need a simple yet powerful solution for Telegram voice and video calls*
 
-[**📚 Documentation**](https://tgcaller.readthedocs.io) • [**🎯 Examples**](examples/) • [**💬 Community**](https://t.me/tgcaller) • [**🐛 Issues**](https://github.com/tgcaller/tgcaller/issues)
+[**📚 Documentation**](https://tgcaller.readthedocs.io) • [**🎯 Examples**](https://github.com/tgcaller/tgcaller/tree/main/examples) • [**💬 Community**](https://t.me/tgcaller) • [**🐛 Issues**](https://github.com/tgcaller/tgcaller/issues)
 
 </div>
 
@@ -43,7 +43,7 @@ pip install tgcaller
 pip install tgcaller[media]
 
 # Install with all features
-pip install tgcaller[dev,media,audio]
+pip install tgcaller[all]
 ```
 
 ### **Verify Installation**
@@ -300,7 +300,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install TgCaller
-RUN pip install tgcaller[media]
+RUN pip install tgcaller[all]
 
 # Copy your bot
 COPY . /app
@@ -448,10 +448,10 @@ tgcaller test
 ## 📚 **Documentation**
 
 - **[API Reference](https://tgcaller.readthedocs.io/api)** - Complete API documentation
-- **[Examples](examples/)** - Code examples and tutorials
-- **[Migration Guide](docs/migration.md)** - Migrate from pytgcalls
-- **[Plugin Development](docs/plugins.md)** - Create custom plugins
-- **[Advanced Features](docs/advanced.md)** - Professional features guide
+- **[Examples](https://github.com/tgcaller/tgcaller/tree/main/examples)** - Code examples and tutorials
+- **[Migration Guide](https://tgcaller.readthedocs.io/migration)** - Migrate from pytgcalls
+- **[Plugin Development](https://tgcaller.readthedocs.io/plugins)** - Create custom plugins
+- **[Advanced Features](https://tgcaller.readthedocs.io/advanced)** - Professional features guide
 
 ---
 
@@ -459,13 +459,13 @@ tgcaller test
 
 - **[Telegram Group](https://t.me/tgcaller_support)** - Get help and discuss
 - **[GitHub Discussions](https://github.com/tgcaller/tgcaller/discussions)** - Feature requests and ideas
-  
+- **[GitHub Issues](https://github.com/tgcaller/tgcaller/issues)** - Bug reports
 
 ---
 
 ## 📄 **License**
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/tgcaller/tgcaller/blob/main/LICENSE) file for details.
 
 ---
 
@@ -473,7 +473,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for the Telegram developer community**
 
-![Made with Python](https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&logo=python&logoColor=white)
-![Powered by FFmpeg](https://img.shields.io/badge/Powered_by-FFmpeg-007808?style=for-the-badge)
+[![Made with Python](https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Powered by FFmpeg](https://img.shields.io/badge/Powered_by-FFmpeg-007808?style=for-the-badge)](https://ffmpeg.org)
 
 </div>
