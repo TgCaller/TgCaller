@@ -5,6 +5,7 @@ Test TgCaller Client
 import pytest
 import asyncio
 from unittest.mock import Mock, AsyncMock
+import pyrogram  # <-- Add this import
 
 from tgcaller import TgCaller
 from tgcaller.types import AudioConfig, VideoConfig, CallStatus
@@ -16,7 +17,7 @@ class TestTgCaller:
     @pytest.fixture
     def mock_client(self):
         """Create mock Pyrogram client"""
-        client = Mock()
+        client = Mock(spec=pyrogram.Client)  # <-- Use spec
         client.is_connected = False
         client.start = AsyncMock()
         client.stop = AsyncMock()
