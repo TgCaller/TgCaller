@@ -6,7 +6,7 @@ A simple, fast, and reliable library for Telegram voice and video calls
 with advanced features like screen sharing, transcription, and more.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "TgCaller Team"
 __email__ = "team@tgcaller.dev"
 __license__ = "MIT"
@@ -19,6 +19,7 @@ from .types import (
     MediaStream,
     CallUpdate,
     CallStatus,
+    StreamType,
 )
 from .exceptions import (
     TgCallerError,
@@ -58,6 +59,7 @@ __all__ = [
     # Update types
     "CallUpdate",
     "CallStatus",
+    "StreamType",
     
     # Exceptions
     "TgCallerError",
