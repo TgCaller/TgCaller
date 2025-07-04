@@ -72,7 +72,7 @@ class StreamMethods:
         except Exception as e:
             raise StreamError(f"Failed to play media: {e}")
     
-    async def stop(self, chat_id: int) -> bool:
+    async def stop_stream(self, chat_id: int) -> bool:
         """Stop current stream"""
         if chat_id not in self._active_calls:
             return False
@@ -92,6 +92,65 @@ class StreamMethods:
         )
         await self._emit_event('stream_stopped', update)
         
+        return True
+    
+    async def pause(self, chat_id: int) -> bool:
+        """Pause current stream"""
+        if chat_id not in self._active_calls:
+            return False
+        
+        call_session = self._active_calls[chat_id]
+        
+        if 'current_stream' not in call_session:
+            return False
+        
+        call_session['status'] = CallStatus.PAUSED
+        
+        update = CallUpdate(
+            chat_id=chat_id,
+            status=CallStatus.PAUSED,
+            message="Stream paused"
+        )
+        await self._emit_event('stream_paused', update)
+        
+        return True
+    
+    async def resume(self, chat_id: int) -> bool:
+        """Resume paused stream"""
+        if chat_id not in self._active_calls:
+            return False
+        
+        call_session = self._active_calls[chat_id]
+        
+        if 'current_stream' not in call_session:
+            return False
+        
+        if call_session.get('status') != CallStatus.PAUSED:
+            return False
+        
+        call_session['status'] = CallStatus.PLAYING
+        
+        update = CallUpdate(
+            chat_id=chat_id,
+            status=CallStatus.PLAYING,
+            message="Stream resumed"
+        )
+        await self._emit_event('stream_resumed', update)
+        
+        return True
+    
+    async def set_volume(self, chat_id: int, volume: float) -> bool:
+        """Set volume level (0.0 to 1.0)"""
+        if not 0.0 <= volume <= 1.0:
+            raise ValueError("Volume must be between 0.0 and 1.0")
+        
+        if chat_id not in self._active_calls:
+            return False
+        
+        call_session = self._active_calls[chat_id]
+        call_session['volume'] = volume
+        
+        self._logger.info(f"Set volume to {volume} in chat {chat_id}")
         return True
     
     async def seek(self, chat_id: int, position: float) -> bool:

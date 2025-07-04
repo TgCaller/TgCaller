@@ -88,11 +88,15 @@ class TgCaller:
                 method = getattr(CallMethods, method_name)
                 setattr(self, method_name, method.__get__(self, self.__class__))
         
-        # Add stream methods  
+        # Add stream methods with explicit mapping to avoid conflicts
         for method_name in dir(StreamMethods):
             if not method_name.startswith('_') and callable(getattr(StreamMethods, method_name)):
                 method = getattr(StreamMethods, method_name)
-                setattr(self, method_name, method.__get__(self, self.__class__))
+                # Map stop_stream to stop for backward compatibility
+                if method_name == 'stop_stream':
+                    setattr(self, 'stop_stream', method.__get__(self, self.__class__))
+                else:
+                    setattr(self, method_name, method.__get__(self, self.__class__))
     
     async def start(self) -> None:
         """

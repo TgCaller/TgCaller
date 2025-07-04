@@ -4,6 +4,8 @@ Test TgCaller Client
 
 import pytest
 import asyncio
+import tempfile
+import os
 from unittest.mock import Mock, AsyncMock
 import pyrogram  # <-- Add this import
 
@@ -27,6 +29,23 @@ class TestTgCaller:
     def caller(self, mock_client):
         """Create TgCaller instance"""
         return TgCaller(mock_client)
+    
+    @pytest.fixture
+    def temp_audio_file(self):
+        """Create temporary audio file for testing"""
+        # Create a temporary file with .mp3 extension
+        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+            # Write some dummy content to make it a valid file
+            temp_file.write(b'dummy audio content')
+            temp_file_path = temp_file.name
+        
+        yield temp_file_path
+        
+        # Cleanup after test
+        try:
+            os.unlink(temp_file_path)
+        except FileNotFoundError:
+            pass
     
     @pytest.mark.asyncio
     async def test_start_stop(self, caller, mock_client):
@@ -69,26 +88,26 @@ class TestTgCaller:
         assert not caller.is_connected(chat_id)
     
     @pytest.mark.asyncio
-    async def test_play_media(self, caller, mock_client):
+    async def test_play_media(self, caller, mock_client, temp_audio_file):
         """Test playing media"""
         await caller.start()
         
         chat_id = -1001234567890
         
-        # Test playing audio
-        result = await caller.play(chat_id, "test.mp3")
+        # Test playing audio with temporary file
+        result = await caller.play(chat_id, temp_audio_file)
         assert result is True
         assert caller.is_connected(chat_id)
     
     @pytest.mark.asyncio
-    async def test_pause_resume(self, caller, mock_client):
+    async def test_pause_resume(self, caller, mock_client, temp_audio_file):
         """Test pause and resume"""
         await caller.start()
         
         chat_id = -1001234567890
         
         # Start playing
-        await caller.play(chat_id, "test.mp3")
+        await caller.play(chat_id, temp_audio_file)
         
         # Pause
         result = await caller.pause(chat_id)

@@ -90,11 +90,11 @@ Resume paused stream.
 await caller.resume(-1001234567890)
 ```
 
-##### `stop(chat_id)`
+##### `stop_stream(chat_id)`
 Stop current stream.
 
 ```python
-await caller.stop(-1001234567890)
+await caller.stop_stream(-1001234567890)
 ```
 
 ##### `set_volume(chat_id, volume)`
