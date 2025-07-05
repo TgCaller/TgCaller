@@ -1257,16 +1257,17 @@
 
 
 <h1 id="tgcaller">TgCaller</h1>
-<div align="center" class="badges">
+<!--
+  PROBLEM FIX:
+  1. Do not use <div> with markdown badges inside. Use pure markdown for badges, then optionally use <div align="center"> only for text/buttons if needed.
+  2. Avoid HTML wrappers around badges, as Material for MkDocs disables markdown parsing inside HTML. 
+-->
 
-[![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)](https://pypi.org/project/tgcaller/)
-[![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/TgCaller/TgCaller/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue)](https://pypi.org/project/tgcaller/)
-[![GitHub Stars](https://img.shields.io/github/stars/TgCaller/TgCaller?style=for-the-badge&logo=github)](https://github.com/TgCaller/TgCaller)
-
-</div>
-
+<p><a href="https://pypi.org/project/tgcaller/"><img alt="PyPI" src="https://img.shields.io/pypi/v/tgcaller?style=for-the-badge" /></a>
+<a href="https://python.org"><img alt="Python" src="https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&amp;logo=python&amp;logoColor=white" /></a>
+<a href="https://github.com/TgCaller/TgCaller/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge" /></a>
+<a href="https://pypi.org/project/tgcaller/"><img alt="Downloads" src="https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&amp;color=blue" /></a>
+<a href="https://github.com/TgCaller/TgCaller"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/TgCaller/TgCaller?style=for-the-badge&amp;logo=github" /></a></p>
 <div align="center">
 
 **🎯 Modern, Fast, and Reliable Telegram Group Calls Library**
@@ -1281,38 +1282,20 @@
 <hr />
 <h2 id="why-tgcaller">⚡ Why TgCaller?</h2>
 <p>TgCaller is a modern alternative to pytgcalls, designed with developer experience and reliability in mind:</p>
-<div class="feature-grid">
-  <div class="feature-card">
-    <h3>🚀 Fast & Lightweight</h3>
-    <p>Optimized performance with minimal dependencies. 3x faster connection times compared to alternatives.</p>
-  </div>
+<!--
+  PROBLEM FIX:
+  3. For feature cards, Material for MkDocs disables markdown inside HTML.
+     For best cross-compatibility, use pure markdown for features, or keep as is if you are happy with simple HTML fallback.
+-->
 
-  <div class="feature-card">
-    <h3>📱 Easy to Use</h3>
-    <p>Simple, intuitive API that just works. Less boilerplate code, more functionality.</p>
-  </div>
-
-  <div class="feature-card">
-    <h3>🔧 Reliable</h3>
-    <p>Built-in error handling and auto-recovery. <2% error rate in production environments.</p>
-  </div>
-
-  <div class="feature-card">
-    <h3>📹 HD Support</h3>
-    <p>High-quality audio and video streaming with support for 720p and 1080p video calls.</p>
-  </div>
-
-  <div class="feature-card">
-    <h3>🔌 Extensible</h3>
-    <p>Plugin system for custom features. Extend functionality without modifying core code.</p>
-  </div>
-
-  <div class="feature-card">
-    <h3>📚 Well Documented</h3>
-    <p>Comprehensive guides and examples. Complete API reference with interactive examples.</p>
-  </div>
-</div>
-
+<ul>
+<li>🚀 <strong>Fast &amp; Lightweight</strong>: Optimized performance, 3x faster connection times compared to alternatives.</li>
+<li>📱 <strong>Easy to Use</strong>: Simple, intuitive API with less boilerplate code, more functionality.</li>
+<li>🔧 <strong>Reliable</strong>: Built-in error handling and auto-recovery. &lt;2% error rate in production environments.</li>
+<li>📹 <strong>HD Support</strong>: High-quality audio and video streaming with support for 720p and 1080p video calls.</li>
+<li>🔌 <strong>Extensible</strong>: Plugin system for custom features. Extend functionality without modifying core code.</li>
+<li>📚 <strong>Well Documented</strong>: Comprehensive guides and examples. Complete API reference with interactive examples.</li>
+</ul>
 <hr />
 <h2 id="quick-start">🚀 Quick Start</h2>
 <h3 id="installation">Installation</h3>
@@ -1385,43 +1368,42 @@
 </ul>
 <hr />
 <h2 id="performance-comparison">📊 Performance Comparison</h2>
-<table class="performance-table">
-  <thead>
-    <tr>
-      <th>Feature</th>
-      <th>TgCaller</th>
-      <th>pytgcalls</th>
-      <th>Improvement</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Connection Time</strong></td>
-      <td>~1s</td>
-      <td>~3s</td>
-      <td>3x faster</td>
-    </tr>
-    <tr>
-      <td><strong>Memory Usage</strong></td>
-      <td>80MB</td>
-      <td>150MB</td>
-      <td>47% less</td>
-    </tr>
-    <tr>
-      <td><strong>CPU Usage</strong></td>
-      <td>Low</td>
-      <td>High</td>
-      <td>60% less</td>
-    </tr>
-    <tr>
-      <td><strong>Error Rate</strong></td>
-      <td><2%</td>
-      <td>~8%</td>
-      <td>4x more reliable</td>
-    </tr>
-  </tbody>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>TgCaller</th>
+<th>pytgcalls</th>
+<th>Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Connection Time</strong></td>
+<td>~1s</td>
+<td>~3s</td>
+<td>3x faster</td>
+</tr>
+<tr>
+<td><strong>Memory Usage</strong></td>
+<td>80MB</td>
+<td>150MB</td>
+<td>47% less</td>
+</tr>
+<tr>
+<td><strong>CPU Usage</strong></td>
+<td>Low</td>
+<td>High</td>
+<td>60% less</td>
+</tr>
+<tr>
+<td><strong>Error Rate</strong></td>
+<td>&lt;2%</td>
+<td>~8%</td>
+<td>4x more reliable</td>
+</tr>
+</tbody>
 </table>
-
 <hr />
 <h2 id="examples">🎮 Examples</h2>
 <h3 id="music-bot">Music Bot</h3>
@@ -1481,14 +1463,9 @@
 </span></code></pre></div>
 <hr />
 <h2 id="community">🤝 Community</h2>
-<div align="center">
-
-[![GitHub](https://img.shields.io/badge/GitHub-TgCaller-181717?style=for-the-badge&logo=github)](https://github.com/TgCaller/TgCaller)
-[![Telegram](https://img.shields.io/badge/Telegram-@TgCallerOfficial-26A5E4?style=for-the-badge&logo=telegram)](https://t.me/TgCallerOfficial)
-[![PyPI](https://img.shields.io/badge/PyPI-tgcaller-3775A9?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/tgcaller/)
-
-</div>
-
+<p><a href="https://github.com/TgCaller/TgCaller"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-TgCaller-181717?style=for-the-badge&amp;logo=github" /></a>
+<a href="https://t.me/TgCallerOfficial"><img alt="Telegram" src="https://img.shields.io/badge/Telegram-@TgCallerOfficial-26A5E4?style=for-the-badge&amp;logo=telegram" /></a>
+<a href="https://pypi.org/project/tgcaller/"><img alt="PyPI" src="https://img.shields.io/badge/PyPI-tgcaller-3775A9?style=for-the-badge&amp;logo=pypi&amp;logoColor=white" /></a></p>
 <ul>
 <li><strong><a href="https://github.com/TgCaller/TgCaller">GitHub</a></strong> - Source code and issues</li>
 <li><strong><a href="https://t.me/TgCallerOfficial">Telegram Group</a></strong> - Get help and discuss</li>
@@ -1498,14 +1475,9 @@
 <h2 id="license">📄 License</h2>
 <p>This project is licensed under the MIT License - see the <a href="https://github.com/TgCaller/TgCaller/blob/main/LICENSE">LICENSE</a> file for details.</p>
 <hr />
-<div align="center">
-
-**Made with ❤️ for the Telegram developer community**
-
-[![Made with Python](https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Powered by FFmpeg](https://img.shields.io/badge/Powered_by-FFmpeg-007808?style=for-the-badge)](https://ffmpeg.org)
-
-</div>
+<p><strong>Made with ❤️ for the Telegram developer community</strong></p>
+<p><a href="https://python.org"><img alt="Made with Python" src="https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&amp;logo=python&amp;logoColor=white" /></a>
+<a href="https://ffmpeg.org"><img alt="Powered by FFmpeg" src="https://img.shields.io/badge/Powered_by-FFmpeg-007808?style=for-the-badge" /></a></p>
 
 
 
