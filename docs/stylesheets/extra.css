@@ -109,3 +109,14 @@
     gap: 0.5rem;
   }
 }
+
+/* Fix for badges rendering */
+.badges a {
+  display: inline-block;
+  margin: 0.2rem;
+}
+
+.badges img {
+  display: inline-block;
+  vertical-align: middle;
+}
