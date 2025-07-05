@@ -4,7 +4,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)](https://pypi.org/project/tgcaller/)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/jhoommusic/TgCaller/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/tgcaller/TgCaller/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue)](https://pypi.org/project/tgcaller/)
 
 **🎯 Modern, Fast, and Reliable Telegram Group Calls Library**
@@ -105,15 +105,15 @@ if __name__ == "__main__":
 
 ## 🤝 Community
 
-- **[GitHub](https://github.com/jhoommusic/TgCaller)** - Source code and issues
+- **[GitHub](https://github.com/tgcaller/TgCaller)** - Source code and issues
 - **[Telegram Group](https://t.me/tgcaller)** - Get help and discuss
-- **[Documentation](https://jhoommusic.github.io/TgCaller/)** - Complete guides
+- **[Documentation](https://tgcaller.github.io/TgCaller/)** - Complete guides
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/jhoommusic/TgCaller/blob/main/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/tgcaller/TgCaller/blob/main/LICENSE) file for details.
 
 ---
 

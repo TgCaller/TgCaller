@@ -1,8 +1,8 @@
 site_name: TgCaller
 site_description: Modern, fast, and reliable Telegram group calls library
-site_url: https://jhoommusic.github.io/TgCaller/
-repo_url: https://github.com/jhoommusic/TgCaller
-repo_name: jhoommusic/TgCaller
+site_url: https://tgcaller.github.io/TgCaller/
+repo_url: https://github.com/tgcaller/TgCaller
+repo_name: tgcaller/TgCaller
 
 theme:
   name: material
@@ -66,6 +66,6 @@ plugins:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/jhoommusic/TgCaller
+      link: https://github.com/tgcaller/TgCaller
     - icon: fontawesome/brands/telegram
       link: https://t.me/tgcaller

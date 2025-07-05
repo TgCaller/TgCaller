@@ -211,11 +211,11 @@ See [Migration Guide](migration.md) for detailed migration instructions.
 
 ## Support and Community
 
-- 📚 **[Documentation](https://jhoommusic.github.io/TgCaller/)** - Complete guides and API reference
+- 📚 **[Documentation](https://tgcaller.github.io/TgCaller/)** - Complete guides and API reference
 - 💬 **[Telegram Group](https://t.me/tgcaller)** - Get help from the community
-- 🐛 **[GitHub Issues](https://github.com/jhoommusic/TgCaller/issues)** - Report bugs and request features
-- 💡 **[GitHub Discussions](https://github.com/jhoommusic/TgCaller/discussions)** - Share ideas and ask questions
-- 🤝 **[Contributing Guide](https://github.com/jhoommusic/TgCaller/blob/main/CONTRIBUTING.md)** - Help improve TgCaller
+- 🐛 **[GitHub Issues](https://github.com/tgcaller/TgCaller/issues)** - Report bugs and request features
+- 💡 **[GitHub Discussions](https://github.com/tgcaller/TgCaller/discussions)** - Share ideas and ask questions
+- 🤝 **[Contributing Guide](https://github.com/tgcaller/TgCaller/blob/main/CONTRIBUTING.md)** - Help improve TgCaller
 
 ---
 
