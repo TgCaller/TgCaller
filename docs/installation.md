@@ -149,9 +149,9 @@ pip install tgcaller[all]
 
 If you encounter issues:
 
-1. Check the [GitHub Issues](https://github.com/tgcaller/TgCaller/issues)
+1. Check the [GitHub Issues](https://github.com/TgCaller/TgCaller/issues)
 2. Join our [Telegram Group](https://t.me/tgcaller)
-3. Read the [troubleshooting guide](https://github.com/tgcaller/TgCaller/wiki/Troubleshooting)
+3. Read the [troubleshooting guide](https://github.com/TgCaller/TgCaller/wiki/Troubleshooting)
 
 ## Development Installation
 
@@ -159,7 +159,7 @@ For contributing to TgCaller:
 
 ```bash
 # Clone the repository
-git clone https://github.com/tgcaller/TgCaller.git
+git clone https://github.com/TgCaller/TgCaller.git
 cd TgCaller
 
 # Create virtual environment

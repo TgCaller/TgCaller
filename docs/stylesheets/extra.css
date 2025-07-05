@@ -1,0 +1,111 @@
+/* Custom styles to match PyTgCalls */
+.md-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.md-tabs {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.md-hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.md-hero__inner {
+  padding: 2rem 0;
+}
+
+.md-button {
+  border-radius: 0.2rem;
+  font-weight: 500;
+}
+
+.md-button--primary {
+  background-color: #9c27b0;
+  border-color: #9c27b0;
+}
+
+.md-button--primary:hover {
+  background-color: #7b1fa2;
+  border-color: #7b1fa2;
+}
+
+/* Badge styles */
+.badges {
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.badges img {
+  margin: 0.2rem;
+}
+
+/* Feature grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.feature-card {
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.feature-card h3 {
+  margin-top: 0;
+  color: var(--md-primary-fg-color);
+}
+
+/* Code block improvements */
+.highlight {
+  border-radius: 0.3rem;
+}
+
+/* Performance table */
+.performance-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.performance-table th,
+.performance-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.performance-table th {
+  background-color: var(--md-primary-fg-color);
+  color: white;
+  font-weight: 600;
+}
+
+.performance-table tr:hover {
+  background-color: var(--md-default-fg-color--lightest);
+}
+
+/* Responsive improvements */
+@media screen and (max-width: 768px) {
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+}
