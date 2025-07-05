@@ -7,14 +7,12 @@ repo_name: TgCaller/TgCaller
 theme:
   name: material
   palette:
-    # Palette toggle for light mode
     - scheme: default
       primary: purple
       accent: purple
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    # Palette toggle for dark mode
     - scheme: slate
       primary: purple
       accent: purple
@@ -38,22 +36,22 @@ nav:
   - Home: index.md
   - Installation: installation.md
   - Python API:
-    - Client: api/client.md
-    - Callbacks: api/callbacks.md
-    - Basic Methods: api/basic-methods.md
-    - Stream Methods: api/stream-methods.md
-    - Advanced Methods: api/advanced-methods.md
-    - Available Types: api/types.md
-    - Available Enums: api/enums.md
+      - Client: api/client.md
+      - Callbacks: api/callbacks.md
+      - Basic Methods: api/basic-methods.md
+      - Stream Methods: api/stream-methods.md
+      - Advanced Methods: api/advanced-methods.md
+      - Available Types: api/types.md
+      - Available Enums: api/enums.md
   - C API:
-    - Getting Started: c-api/getting-started.md
-    - Callback Registration: c-api/callbacks.md
-    - Using Async: c-api/async.md
-    - Basic Methods: c-api/basic-methods.md
-    - Stream Methods: c-api/stream-methods.md
-    - Advanced Methods: c-api/advanced-methods.md
-    - Available Structs: c-api/structs.md
-    - Available Enums: c-api/enums.md
+      - Getting Started: c-api/getting-started.md
+      - Callback Registration: c-api/callbacks.md
+      - Using Async: c-api/async.md
+      - Basic Methods: c-api/basic-methods.md
+      - Stream Methods: c-api/stream-methods.md
+      - Advanced Methods: c-api/advanced-methods.md
+      - Available Structs: c-api/structs.md
+      - Available Enums: c-api/enums.md
   - Changelogs: changelog.md
 
 markdown_extensions:
@@ -113,4 +111,7 @@ extra:
 extra_css:
   - stylesheets/extra.css
 
-copyright: Copyright &copy; 2024 TgCaller Team
+# Sirf plain text ya HTML hi rakhna yahan, markdown badge nahi
+copyright: |
+  Copyright © 2024 TgCaller Team<br>
+  Made with <span style="color: red;">&#10084;</span> for the Telegram developer community
