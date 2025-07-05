@@ -2,10 +2,10 @@
 
 <div align="center" class="badges">
 
-[![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/tgcaller/)
+[![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)](https://pypi.org/project/tgcaller/)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/TgCaller/TgCaller/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue&logo=pypi&logoColor=white)](https://pypi.org/project/tgcaller/)
+[![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue)](https://pypi.org/project/tgcaller/)
 [![GitHub Stars](https://img.shields.io/github/stars/TgCaller/TgCaller?style=for-the-badge&logo=github)](https://github.com/TgCaller/TgCaller)
 
 </div>
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     </tr>
     <tr>
       <td><strong>Error Rate</strong></td>
-      <td>&lt;2%</td>
+      <td><2%</td>
       <td>~8%</td>
       <td>4x more reliable</td>
     </tr>
@@ -249,13 +249,13 @@ await youtube.play_youtube_url(chat_id, "https://youtube.com/watch?v=...")
 <div align="center">
 
 [![GitHub](https://img.shields.io/badge/GitHub-TgCaller-181717?style=for-the-badge&logo=github)](https://github.com/TgCaller/TgCaller)
-[![Telegram](https://img.shields.io/badge/Telegram-@tgcaller-26A5E4?style=for-the-badge&logo=telegram)](https://t.me/tgcaller)
+[![Telegram](https://img.shields.io/badge/Telegram-@TgCallerOfficial-26A5E4?style=for-the-badge&logo=telegram)](https://t.me/TgCallerOfficial)
 [![PyPI](https://img.shields.io/badge/PyPI-tgcaller-3775A9?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/tgcaller/)
 
 </div>
 
 - **[GitHub](https://github.com/TgCaller/TgCaller)** - Source code and issues
-- **[Telegram Group](https://t.me/tgcaller)** - Get help and discuss
+- **[Telegram Group](https://t.me/TgCallerOfficial)** - Get help and discuss
 - **[Documentation](https://tgcaller.github.io/TgCaller/)** - Complete guides
 
 ---

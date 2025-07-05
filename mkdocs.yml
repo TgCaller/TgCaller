@@ -37,11 +37,24 @@ theme:
 nav:
   - Home: index.md
   - Installation: installation.md
-  - Usage: usage.md
-  - API Reference: api.md
-  - Migration: migration.md
-  - Plugins: plugins.md
-  - Changelog: changelog.md
+  - Python API:
+    - Client: api/client.md
+    - Callbacks: api/callbacks.md
+    - Basic Methods: api/basic-methods.md
+    - Stream Methods: api/stream-methods.md
+    - Advanced Methods: api/advanced-methods.md
+    - Available Types: api/types.md
+    - Available Enums: api/enums.md
+  - C API:
+    - Getting Started: c-api/getting-started.md
+    - Callback Registration: c-api/callbacks.md
+    - Using Async: c-api/async.md
+    - Basic Methods: c-api/basic-methods.md
+    - Stream Methods: c-api/stream-methods.md
+    - Advanced Methods: c-api/advanced-methods.md
+    - Available Structs: c-api/structs.md
+    - Available Enums: c-api/enums.md
+  - Changelogs: changelog.md
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -93,7 +106,7 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/TgCaller/TgCaller
     - icon: fontawesome/brands/telegram
-      link: https://t.me/tgcaller
+      link: https://t.me/TgCallerOfficial
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/tgcaller/
 
