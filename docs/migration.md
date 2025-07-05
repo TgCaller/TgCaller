@@ -105,6 +105,6 @@ await caller.play(chat_id, "video.mp4")
 
 ## Need Help?
 
-- **[Documentation](https://tgcaller.readthedocs.io)** - Complete guides
+- **[Documentation](https://tgcaller.github.io/TgCaller/)** - Complete guides
 - **[Telegram Group](https://t.me/tgcaller)** - Get help from community
-- **[GitHub Issues](https://github.com/tgcaller/tgcaller/issues)** - Report bugs
+- **[GitHub Issues](https://github.com/TgCaller/TgCaller/issues)** - Report bugs
