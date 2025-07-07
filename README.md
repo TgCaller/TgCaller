@@ -11,7 +11,7 @@
 
 *Built for developers who need a simple yet powerful solution for Telegram voice and video calls*
 
-[** Documentation**](https://tgcaller.readthedocs.io) • [** Examples**](https://github.com/tgcaller/tgcaller/tree/main/examples) • [** Community**](https://t.me/tgcaller) • [** Issues**](https://github.com/tgcaller/tgcaller/issues)
+[** Documentation**](https://tgcaller.github.io/TgCaller/) • [** Examples**](https://github.com/tgcaller/tgcaller/tree/main/examples) • [** Community**](https://t.me/TgCallerOfficial) • [** Issues**](https://github.com/tgcaller/tgcaller/issues)
 
 </div>
 
