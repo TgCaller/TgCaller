@@ -5,7 +5,7 @@
 [![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)](https://pypi.org/project/tgcaller/)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/tgcaller/tgcaller/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue)](https://pypi.org/project/tgcaller/)
+[![Downloads](https://img.shields.io/pypi/dt/tgcaller?style=for-the-badge&color=blue)](https://pypi.org/project/tgcaller/)
 
 ** Modern, Fast, and Reliable Telegram Group Calls Library**
 
@@ -16,6 +16,7 @@
 </div>
 
 ---
+
 
 ##  **Why TgCaller?**
 
