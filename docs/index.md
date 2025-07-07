@@ -1,14 +1,8 @@
 # TgCaller
 
-<!--
-  PROBLEM FIX:
-  1. Do not use <div> with markdown badges inside. Use pure markdown for badges, then optionally use <div align="center"> only for text/buttons if needed.
-  2. Avoid HTML wrappers around badges, as Material for MkDocs disables markdown parsing inside HTML. 
--->
-
 [![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)](https://pypi.org/project/tgcaller/)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/TgCaller/TgCaller/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/tgcaller/TgCaller/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue)](https://pypi.org/project/tgcaller/)
 [![GitHub Stars](https://img.shields.io/github/stars/TgCaller/TgCaller?style=for-the-badge&logo=github)](https://github.com/TgCaller/TgCaller)
 
@@ -29,12 +23,6 @@
 
 TgCaller is a modern alternative to pytgcalls, designed with developer experience and reliability in mind:
 
-<!--
-  PROBLEM FIX:
-  3. For feature cards, Material for MkDocs disables markdown inside HTML.
-     For best cross-compatibility, use pure markdown for features, or keep as is if you are happy with simple HTML fallback.
--->
-
 - 🚀 **Fast & Lightweight**: Optimized performance, 3x faster connection times compared to alternatives.
 - 📱 **Easy to Use**: Simple, intuitive API with less boilerplate code, more functionality.
 - 🔧 **Reliable**: Built-in error handling and auto-recovery. <2% error rate in production environments.
@@ -54,10 +42,10 @@ TgCaller is a modern alternative to pytgcalls, designed with developer experienc
     pip install tgcaller
     ```
 
-=== "With Video Support"
+=== "With CLI Tools"
 
     ```bash
-    pip install tgcaller[media]
+    pip install tgcaller[cli]
     ```
 
 === "Complete Installation"
@@ -65,6 +53,19 @@ TgCaller is a modern alternative to pytgcalls, designed with developer experienc
     ```bash
     pip install tgcaller[all]
     ```
+
+### Verify Installation
+
+```bash
+# Test installation
+tgcaller test
+
+# Check system info
+tgcaller info
+
+# Show examples
+tgcaller examples
+```
 
 ### Basic Usage
 
@@ -193,6 +194,26 @@ await screen_streamer.start_streaming(monitor_index=1)
 # Stream YouTube
 youtube = YouTubeStreamer(caller)
 await youtube.play_youtube_url(chat_id, "https://youtube.com/watch?v=...")
+```
+
+---
+
+## 🛠️ CLI Tools
+
+TgCaller comes with powerful CLI tools:
+
+```bash
+# Test installation
+tgcaller test --api-id 12345 --api-hash "your_hash"
+
+# System diagnostics
+tgcaller diagnose
+
+# Show examples
+tgcaller examples
+
+# Get help
+tgcaller --help
 ```
 
 ---

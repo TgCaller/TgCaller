@@ -41,6 +41,11 @@ python-dotenv>=1.0.0
 # Web server for custom API
 aiohttp>=3.8.4
 
+# CLI enhancements
+rich>=13.0.0
+pyfiglet>=0.8.0
+colorama>=0.4.6
+
 # Development tools (optional)
 black>=23.3.0
 isort>=5.12.0

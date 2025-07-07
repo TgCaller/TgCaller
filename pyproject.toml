@@ -76,16 +76,21 @@ advanced = [
     "mss>=9.0.1",
     "torch>=2.0.0",
 ]
+cli = [
+    "rich>=13.0.0",
+    "pyfiglet>=0.8.0",
+    "colorama>=0.4.6",
+]
 all = [
-    "tgcaller[dev,media,audio,advanced]"
+    "tgcaller[dev,media,audio,advanced,cli]"
 ]
 
 [project.urls]
 Homepage = "https://github.com/tgcaller/tgcaller"
-Documentation = "https://tgcaller.readthedocs.io"
+Documentation = "https://tgcaller.github.io/TgCaller/"
 Repository = "https://github.com/tgcaller/tgcaller"
 Issues = "https://github.com/tgcaller/tgcaller/issues"
-Community = "https://t.me/tgcaller"
+Community = "https://t.me/TgCallerOfficial"
 
 [project.scripts]
 tgcaller = "tgcaller.cli:main"
