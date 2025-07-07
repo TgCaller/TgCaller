@@ -111,7 +111,8 @@ extra:
 extra_css:
   - stylesheets/extra.css
 
-# Sirf plain text ya HTML hi rakhna yahan, markdown badge nahi
 copyright: |
   Copyright © 2024 TgCaller Team<br>
-  Made with <span style="color: red;">&#10084;</span> for the Telegram developer community
+  Made with <span style="color: red;">&#10084;</span> for the Telegram developer community<br>
+  <a href="https://tgcaller.github.io/TgCaller/">Documentation</a> | 
+  <a href="https://t.me/TgCallerOfficial">Community</a>
