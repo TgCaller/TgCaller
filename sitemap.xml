@@ -2,34 +2,54 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://tgcaller.github.io/TgCaller/</loc>
-         <lastmod>2025-07-05</lastmod>
+         <lastmod>2025-07-07</lastmod>
     </url>
     <url>
          <loc>https://tgcaller.github.io/TgCaller/api/</loc>
-         <lastmod>2025-07-05</lastmod>
+         <lastmod>2025-07-07</lastmod>
     </url>
     <url>
          <loc>https://tgcaller.github.io/TgCaller/changelog/</loc>
-         <lastmod>2025-07-05</lastmod>
+         <lastmod>2025-07-07</lastmod>
     </url>
     <url>
          <loc>https://tgcaller.github.io/TgCaller/installation/</loc>
-         <lastmod>2025-07-05</lastmod>
+         <lastmod>2025-07-07</lastmod>
     </url>
     <url>
          <loc>https://tgcaller.github.io/TgCaller/migration/</loc>
-         <lastmod>2025-07-05</lastmod>
+         <lastmod>2025-07-07</lastmod>
     </url>
     <url>
          <loc>https://tgcaller.github.io/TgCaller/plugins/</loc>
-         <lastmod>2025-07-05</lastmod>
+         <lastmod>2025-07-07</lastmod>
     </url>
     <url>
          <loc>https://tgcaller.github.io/TgCaller/usage/</loc>
-         <lastmod>2025-07-05</lastmod>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://tgcaller.github.io/TgCaller/c-api/advanced-methods/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://tgcaller.github.io/TgCaller/c-api/async/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://tgcaller.github.io/TgCaller/c-api/basic-methods/</loc>
+         <lastmod>2025-07-07</lastmod>
     </url>
     <url>
          <loc>https://tgcaller.github.io/TgCaller/c-api/enums/</loc>
-         <lastmod>2025-07-05</lastmod>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://tgcaller.github.io/TgCaller/c-api/stream-methods/</loc>
+         <lastmod>2025-07-07</lastmod>
+    </url>
+    <url>
+         <loc>https://tgcaller.github.io/TgCaller/c-api/structs/</loc>
+         <lastmod>2025-07-07</lastmod>
     </url>
 </urlset>

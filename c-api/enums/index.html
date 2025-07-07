@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://tgcaller.github.io/TgCaller/c-api/enums/">
       
       
-        <link rel="prev" href="../../installation/">
+        <link rel="prev" href="../structs/">
       
       
         <link rel="next" href="../../changelog/">
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#c-api-enums" class="md-skip">
+        <a href="#available-enums" class="md-skip">
           Skip to content
         </a>
       
@@ -726,7 +726,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../async.md" class="md-nav__link">
+      <a href="../async/" class="md-nav__link">
         
   
   
@@ -749,7 +749,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../basic-methods.md" class="md-nav__link">
+      <a href="../basic-methods/" class="md-nav__link">
         
   
   
@@ -772,7 +772,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../stream-methods.md" class="md-nav__link">
+      <a href="../stream-methods/" class="md-nav__link">
         
   
   
@@ -795,7 +795,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../advanced-methods.md" class="md-nav__link">
+      <a href="../advanced-methods/" class="md-nav__link">
         
   
   
@@ -818,7 +818,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../structs.md" class="md-nav__link">
+      <a href="../structs/" class="md-nav__link">
         
   
   
@@ -850,6 +850,19 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Available Enums
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -861,6 +874,412 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#error-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Codes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Codes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallererror" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerError
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stream-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stream Status
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stream Status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerstreamstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerStreamStatus
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#call-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      Call Status
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Call Status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallercallstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerCallStatus
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#codecs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Codecs
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Codecs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallercodec" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerCodec
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#media-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      Media Formats
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Media Formats">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerformat" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerFormat
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quality-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quality Presets
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quality Presets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerquality" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerQuality
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repeat-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Repeat Modes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Repeat Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerrepeatmode" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerRepeatMode
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#event-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Event Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Event Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerstreameventtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerStreamEventType
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tgcallercalleventtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerCallEventType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filter-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filter Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filter Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerfiltertype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerFilterType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whisper-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      Whisper Models
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Whisper Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerwhispermodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerWhisperModel
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      Log Levels
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Log Levels">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerloglevel" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerLogLevel
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#device-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Device Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Device Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerdevicetype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerDeviceType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connection-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connection Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Connection Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerconnectiontype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerConnectionType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stream-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stream Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stream Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerstreamtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerStreamType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-checking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Status Checking
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quality-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quality Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -916,6 +1335,401 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#error-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Codes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Codes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallererror" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerError
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stream-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stream Status
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stream Status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerstreamstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerStreamStatus
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#call-status" class="md-nav__link">
+    <span class="md-ellipsis">
+      Call Status
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Call Status">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallercallstatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerCallStatus
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#codecs" class="md-nav__link">
+    <span class="md-ellipsis">
+      Codecs
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Codecs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallercodec" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerCodec
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#media-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      Media Formats
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Media Formats">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerformat" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerFormat
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quality-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quality Presets
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quality Presets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerquality" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerQuality
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repeat-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Repeat Modes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Repeat Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerrepeatmode" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerRepeatMode
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#event-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Event Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Event Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerstreameventtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerStreamEventType
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tgcallercalleventtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerCallEventType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filter-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filter Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Filter Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerfiltertype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerFilterType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whisper-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      Whisper Models
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Whisper Models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerwhispermodel" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerWhisperModel
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#log-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      Log Levels
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Log Levels">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerloglevel" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerLogLevel
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#device-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Device Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Device Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerdevicetype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerDeviceType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connection-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Connection Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Connection Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerconnectiontype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerConnectionType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stream-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stream Types
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stream Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tgcallerstreamtype" class="md-nav__link">
+    <span class="md-ellipsis">
+      TgCallerStreamType
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#status-checking" class="md-nav__link">
+    <span class="md-ellipsis">
+      Status Checking
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quality-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Quality Configuration
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -933,8 +1747,279 @@
   
 
 
-<h1 id="c-api-enums">C API - Enums</h1>
-<p>Ye section abhi development me hai.</p>
+<h1 id="available-enums">Available Enums</h1>
+<h2 id="error-codes">Error Codes</h2>
+<h3 id="tgcallererror">TgCallerError</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">TGCALLER_SUCCESS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">                    </span><span class="c1">// Operation successful</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_INVALID_PARAMETER</span><span class="p">,</span><span class="w">       </span><span class="c1">// Invalid parameter passed</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_NOT_INITIALIZED</span><span class="p">,</span><span class="w">         </span><span class="c1">// TgCaller not initialized</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_NOT_CONNECTED</span><span class="p">,</span><span class="w">           </span><span class="c1">// Not connected to Telegram</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_ALREADY_CONNECTED</span><span class="p">,</span><span class="w">       </span><span class="c1">// Already connected</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_CONNECTION_FAILED</span><span class="p">,</span><span class="w">       </span><span class="c1">// Connection failed</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_INVALID_CHAT</span><span class="p">,</span><span class="w">            </span><span class="c1">// Invalid chat ID</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_ALREADY_IN_CALL</span><span class="p">,</span><span class="w">         </span><span class="c1">// Already in call</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_NOT_IN_CALL</span><span class="p">,</span><span class="w">             </span><span class="c1">// Not in call</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_CALL_FAILED</span><span class="p">,</span><span class="w">             </span><span class="c1">// Call operation failed</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_STREAM_FAILED</span><span class="p">,</span><span class="w">           </span><span class="c1">// Stream operation failed</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_FILE_NOT_FOUND</span><span class="p">,</span><span class="w">          </span><span class="c1">// Media file not found</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_INVALID_FORMAT</span><span class="p">,</span><span class="w">          </span><span class="c1">// Invalid media format</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_CODEC_ERROR</span><span class="p">,</span><span class="w">             </span><span class="c1">// Codec error</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_DEVICE_ERROR</span><span class="p">,</span><span class="w">            </span><span class="c1">// Audio/video device error</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_PERMISSION_DENIED</span><span class="p">,</span><span class="w">       </span><span class="c1">// Permission denied</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_NETWORK_ERROR</span><span class="p">,</span><span class="w">           </span><span class="c1">// Network error</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_TIMEOUT</span><span class="p">,</span><span class="w">                 </span><span class="c1">// Operation timeout</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_OUT_OF_MEMORY</span><span class="p">,</span><span class="w">           </span><span class="c1">// Out of memory</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="n">TGCALLER_ERROR_UNKNOWN</span><span class="w">                  </span><span class="c1">// Unknown error</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerError</span><span class="p">;</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="c1">// Get error string</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="k">const</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="nf">tgcaller_error_string</span><span class="p">(</span><span class="n">TgCallerError</span><span class="w"> </span><span class="n">error</span><span class="p">);</span>
+</span></code></pre></div>
+<h2 id="stream-status">Stream Status</h2>
+<h3 id="tgcallerstreamstatus">TgCallerStreamStatus</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_IDLE</span><span class="p">,</span><span class="w">           </span><span class="c1">// No active stream</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_LOADING</span><span class="p">,</span><span class="w">        </span><span class="c1">// Loading stream</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_PLAYING</span><span class="p">,</span><span class="w">        </span><span class="c1">// Stream is playing</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_PAUSED</span><span class="p">,</span><span class="w">         </span><span class="c1">// Stream is paused</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_STOPPED</span><span class="p">,</span><span class="w">        </span><span class="c1">// Stream is stopped</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_ERROR</span><span class="w">           </span><span class="c1">// Stream error</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerStreamStatus</span><span class="p">;</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1">// Get stream status</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">TgCallerError</span><span class="w"> </span><span class="nf">tgcaller_get_stream_status</span><span class="p">(</span><span class="n">TgCaller</span><span class="o">*</span><span class="w"> </span><span class="n">caller</span><span class="p">,</span><span class="w"> </span><span class="kt">int64_t</span><span class="w"> </span><span class="n">chat_id</span><span class="p">,</span><span class="w"> </span><span class="n">TgCallerStreamStatus</span><span class="o">*</span><span class="w"> </span><span class="n">status</span><span class="p">);</span>
+</span></code></pre></div>
+<h2 id="call-status">Call Status</h2>
+<h3 id="tgcallercallstatus">TgCallerCallStatus</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="n">TGCALLER_CALL_IDLE</span><span class="p">,</span><span class="w">             </span><span class="c1">// Not in call</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="n">TGCALLER_CALL_CONNECTING</span><span class="p">,</span><span class="w">       </span><span class="c1">// Connecting to call</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="n">TGCALLER_CALL_CONNECTED</span><span class="p">,</span><span class="w">        </span><span class="c1">// Connected to call</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="n">TGCALLER_CALL_DISCONNECTING</span><span class="p">,</span><span class="w">    </span><span class="c1">// Disconnecting from call</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="n">TGCALLER_CALL_ERROR</span><span class="w">             </span><span class="c1">// Call error</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerCallStatus</span><span class="p">;</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1">// Get call status</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="n">TgCallerError</span><span class="w"> </span><span class="nf">tgcaller_get_call_status</span><span class="p">(</span><span class="n">TgCaller</span><span class="o">*</span><span class="w"> </span><span class="n">caller</span><span class="p">,</span><span class="w"> </span><span class="kt">int64_t</span><span class="w"> </span><span class="n">chat_id</span><span class="p">,</span><span class="w"> </span><span class="n">TgCallerCallStatus</span><span class="o">*</span><span class="w"> </span><span class="n">status</span><span class="p">);</span>
+</span></code></pre></div>
+<h2 id="codecs">Codecs</h2>
+<h3 id="tgcallercodec">TgCallerCodec</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="c1">// Audio codecs</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="n">TGCALLER_CODEC_OPUS</span><span class="p">,</span><span class="w">            </span><span class="c1">// Opus codec (recommended for audio)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="n">TGCALLER_CODEC_AAC</span><span class="p">,</span><span class="w">             </span><span class="c1">// AAC codec</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="n">TGCALLER_CODEC_MP3</span><span class="p">,</span><span class="w">             </span><span class="c1">// MP3 codec</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="n">TGCALLER_CODEC_PCM</span><span class="p">,</span><span class="w">             </span><span class="c1">// Raw PCM</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="c1">// Video codecs</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="n">TGCALLER_CODEC_H264</span><span class="p">,</span><span class="w">            </span><span class="c1">// H.264 codec (recommended for video)</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="n">TGCALLER_CODEC_VP8</span><span class="p">,</span><span class="w">             </span><span class="c1">// VP8 codec</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="n">TGCALLER_CODEC_VP9</span><span class="p">,</span><span class="w">             </span><span class="c1">// VP9 codec</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="n">TGCALLER_CODEC_AV1</span><span class="w">              </span><span class="c1">// AV1 codec</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerCodec</span><span class="p">;</span>
+</span></code></pre></div>
+<h2 id="media-formats">Media Formats</h2>
+<h3 id="tgcallerformat">TgCallerFormat</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_PCM</span><span class="p">,</span><span class="w">            </span><span class="c1">// Raw PCM audio</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_MP3</span><span class="p">,</span><span class="w">            </span><span class="c1">// MP3 audio</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_WAV</span><span class="p">,</span><span class="w">            </span><span class="c1">// WAV audio</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_OGG</span><span class="p">,</span><span class="w">            </span><span class="c1">// OGG audio</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_FLAC</span><span class="p">,</span><span class="w">           </span><span class="c1">// FLAC audio</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_AAC</span><span class="p">,</span><span class="w">            </span><span class="c1">// AAC audio</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_MP4</span><span class="p">,</span><span class="w">            </span><span class="c1">// MP4 video</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_AVI</span><span class="p">,</span><span class="w">            </span><span class="c1">// AVI video</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_MKV</span><span class="p">,</span><span class="w">            </span><span class="c1">// MKV video</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_WEBM</span><span class="p">,</span><span class="w">           </span><span class="c1">// WebM video</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">    </span><span class="n">TGCALLER_FORMAT_MOV</span><span class="w">             </span><span class="c1">// MOV video</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerFormat</span><span class="p">;</span>
+</span></code></pre></div>
+<h2 id="quality-presets">Quality Presets</h2>
+<h3 id="tgcallerquality">TgCallerQuality</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="n">TGCALLER_QUALITY_LOW</span><span class="p">,</span><span class="w">           </span><span class="c1">// Low quality (bandwidth optimized)</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="n">TGCALLER_QUALITY_MEDIUM</span><span class="p">,</span><span class="w">        </span><span class="c1">// Medium quality (balanced)</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="n">TGCALLER_QUALITY_HIGH</span><span class="p">,</span><span class="w">          </span><span class="c1">// High quality (quality optimized)</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="n">TGCALLER_QUALITY_ULTRA</span><span class="p">,</span><span class="w">         </span><span class="c1">// Ultra quality (maximum quality)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="n">TGCALLER_QUALITY_CUSTOM</span><span class="w">         </span><span class="c1">// Custom quality (use specific config)</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerQuality</span><span class="p">;</span>
+</span></code></pre></div>
+<h2 id="repeat-modes">Repeat Modes</h2>
+<h3 id="tgcallerrepeatmode">TgCallerRepeatMode</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="n">TGCALLER_REPEAT_NONE</span><span class="p">,</span><span class="w">           </span><span class="c1">// No repeat</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="n">TGCALLER_REPEAT_ONE</span><span class="p">,</span><span class="w">            </span><span class="c1">// Repeat current track</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="n">TGCALLER_REPEAT_ALL</span><span class="w">             </span><span class="c1">// Repeat all tracks in queue</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerRepeatMode</span><span class="p">;</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1">// Set repeat mode</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">TgCallerError</span><span class="w"> </span><span class="nf">tgcaller_set_repeat_mode</span><span class="p">(</span><span class="n">TgCaller</span><span class="o">*</span><span class="w"> </span><span class="n">caller</span><span class="p">,</span><span class="w"> </span><span class="kt">int64_t</span><span class="w"> </span><span class="n">chat_id</span><span class="p">,</span><span class="w"> </span><span class="n">TgCallerRepeatMode</span><span class="w"> </span><span class="n">mode</span><span class="p">);</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="c1">// Get repeat mode</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="n">TgCallerError</span><span class="w"> </span><span class="nf">tgcaller_get_repeat_mode</span><span class="p">(</span><span class="n">TgCaller</span><span class="o">*</span><span class="w"> </span><span class="n">caller</span><span class="p">,</span><span class="w"> </span><span class="kt">int64_t</span><span class="w"> </span><span class="n">chat_id</span><span class="p">,</span><span class="w"> </span><span class="n">TgCallerRepeatMode</span><span class="o">*</span><span class="w"> </span><span class="n">mode</span><span class="p">);</span>
+</span></code></pre></div>
+<h2 id="event-types">Event Types</h2>
+<h3 id="tgcallerstreameventtype">TgCallerStreamEventType</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_STARTED</span><span class="p">,</span><span class="w">        </span><span class="c1">// Stream started</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_ENDED</span><span class="p">,</span><span class="w">          </span><span class="c1">// Stream ended</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_PAUSED</span><span class="p">,</span><span class="w">         </span><span class="c1">// Stream paused</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_RESUMED</span><span class="p">,</span><span class="w">        </span><span class="c1">// Stream resumed</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_POSITION</span><span class="p">,</span><span class="w">       </span><span class="c1">// Position changed</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_ERROR</span><span class="w">           </span><span class="c1">// Stream error</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerStreamEventType</span><span class="p">;</span>
+</span></code></pre></div>
+<h3 id="tgcallercalleventtype">TgCallerCallEventType</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="n">TGCALLER_CALL_JOINED</span><span class="p">,</span><span class="w">           </span><span class="c1">// Joined call</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="n">TGCALLER_CALL_LEFT</span><span class="p">,</span><span class="w">             </span><span class="c1">// Left call</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="n">TGCALLER_CALL_USER_JOINED</span><span class="p">,</span><span class="w">      </span><span class="c1">// User joined call</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="n">TGCALLER_CALL_USER_LEFT</span><span class="p">,</span><span class="w">        </span><span class="c1">// User left call</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="n">TGCALLER_CALL_KICKED</span><span class="p">,</span><span class="w">           </span><span class="c1">// Kicked from call</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="n">TGCALLER_CALL_ERROR</span><span class="w">             </span><span class="c1">// Call error</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerCallEventType</span><span class="p">;</span>
+</span></code></pre></div>
+<h2 id="filter-types">Filter Types</h2>
+<h3 id="tgcallerfiltertype">TgCallerFilterType</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="c1">// Audio filters</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_ECHO</span><span class="p">,</span><span class="w">           </span><span class="c1">// Echo effect</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_REVERB</span><span class="p">,</span><span class="w">         </span><span class="c1">// Reverb effect</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_PITCH_SHIFT</span><span class="p">,</span><span class="w">    </span><span class="c1">// Pitch shifting</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_DISTORTION</span><span class="p">,</span><span class="w">     </span><span class="c1">// Distortion effect</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_NOISE_GATE</span><span class="p">,</span><span class="w">     </span><span class="c1">// Noise gate</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_COMPRESSOR</span><span class="p">,</span><span class="w">     </span><span class="c1">// Audio compressor</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_EQUALIZER</span><span class="p">,</span><span class="w">      </span><span class="c1">// Equalizer</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">    </span><span class="c1">// Video filters</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_BLUR</span><span class="p">,</span><span class="w">           </span><span class="c1">// Blur effect</span>
+</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_SHARPEN</span><span class="p">,</span><span class="w">        </span><span class="c1">// Sharpen effect</span>
+</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_SEPIA</span><span class="p">,</span><span class="w">          </span><span class="c1">// Sepia effect</span>
+</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_GRAYSCALE</span><span class="p">,</span><span class="w">      </span><span class="c1">// Grayscale effect</span>
+</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_COLOR_ADJUST</span><span class="p">,</span><span class="w">   </span><span class="c1">// Color adjustment</span>
+</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_COLOR_BALANCE</span><span class="p">,</span><span class="w">  </span><span class="c1">// Color balance</span>
+</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_EDGE_DETECT</span><span class="p">,</span><span class="w">    </span><span class="c1">// Edge detection</span>
+</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">    </span><span class="n">TGCALLER_FILTER_CARTOON</span><span class="w">         </span><span class="c1">// Cartoon effect</span>
+</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerFilterType</span><span class="p">;</span>
+</span></code></pre></div>
+<h2 id="whisper-models">Whisper Models</h2>
+<h3 id="tgcallerwhispermodel">TgCallerWhisperModel</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="n">TGCALLER_WHISPER_TINY</span><span class="p">,</span><span class="w">          </span><span class="c1">// Tiny model (~39 MB)</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="n">TGCALLER_WHISPER_BASE</span><span class="p">,</span><span class="w">          </span><span class="c1">// Base model (~74 MB)</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="n">TGCALLER_WHISPER_SMALL</span><span class="p">,</span><span class="w">         </span><span class="c1">// Small model (~244 MB)</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="n">TGCALLER_WHISPER_MEDIUM</span><span class="p">,</span><span class="w">        </span><span class="c1">// Medium model (~769 MB)</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="n">TGCALLER_WHISPER_LARGE</span><span class="p">,</span><span class="w">         </span><span class="c1">// Large model (~1550 MB)</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">    </span><span class="n">TGCALLER_WHISPER_LARGE_V2</span><span class="p">,</span><span class="w">      </span><span class="c1">// Large v2 model (~1550 MB)</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="n">TGCALLER_WHISPER_LARGE_V3</span><span class="w">       </span><span class="c1">// Large v3 model (~1550 MB)</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerWhisperModel</span><span class="p">;</span>
+</span></code></pre></div>
+<h2 id="log-levels">Log Levels</h2>
+<h3 id="tgcallerloglevel">TgCallerLogLevel</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="n">TGCALLER_LOG_TRACE</span><span class="p">,</span><span class="w">             </span><span class="c1">// Trace level (most verbose)</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="n">TGCALLER_LOG_DEBUG</span><span class="p">,</span><span class="w">             </span><span class="c1">// Debug level</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">    </span><span class="n">TGCALLER_LOG_INFO</span><span class="p">,</span><span class="w">              </span><span class="c1">// Info level</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="n">TGCALLER_LOG_WARNING</span><span class="p">,</span><span class="w">           </span><span class="c1">// Warning level</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="n">TGCALLER_LOG_ERROR</span><span class="p">,</span><span class="w">             </span><span class="c1">// Error level</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="n">TGCALLER_LOG_CRITICAL</span><span class="p">,</span><span class="w">          </span><span class="c1">// Critical level</span>
+</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">    </span><span class="n">TGCALLER_LOG_OFF</span><span class="w">                </span><span class="c1">// Logging disabled</span>
+</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerLogLevel</span><span class="p">;</span>
+</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>
+</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="c1">// Set log level</span>
+</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="n">TgCallerError</span><span class="w"> </span><span class="nf">tgcaller_set_log_level</span><span class="p">(</span><span class="n">TgCallerLogLevel</span><span class="w"> </span><span class="n">level</span><span class="p">);</span>
+</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>
+</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="c1">// Get current log level</span>
+</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="n">TgCallerLogLevel</span><span class="w"> </span><span class="nf">tgcaller_get_log_level</span><span class="p">(</span><span class="kt">void</span><span class="p">);</span>
+</span></code></pre></div>
+<h2 id="device-types">Device Types</h2>
+<h3 id="tgcallerdevicetype">TgCallerDeviceType</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="n">TGCALLER_DEVICE_AUDIO_INPUT</span><span class="p">,</span><span class="w">    </span><span class="c1">// Audio input device (microphone)</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="n">TGCALLER_DEVICE_AUDIO_OUTPUT</span><span class="p">,</span><span class="w">   </span><span class="c1">// Audio output device (speakers)</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="n">TGCALLER_DEVICE_VIDEO_INPUT</span><span class="p">,</span><span class="w">    </span><span class="c1">// Video input device (camera)</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="n">TGCALLER_DEVICE_MONITOR</span><span class="w">         </span><span class="c1">// Monitor/display device</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerDeviceType</span><span class="p">;</span>
+</span></code></pre></div>
+<h2 id="connection-types">Connection Types</h2>
+<h3 id="tgcallerconnectiontype">TgCallerConnectionType</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="n">TGCALLER_CONNECTION_UDP</span><span class="p">,</span><span class="w">        </span><span class="c1">// UDP connection (default)</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="n">TGCALLER_CONNECTION_TCP</span><span class="p">,</span><span class="w">        </span><span class="c1">// TCP connection</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="n">TGCALLER_CONNECTION_TLS</span><span class="w">         </span><span class="c1">// TLS connection</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerConnectionType</span><span class="p">;</span>
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1">// Set connection type</span>
+</span><span id="__span-13-8"><a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="n">TgCallerError</span><span class="w"> </span><span class="nf">tgcaller_set_connection_type</span><span class="p">(</span><span class="n">TgCaller</span><span class="o">*</span><span class="w"> </span><span class="n">caller</span><span class="p">,</span><span class="w"> </span><span class="n">TgCallerConnectionType</span><span class="w"> </span><span class="n">type</span><span class="p">);</span>
+</span></code></pre></div>
+<h2 id="stream-types">Stream Types</h2>
+<h3 id="tgcallerstreamtype">TgCallerStreamType</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">typedef</span><span class="w"> </span><span class="k">enum</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_AUDIO</span><span class="p">,</span><span class="w">          </span><span class="c1">// Audio only stream</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_VIDEO</span><span class="p">,</span><span class="w">          </span><span class="c1">// Video stream (includes audio)</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_SCREEN</span><span class="p">,</span><span class="w">         </span><span class="c1">// Screen sharing stream</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_MICROPHONE</span><span class="p">,</span><span class="w">     </span><span class="c1">// Live microphone input</span>
+</span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_CAMERA</span><span class="p">,</span><span class="w">         </span><span class="c1">// Live camera input</span>
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">    </span><span class="n">TGCALLER_STREAM_MIXED</span><span class="w">           </span><span class="c1">// Mixed audio/video stream</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="p">}</span><span class="w"> </span><span class="n">TgCallerStreamType</span><span class="p">;</span>
+</span></code></pre></div>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="error-handling">Error Handling</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="n">TgCallerError</span><span class="w"> </span><span class="n">error</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tgcaller_join_call</span><span class="p">(</span><span class="n">caller</span><span class="p">,</span><span class="w"> </span><span class="n">chat_id</span><span class="p">);</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="no">TGCALLER_SUCCESS</span><span class="p">:</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Successfully joined call</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">        </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="no">TGCALLER_ERROR_NOT_CONNECTED</span><span class="p">:</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">        </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Not connected to Telegram</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">        </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="no">TGCALLER_ERROR_INVALID_CHAT</span><span class="p">:</span>
+</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="w">        </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Invalid chat ID</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="w">        </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="no">TGCALLER_ERROR_ALREADY_IN_CALL</span><span class="p">:</span>
+</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="w">        </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Already in call</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a><span class="w">        </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a><span class="w">    </span><span class="k">default</span><span class="o">:</span>
+</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a><span class="w">        </span><span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Error: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">tgcaller_error_string</span><span class="p">(</span><span class="n">error</span><span class="p">));</span>
+</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a><span class="w">        </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-15-19"><a id="__codelineno-15-19" name="__codelineno-15-19" href="#__codelineno-15-19"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="status-checking">Status Checking</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="n">TgCallerStreamStatus</span><span class="w"> </span><span class="n">status</span><span class="p">;</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="n">TgCallerError</span><span class="w"> </span><span class="n">error</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tgcaller_get_stream_status</span><span class="p">(</span><span class="n">caller</span><span class="p">,</span><span class="w"> </span><span class="n">chat_id</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">status</span><span class="p">);</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">error</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">TGCALLER_SUCCESS</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="n">status</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="no">TGCALLER_STREAM_PLAYING</span><span class="p">:</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">            </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Stream is currently playing</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">            </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="no">TGCALLER_STREAM_PAUSED</span><span class="p">:</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">            </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Stream is paused</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">            </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="no">TGCALLER_STREAM_IDLE</span><span class="p">:</span>
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="w">            </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;No active stream</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="w">            </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="w">        </span><span class="k">default</span><span class="o">:</span>
+</span><span id="__span-16-16"><a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a><span class="w">            </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Stream status: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">status</span><span class="p">);</span>
+</span><span id="__span-16-17"><a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a><span class="w">            </span><span class="k">break</span><span class="p">;</span>
+</span><span id="__span-16-18"><a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-16-19"><a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="quality-configuration">Quality Configuration</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">// Use quality preset</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="n">TgCallerVideoConfig</span><span class="w"> </span><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tgcaller_video_config_default</span><span class="p">();</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="n">config</span><span class="p">.</span><span class="n">quality</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TGCALLER_QUALITY_HIGH</span><span class="p">;</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="c1">// Or use specific codec</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="n">config</span><span class="p">.</span><span class="n">codec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TGCALLER_CODEC_H264</span><span class="p">;</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="n">config</span><span class="p">.</span><span class="n">quality</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TGCALLER_QUALITY_CUSTOM</span><span class="p">;</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="n">config</span><span class="p">.</span><span class="n">bitrate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2000000</span><span class="p">;</span><span class="w">  </span><span class="c1">// 2 Mbps</span>
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>
+</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="n">TgCallerError</span><span class="w"> </span><span class="n">error</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tgcaller_set_video_config</span><span class="p">(</span><span class="n">caller</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">config</span><span class="p">);</span>
+</span></code></pre></div>
+<p>All enums provide meaningful values that can be used for configuration, status checking, and error handling throughout the TgCaller C API.</p>
 
 
 
@@ -973,8 +2058,9 @@
   
     <div class="md-copyright__highlight">
       Copyright © 2024 TgCaller Team<br>
-Made with <span style="color: red;">&#10084;</span> for the Telegram developer community
-
+Made with <span style="color: red;">&#10084;</span> for the Telegram developer community<br>
+<a href="https://tgcaller.github.io/TgCaller/">Documentation</a> | 
+<a href="https://t.me/TgCallerOfficial">Community</a>
     </div>
   
   
