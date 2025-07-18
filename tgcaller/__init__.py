@@ -6,7 +6,7 @@ A simple, fast, and reliable library for Telegram voice and video calls
 with advanced features like screen sharing, transcription, and more.
 """
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __author__ = "TgCaller Team"
 __email__ = "team@tgcaller.dev"
 __license__ = "MIT"
