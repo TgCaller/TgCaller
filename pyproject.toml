@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tgcaller"
-version = "1.0.2"
+version = "1.0.3"
 description = "Modern, fast, and reliable Telegram group calls library with advanced features"
 readme = "README.md"
 license = {text = "MIT"}
