@@ -116,8 +116,11 @@ extra:
 extra_css:
   - stylesheets/extra.css
 
-copyright: |
-  Copyright © 2024 TgCaller Team<br>
-  Made with <span style="color: red;">&#10084;</span> for the Telegram developer community<br>
-  <a href="https://tgcaller.github.io/TgCaller/">Documentation</a> | 
-  <a href="https://t.me/TgCallerOfficial">Community</a>
+site_url: https://tgcaller.github.io/TgCaller/
+
+extra:
+  copyright: |
+    Copyright © 2024 TgCaller Team<br>
+    Made with <span style="color: red;">&#10084;</span> for the Telegram developer community<br>
+    <a href="https://tgcaller.github.io/TgCaller/">Documentation</a> | 
+    <a href="https://t.me/TgCallerOfficial">Community</a>
