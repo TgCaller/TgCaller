@@ -34,25 +34,24 @@ theme:
 
 nav:
   - Home: index.md
-  - Installation: installation.md
-  - Python API:
-      - Client: api/client.md
-      - Callbacks: api/callbacks.md
-      - Basic Methods: api/basic-methods.md
-      - Stream Methods: api/stream-methods.md
-      - Advanced Methods: api/advanced-methods.md
-      - Available Types: api/types.md
-      - Available Enums: api/enums.md
-  - C API:
-      - Getting Started: c-api/getting-started.md
-      - Callback Registration: c-api/callbacks.md
-      - Using Async: c-api/async.md
-      - Basic Methods: c-api/basic-methods.md
-      - Stream Methods: c-api/stream-methods.md
-      - Advanced Methods: c-api/advanced-methods.md
-      - Available Structs: c-api/structs.md
-      - Available Enums: c-api/enums.md
-  - Changelogs: changelog.md
+  - Getting Started:
+      - Installation: installation.md
+      - Usage Guide: usage.md
+      - CLI Tools: cli.md
+  - Advanced Features:
+      - Advanced Guide: advanced.md
+      - Plugin System: plugins.md
+      - Docker Deployment: docker.md
+  - API Reference:
+      - Python API: api.md
+      - C API: c-api/
+  - Migration & Support:
+      - Migration Guide: migration.md
+      - FAQ: faq.md
+      - Troubleshooting: troubleshooting.md
+      - Contributing: contributing.md
+      - Code of Conduct: code_of_conduct.md
+      - Changelog: changelog.md
 
 markdown_extensions:
   - pymdownx.highlight:
