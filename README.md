@@ -1,6 +1,6 @@
 
 <p align="center">
-  <img src="https://github.com/TgCaller/TgCaller/raw/main/assets/file_00000000b92c61f988c7c26e569da392_1_optimized_50.png" alt="TgCaller Banner" width="100%">
+  <img src="https://github.com/TgCaller/TgCaller/raw/main/assets/file_00000000b92c61f988c7c26e569da392_1_optimized_50.png" alt="TgCaller Banner" width="720">
 </p>
 
 <h1 align="center">TgCaller</h1>
@@ -500,12 +500,14 @@ tgcaller test
 This project is licensed under the MIT License - see the [LICENSE](https://github.com/tgcaller/tgcaller/blob/main/LICENSE) file for details.
 
 ---
-
 ## 💖 Sponsor
 
 <p align="center">
   <a href="https://jhoommusic.com" target="_blank">
     <img src="https://github.com/TgCaller/TgCaller/raw/main/assets/Designer%20(16).jpeg" alt="Jhoommusic Banner" width="100%">
   </a>
+  <br>
+  <i>Crafted with ❤️ by Jhoommusic — blending community spirit with professional-grade audio & video streaming for Telegram bots.</i>
 </p>
+
 
