@@ -1,8 +1,9 @@
+
 <p align="center">
-  <img src="https://i.ibb.co/5hYvhvx/file-00000000b92c61f988c7c26e569da392-1-optimized-50.png" alt="TgCaller Banner" width="100%">
+  <img src="https://github.com/TgCaller/TgCaller/raw/main/assets/file_00000000b92c61f988c7c26e569da392_1_optimized_50.png" alt="TgCaller Banner" width="100%">
 </p>
 
-# TgCaller
+<h1 align="center">TgCaller</h1>
 
 <div align="center">
 
@@ -12,6 +13,7 @@
 [![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue)](https://pypi.org/project/tgcaller/)
 [![GitHub Stars](https://img.shields.io/github/stars/TgCaller/TgCaller?style=for-the-badge&logo=github)](https://github.com/TgCaller/TgCaller)
 
+</div>
 </div>
 
 **Modern, Fast, and Reliable Telegram Group Calls Library**
