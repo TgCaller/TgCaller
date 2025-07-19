@@ -476,9 +476,16 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 <div align="center">
 
-**Made with ❤️ for the Telegram developer community**
+## 💖 Sponsor
 
-[![Made with Python](https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Powered by FFmpeg](https://img.shields.io/badge/Powered_by-FFmpeg-007808?style=for-the-badge)](https://ffmpeg.org)
+<p align="center">
+  <a href="https://jhoommusic.com">
+    <img src="https://i.imgur.com/nAOLlHs.png" alt="Jhoommusic Sponsor Banner" width="100%">
+  </a>
+</p>
+
+<p align="center">
+  <b>Jhoommusic</b> — powering the voice behind TgCaller 🎵
+</p>
 
 </div>
