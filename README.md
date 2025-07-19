@@ -479,13 +479,13 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 ## 💖 Sponsor
 
 <p align="center">
-  <a href="https://jhoommusic.com">
-    <img src="https://i.imgur.com/nAOLlHs.png" alt="Jhoommusic Sponsor Banner" width="100%">
+  <a href="https://jhoommusic.com" target="_blank">
+    <img src="https://i.ibb.co/d4kgNjx/Designer-16.jpg" alt="Jhoommusic Banner" width="100%">
   </a>
 </p>
 
 <p align="center">
-  <b>Jhoommusic</b> — powering the voice behind TgCaller 🎵
+  <b>Sponsored by <a href="https://jhoommusic.com">Jhoommusic</a></b>
 </p>
 
 </div>
