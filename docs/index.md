@@ -18,20 +18,20 @@
 
 ---
 
-## ⚡ Why TgCaller?
+##  Why TgCaller?
 
 TgCaller is a modern library designed with developer experience and reliability in mind:
 
-- 🚀 **Fast & Lightweight**: Optimized performance with minimal resource usage
-- 📱 **Easy to Use**: Simple, intuitive API with comprehensive documentation
-- 🔧 **Reliable**: Built-in error handling and auto-recovery mechanisms
-- 📹 **HD Support**: High-quality audio and video streaming capabilities
-- 🔌 **Extensible**: Plugin system for custom features and integrations
-- 📚 **Well Documented**: Complete guides, examples, and API reference
+-  **Fast & Lightweight**: Optimized performance with minimal resource usage
+-  **Easy to Use**: Simple, intuitive API with comprehensive documentation
+-  **Reliable**: Built-in error handling and auto-recovery mechanisms
+-  **HD Support**: High-quality audio and video streaming capabilities
+-  **Extensible**: Plugin system for custom features and integrations
+-  **Well Documented**: Complete guides, examples, and API reference
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Installation
 
@@ -84,16 +84,16 @@ if __name__ == "__main__":
 - Multiple resolution presets for different use cases
 
 ### Advanced Capabilities
-- 🌉 **Bridged Calls** - Connect multiple chats
-- 🎤 **Microphone Streaming** - Live microphone input
-- 🖥️ **Screen Sharing** - Share your screen in video calls
-- 🎬 **YouTube Integration** - Stream YouTube videos directly
-- 🎤 **Speech Transcription** - Real-time speech-to-text
-- 🎛️ **Audio/Video Filters** - Apply real-time effects
+-  **Bridged Calls** - Connect multiple chats
+-  **Microphone Streaming** - Live microphone input
+-  **Screen Sharing** - Share your screen in video calls
+-  **YouTube Integration** - Stream YouTube videos directly
+-  **Speech Transcription** - Real-time speech-to-text
+-  **Audio/Video Filters** - Apply real-time effects
 
 ---
 
-## 🛠️ CLI Tools
+##  CLI Tools
 
 TgCaller comes with powerful command-line tools:
 
