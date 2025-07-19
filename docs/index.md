@@ -1,18 +1,42 @@
-# TgCaller
+
+<p align="center">
+  <img src="https://github.com/TgCaller/TgCaller/raw/main/assets/file_00000000b92c61f988c7c26e569da392_1_optimized_50.png" alt="TgCaller Banner" width="720">
+</p>
+
+<h1 align="center">TgCaller</h1>
 
 <div align="center">
 
-[![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)](https://pypi.org/project/tgcaller/)
-[![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/tgcaller/TgCaller/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue)](https://pypi.org/project/tgcaller/)
+<p align="center">
+  <a href="https://pypi.org/project/tgcaller/">
+    <img src="https://img.shields.io/pypi/v/tgcaller?style=for-the-badge" alt="PyPI Version">
+  </a>
+  <a href="https://www.python.org/">
+    <img src="https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python Version">
+  </a>
+  <a href="https://github.com/tgcaller/TgCaller/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge" alt="License">
+  </a>
+  <a href="https://pypi.org/project/tgcaller/">
+    <img src="https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue" alt="Downloads">
+  </a>
+  <a href="https://github.com/TgCaller/TgCaller/stargazers">
+    <img src="https://img.shields.io/github/stars/TgCaller/TgCaller?style=for-the-badge&logo=github" alt="GitHub Stars">
+  </a>
+  <a href="https://github.com/TgCaller/TgCaller/network/members">
+    <img src="https://img.shields.io/github/forks/TgCaller/TgCaller?style=for-the-badge&logo=github" alt="GitHub Forks">
+  </a>
+</p>
+
+</div>
+
 
 **🎯 Modern, Fast, and Reliable Telegram Group Calls Library**
 
 *Built for developers who need a simple yet powerful solution for Telegram voice and video calls*
 
-[Get Started](installation.md){ .md-button .md-button--primary }
-[View Examples](usage.md){ .md-button }
+[Get Started](installation.md)
+[View Examples](usage.md)
 
 </div>
 
