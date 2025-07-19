@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://tgcaller.github.io/TgCaller/sitemap.xml
