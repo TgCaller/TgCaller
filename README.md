@@ -474,8 +474,6 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 ---
 
-<div align="center">
-
 ## 💖 Sponsor
 
 <p align="center">
@@ -488,4 +486,4 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
   <b>Sponsored by <a href="https://jhoommusic.com">Jhoommusic</a></b>
 </p>
 
-</div>
+<h3 align="center">𝚙𝚘𝚠𝚎𝚛𝚒𝚗𝚐 𝚝𝚑𝚎 𝚟𝚘𝚒𝚌𝚎 𝚋𝚎𝚑𝚒𝚗𝚍 𝚃𝚐𝙲𝚊𝚕𝚕𝚎𝚛 🎵</h3>
