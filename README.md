@@ -22,17 +22,37 @@
 ---
 
 
-##  **Why TgCaller?**
+## Why TgCaller?
 
-TgCaller is a modern alternative to pytgcalls, designed with developer experience and reliability in mind:
+**TgCaller** is a next-generation Telegram group call engine — built for speed, reliability, and developer-first simplicity.  
+It delivers the performance you need, without the complexity you don’t.
 
-- ** Fast & Lightweight** - Optimized performance with minimal dependencies
-- ** Easy to Use** - Simple, intuitive API that just works
-- ** Reliable** - Built-in error handling and auto-recovery
-- ** HD Support** - High-quality audio and video streaming
-- ** Extensible** - Plugin system for custom features
-- ** Well Documented** - Comprehensive guides and examples
-- ** Advanced Features** - Professional-grade capabilities
+---
+
+### ✦ Fast & Lightweight  
+Engineered for optimal performance with minimal system usage. No bloat. No overhead.
+
+### ✦ Easy to Use  
+A developer-friendly API that feels intuitive from the very first line of code.
+
+### ✦ Stable by Default  
+Automatic reconnection, intelligent error handling, and smooth session management — all built-in.
+
+### ✦ High-Quality Streaming  
+Stream crystal-clear audio and HD video seamlessly in Telegram group calls.
+
+### ✦ Plugin-Based Architecture  
+Extend and customize core features effortlessly with a modular plugin system.
+
+### ✦ Fully Documented  
+Complete guides, real-world examples, and full API references to support every stage of development.
+
+### ✦ Built-In Power Tools  
+Includes advanced capabilities like YouTube streaming, Whisper transcription, and media filters — ready to go.
+
+---
+
+> TgCaller isn’t just simple to adopt — it’s designed to grow with your vision.
 
 ---
 
@@ -243,7 +263,7 @@ tgcaller info
 
 ---
 
-## 🎮 **Examples**
+##  **Examples**
 
 ### **Music Bot**
 
