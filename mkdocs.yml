@@ -44,7 +44,13 @@ nav:
       - Docker Deployment: docker.md
   - API Reference:
       - Python API: api.md
-      - C API: c-api/
+      - C API:
+          - Advanced Methods: c-api/advanced-methods.md
+          - Async: c-api/async.md
+          - Basic Methods: c-api/basic-methods.md
+          - Enums: c-api/enums.md
+          - Stream Methods: c-api/stream-methods.md
+          - Structs: c-api/structs.md
   - Migration & Support:
       - Migration Guide: migration.md
       - FAQ: faq.md
