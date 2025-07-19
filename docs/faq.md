@@ -18,7 +18,7 @@
 ---
 
 **Q: Is there a C API available?**  
-**A:** Yes. Refer to the [`c-api/`](./c-api/) directory for documentation and usage examples.
+**A:** Yes. Refer to the [C API documentation](./c-api/advanced-methods.md) for documentation and usage examples.
 
 ---
 
