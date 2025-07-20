@@ -1,58 +1,92 @@
-# TgCaller
+
+
+<p align="center">
+  <img src="https://github.com/TgCaller/TgCaller/raw/main/assets/file_00000000b92c61f988c7c26e569da392_1_optimized_50.png" alt="TgCaller Banner" width="720">
+</p>
+
+<h1 align="center">TgCaller</h1>
 
 <div align="center">
 
-[![PyPI](https://img.shields.io/pypi/v/tgcaller?style=for-the-badge)](https://pypi.org/project/tgcaller/)
-[![Python](https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge)](https://github.com/tgcaller/TgCaller/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue)](https://pypi.org/project/tgcaller/)
-[![GitHub Stars](https://img.shields.io/github/stars/TgCaller/TgCaller?style=for-the-badge&logo=github)](https://github.com/TgCaller/TgCaller)
-
-**🎯 Modern, Fast, and Reliable Telegram Group Calls Library**
-
-*Built for developers who need a simple yet powerful solution for Telegram voice and video calls*
-
-[Get Started](installation.md){ .md-button .md-button--primary }
-[View on GitHub](https://github.com/TgCaller/TgCaller){ .md-button }
+<p align="center">
+  <a href="https://pypi.org/project/tgcaller/">
+    <img src="https://img.shields.io/pypi/v/tgcaller?style=for-the-badge" alt="PyPI Version">
+  </a>
+  <a href="https://www.python.org/">
+    <img src="https://img.shields.io/badge/Python-3.8%2B-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python Version">
+  </a>
+  <a href="https://github.com/tgcaller/TgCaller/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-00d4aa?style=for-the-badge" alt="License">
+  </a>
+  <a href="https://pypi.org/project/tgcaller/">
+    <img src="https://img.shields.io/pypi/dm/tgcaller?style=for-the-badge&color=blue" alt="Downloads">
+  </a>
+  <a href="https://github.com/TgCaller/TgCaller/stargazers">
+    <img src="https://img.shields.io/github/stars/TgCaller/TgCaller?style=for-the-badge&logo=github" alt="GitHub Stars">
+  </a>
+  <a href="https://github.com/TgCaller/TgCaller/network/members">
+    <img src="https://img.shields.io/github/forks/TgCaller/TgCaller?style=for-the-badge&logo=github" alt="GitHub Forks">
+  </a>
+</p>
 
 </div>
 
----
+**Modern, Fast, and Reliable Telegram Group Calls Library**
 
-## ⚡ Why TgCaller?
+*Built for developers who need a simple yet powerful solution for Telegram voice and video calls*
 
-TgCaller is a modern alternative to pytgcalls, designed with developer experience and reliability in mind:
-
-- 🚀 **Fast & Lightweight**: Optimized performance, 3x faster connection times compared to alternatives.
-- 📱 **Easy to Use**: Simple, intuitive API with less boilerplate code, more functionality.
-- 🔧 **Reliable**: Built-in error handling and auto-recovery. <2% error rate in production environments.
-- 📹 **HD Support**: High-quality audio and video streaming with support for 720p and 1080p video calls.
-- 🔌 **Extensible**: Plugin system for custom features. Extend functionality without modifying core code.
-- 📚 **Well Documented**: Comprehensive guides and examples. Complete API reference with interactive examples.
+[**Documentation**](https://tgcaller.github.io/TgCaller/) • [**Examples**](https://github.com/tgcaller/tgcaller/tree/main/examples) • [**Community**](https://t.me/TgCallerOfficial) • [**Issues**](https://github.com/tgcaller/tgcaller/issues)
 
 ---
 
-## 🚀 Quick Start
+## Why TgCaller?
+
+**TgCaller** is a next-generation Telegram group call engine — built for speed, reliability, and developer-first simplicity.  
+It delivers the performance you need, without the complexity you don't.
+
+---
+
+### ✦ Fast & Lightweight  
+Engineered for optimal performance with minimal system usage. No bloat. No overhead.
+
+### ✦ Easy to Use  
+A developer-friendly API that feels intuitive from the very first line of code.
+
+### ✦ Stable by Default  
+Automatic reconnection, intelligent error handling, and smooth session management — all built-in.
+
+### ✦ High-Quality Streaming  
+Stream crystal-clear audio and HD video seamlessly in Telegram group calls.
+
+### ✦ Plugin-Based Architecture  
+Extend and customize core features effortlessly with a modular plugin system.
+
+### ✦ Fully Documented  
+Complete guides, real-world examples, and full API references to support every stage of development.
+
+### ✦ Built-In Power Tools  
+Includes advanced capabilities like YouTube streaming, Whisper transcription, and media filters — ready to go.
+
+---
+
+> TgCaller isn't just simple to adopt — it's designed to grow with your vision.
+
+---
+
+## Quick Start
 
 ### Installation
 
-=== "PyPI"
+```bash
+# Install from PyPI
+pip install tgcaller
 
-    ```bash
-    pip install tgcaller
-    ```
+# Install with video support
+pip install tgcaller[media]
 
-=== "With CLI Tools"
-
-    ```bash
-    pip install tgcaller[cli]
-    ```
-
-=== "Complete Installation"
-
-    ```bash
-    pip install tgcaller[all]
-    ```
+# Install with all features
+pip install tgcaller[all]
+```
 
 ### Verify Installation
 
@@ -62,9 +96,14 @@ tgcaller test
 
 # Check system info
 tgcaller info
+```
 
-# Show examples
-tgcaller examples
+**Expected Output:**
+```
+ Testing TgCaller installation...
+ Pyrogram imported successfully
+ TgCaller types imported successfully
+ TgCaller installation test completed successfully!
 ```
 
 ### Basic Usage
@@ -90,6 +129,9 @@ async def main():
     
     # Play audio
     await caller.play(-1001234567890, "song.mp3")
+    
+    # Play video
+    await caller.play(-1001234567890, "video.mp4")
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -97,49 +139,154 @@ if __name__ == "__main__":
 
 ---
 
-## 🎵 Features
+## Audio Features
 
-### Audio Streaming
-- Multiple quality presets (high quality, low bandwidth)
-- Opus and AAC codec support
-- Noise suppression and echo cancellation
-- Real-time volume control
-- Seek functionality
+```python
+from tgcaller import AudioConfig
 
-### Video Streaming
-- 720p and 1080p HD support
-- H.264 and VP8 codec support
-- Hardware acceleration
-- Multiple resolution presets
+# High-quality audio
+audio_config = AudioConfig(
+    bitrate=128000,           # 128 kbps
+    sample_rate=48000,        # 48 kHz
+    channels=2,               # Stereo
+    noise_suppression=True,   # Clean audio
+    echo_cancellation=True    # No echo
+)
 
-### Advanced Features
-- 🌉 **Bridged Calls** - Connect multiple chats
-- 🎤 **Microphone Streaming** - Live microphone input
-- 🖥️ **Screen Sharing** - Share your screen
-- 🎬 **YouTube Integration** - Stream YouTube videos
-- 🎤 **Speech Transcription** - Real-time speech-to-text
-- 🎛️ **Audio/Video Filters** - Apply real-time effects
+await caller.play(chat_id, "audio.mp3", audio_config=audio_config)
+```
+
+## Video Features
+
+```python
+from tgcaller import VideoConfig
+
+# HD video streaming
+video_config = VideoConfig(
+    width=1920,
+    height=1080,
+    fps=30,
+    bitrate=2000000,          # 2 Mbps
+    codec="h264"
+)
+
+await caller.play(chat_id, "video.mp4", video_config=video_config)
+```
 
 ---
 
-## 📊 Performance Comparison
+## Advanced Features
 
-| Feature            | TgCaller | pytgcalls | Improvement      |
-|--------------------|---------|-----------|------------------|
-| **Connection Time**| ~1s     | ~3s       | 3x faster        |
-| **Memory Usage**   | 80MB    | 150MB     | 47% less         |
-| **CPU Usage**      | Low     | High      | 60% less         |
-| **Error Rate**     | <2%     | ~8%       | 4x more reliable |
+### Bridged Calls
+Connect multiple chats for conference calls:
+
+```python
+from tgcaller.advanced import BridgedCallManager
+
+bridge_manager = BridgedCallManager(caller)
+await bridge_manager.create_bridge("conference", [chat1, chat2, chat3])
+```
+
+### Microphone Streaming
+Stream live microphone input:
+
+```python
+from tgcaller.advanced import MicrophoneStreamer
+
+mic_streamer = MicrophoneStreamer(caller, chat_id)
+await mic_streamer.start_streaming()
+```
+
+### Screen Sharing
+Share your screen in video calls:
+
+```python
+from tgcaller.advanced import ScreenShareStreamer
+
+screen_streamer = ScreenShareStreamer(caller, chat_id)
+await screen_streamer.start_streaming(monitor_index=1)
+```
+
+### YouTube Integration
+Stream YouTube videos directly:
+
+```python
+from tgcaller.advanced import YouTubeStreamer
+
+youtube = YouTubeStreamer(caller)
+await youtube.play_youtube_url(chat_id, "https://youtube.com/watch?v=...")
+```
+
+### Speech Transcription
+Real-time speech-to-text with Whisper:
+
+```python
+from tgcaller.advanced import WhisperTranscription
+
+transcriber = WhisperTranscription("base")
+await transcriber.start_transcription()
+```
+
+### Audio/Video Filters
+Apply real-time effects:
+
+```python
+from tgcaller.advanced import AudioFilters, VideoFilters
+
+audio_filters = AudioFilters()
+video_filters = VideoFilters()
+
+# Add echo effect
+filtered_audio = audio_filters.apply_echo(audio_data, delay=0.3)
+
+# Add blur effect
+filtered_video = video_filters.apply_blur(video_frame, kernel_size=15)
+```
+
+### Custom API
+Extend with REST API:
+
+```python
+from tgcaller.advanced import CustomAPIHandler
+
+api = CustomAPIHandler(caller, port=8080)
+await api.start_server()
+
+# Now you can control via HTTP:
+# POST /play {"chat_id": -1001234567890, "source": "song.mp3"}
+```
 
 ---
 
-## 🎮 Examples
+## CLI Tool
+
+TgCaller comes with a built-in CLI tool for testing and management:
+
+```bash
+# Show help
+tgcaller --help
+
+# Test installation
+tgcaller test --api-id YOUR_API_ID --api-hash YOUR_API_HASH
+
+# Show system information
+tgcaller info
+```
+
+**CLI Commands:**
+- `tgcaller test` - Test TgCaller installation
+- `tgcaller info` - Show system information
+- `tgcaller --version` - Show version
+
+---
+
+## Examples
 
 ### Music Bot
 
 ```python
+from tgcaller import TgCaller
 from pyrogram import Client, filters
-from tgcaller import TgCaller, AudioConfig
 
 app = Client("music_bot")
 caller = TgCaller(app)
@@ -150,93 +297,220 @@ async def play_music(client, message):
         return await message.reply("Usage: /play <song_name>")
     
     song = message.command[1]
-    chat_id = message.chat.id
     
     # Join call if not already joined
-    if not caller.is_connected(chat_id):
-        await caller.join_call(chat_id)
-        await message.reply("📞 Joined voice chat!")
+    if not caller.is_connected(message.chat.id):
+        await caller.join_call(message.chat.id)
     
     # Play song
-    audio_config = AudioConfig.high_quality()
-    await caller.play(chat_id, f"music/{song}.mp3", audio_config=audio_config)
-    await message.reply(f"🎵 Playing: {song}")
+    await caller.play(message.chat.id, f"music/{song}.mp3")
+    await message.reply(f" Playing: {song}")
 
 @caller.on_stream_end
-async def on_stream_end(client, update):
-    print(f"Stream ended in {update.chat_id}")
+async def next_song(client, update):
+    # Auto-play next song logic here
+    pass
 
 app.run()
 ```
 
-### Advanced Features
+### Advanced Conference Bot
 
 ```python
-from tgcaller.advanced import (
-    BridgedCallManager, 
-    MicrophoneStreamer, 
-    ScreenShareStreamer,
-    YouTubeStreamer
-)
+from tgcaller.advanced import BridgedCallManager, WhisperTranscription
 
-# Bridge multiple chats
+# Create conference bridge
 bridge_manager = BridgedCallManager(caller)
-await bridge_manager.create_bridge("conference", [chat1, chat2, chat3])
+await bridge_manager.create_bridge("meeting", [chat1, chat2, chat3])
 
-# Stream microphone
-mic_streamer = MicrophoneStreamer(caller, chat_id)
-await mic_streamer.start_streaming()
-
-# Share screen
-screen_streamer = ScreenShareStreamer(caller, chat_id)
-await screen_streamer.start_streaming(monitor_index=1)
-
-# Stream YouTube
-youtube = YouTubeStreamer(caller)
-await youtube.play_youtube_url(chat_id, "https://youtube.com/watch?v=...")
+# Add real-time transcription
+transcriber = WhisperTranscription("base")
+await transcriber.start_transcription()
 ```
 
 ---
 
-## 🛠️ CLI Tools
+## Docker Support
 
-TgCaller comes with powerful CLI tools:
+```dockerfile
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libopus-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install TgCaller
+RUN pip install tgcaller[all]
+
+# Copy your bot
+COPY . /app
+WORKDIR /app
+
+CMD ["python", "bot.py"]
+```
+
+**Docker Compose:**
+
+```yaml
+version: '3.8'
+services:
+  tgcaller-bot:
+    build: .
+    environment:
+      - API_ID=${API_ID}
+      - API_HASH=${API_HASH}
+      - BOT_TOKEN=${BOT_TOKEN}
+    volumes:
+      - ./downloads:/app/downloads
+    ports:
+      - "8080:8080"
+```
+
+---
+
+## Performance
+
+| Feature | TgCaller | pytgcalls | Improvement |
+|---------|----------|-----------|-------------|
+| **Connection Time** | ~1s | ~3s | 3x faster |
+| **Memory Usage** | 80MB | 150MB | 47% less |
+| **CPU Usage** | Low | High | 60% less |
+| **Error Rate** | <2% | ~8% | 4x more reliable |
+| **Features** | 25+ | 10 | 2.5x more |
+
+---
+
+## Advanced Configuration
+
+### FFmpeg Parameters
+
+```python
+from tgcaller import TgCaller
+
+caller = TgCaller(app, ffmpeg_parameters={
+    'before_options': '-re',
+    'options': '-vn -preset ultrafast'
+})
+```
+
+### Multiple Clients
+
+```python
+# Manage multiple Telegram accounts
+clients = [Client(f"session_{i}") for i in range(5)]
+callers = [TgCaller(client) for client in clients]
+
+# Start all
+for caller in callers:
+    await caller.start()
+```
+
+### P2P Calls
+
+```python
+from tgcaller.advanced import P2PCallManager
+
+p2p = P2PCallManager(caller)
+await p2p.create_direct_call(user1_id, user2_id)
+```
+
+---
+
+## Dependencies
+
+**Core Dependencies:**
+- `pyrogram>=2.0.106` - Telegram client
+- `aiortc>=1.6.0` - WebRTC support
+- `aiofiles>=23.1.0` - Async file operations
+- `aiohttp>=3.8.4` - HTTP client
+
+**Media Processing:**
+- `ffmpeg-python>=0.2.0` - Media processing
+- `numpy>=1.24.0` - Audio/video arrays
+- `opencv-python>=4.7.0` - Video processing
+
+**Audio Processing:**
+- `pyaudio>=0.2.11` - Audio I/O
+- `soundfile>=0.12.1` - Audio file handling
+
+**Advanced Features:**
+- `openai-whisper` - Speech transcription
+- `yt-dlp>=2023.6.22` - YouTube downloading
+- `mss` - Screen capture
+
+**Optional:**
+- `TgCrypto` - For faster Pyrogram performance
+
+---
+
+## Development
+
+### Setup
 
 ```bash
-# Test installation
-tgcaller test --api-id 12345 --api-hash "your_hash"
+git clone https://github.com/tgcaller/tgcaller.git
+cd tgcaller
 
-# System diagnostics
-tgcaller diagnose
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
 
-# Show examples
-tgcaller examples
+# Install in development mode
+pip install -e ".[dev]"
 
-# Get help
-tgcaller --help
+# Run tests
+pytest tests/ -v
 ```
 
+### Testing
+
+```bash
+# Run all tests
+pytest
+
+# Test with coverage
+pytest --cov=tgcaller tests/
+
+# Test installation
+tgcaller test
+```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
 ---
 
-## 🤝 Community
+## Documentation
 
-[![GitHub](https://img.shields.io/badge/GitHub-TgCaller-181717?style=for-the-badge&logo=github)](https://github.com/TgCaller/TgCaller)
-[![Telegram](https://img.shields.io/badge/Telegram-@TgCallerOfficial-26A5E4?style=for-the-badge&logo=telegram)](https://t.me/TgCallerOfficial)
-[![PyPI](https://img.shields.io/badge/PyPI-tgcaller-3775A9?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/tgcaller/)
-
-- **[GitHub](https://github.com/TgCaller/TgCaller)** - Source code and issues
-- **[Telegram Group](https://t.me/TgCallerOfficial)** - Get help and discuss
-- **[Documentation](https://tgcaller.github.io/TgCaller/)** - Complete guides
+- **[API Reference](https://tgcaller.readthedocs.io/api)** - Complete API documentation
+- **[Examples](https://github.com/tgcaller/tgcaller/tree/main/examples)** - Code examples and tutorials
+- **[Migration Guide](https://tgcaller.readthedocs.io/migration)** - Migrate from pytgcalls
+- **[Plugin Development](https://tgcaller.readthedocs.io/plugins)** - Create custom plugins
+- **[Advanced Features](https://tgcaller.readthedocs.io/advanced)** - Professional features guide
 
 ---
 
-## 📄 License
+## Community
 
-This project is licensed under the MIT License - see the [LICENSE](https://github.com/TgCaller/TgCaller/blob/main/LICENSE) file for details.
+- **[Telegram Group](https://t.me/tgcaller_support)** - Get help and discuss
+- **[GitHub Discussions](https://github.com/tgcaller/tgcaller/discussions)** - Feature requests and ideas
+- **[GitHub Issues](https://github.com/tgcaller/tgcaller/issues)** - Bug reports
 
 ---
 
-**Made with ❤️ for the Telegram developer community**
+## 💖 Sponsor
 
-[![Made with Python](https://img.shields.io/badge/Made_with-Python-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Powered by FFmpeg](https://img.shields.io/badge/Powered_by-FFmpeg-007808?style=for-the-badge)](https://ffmpeg.org)
+<p align="center">
+  <a href="https://jhoommusic.com" target="_blank">
+    <img src="https://github.com/TgCaller/TgCaller/raw/main/assets/Designer%20(16).jpeg" alt="Jhoommusic Banner" width="100%">
+  </a>
+  <br>
+  <i>Crafted with ❤️ by Jhoommusic — blending community spirit with professional-grade audio & video streaming for Telegram bots.</i>
+</p>
