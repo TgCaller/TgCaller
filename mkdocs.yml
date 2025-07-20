@@ -66,8 +66,8 @@ extra:
       link: https://pypi.org/project/tgcaller/
   favicon: assets/favicon.ico
   social_image: assets/banner.png
-  metadata:
-    google-site-verification: o2I6YMzH3Qswem_bgJzIhJ-UbBQBPQxOuy2nY5y99fU
+  # metadata:
+  #   google-site-verification: o2I6YMzH3Qswem_bgJzIhJ-UbBQBPQxOuy2nY5y99fU
   copyright: |
     Copyright © 2024 TgCaller Team<br>
     Made with <span style="color: red;">&#10084;</span> for the Telegram developer community<br>
