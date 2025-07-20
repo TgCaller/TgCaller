@@ -6,6 +6,7 @@ repo_name: TgCaller/TgCaller
 
 theme:
   name: material
+  custom_dir: docs/overrides
   palette:
     - scheme: default
       primary: purple
