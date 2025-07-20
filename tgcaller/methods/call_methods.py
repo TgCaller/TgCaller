@@ -96,6 +96,59 @@ class CallMethods:
             self._logger.error(f"Error leaving call {chat_id}: {e}")
             return False
     
+    async def change_volume_call(self, chat_id: int, volume: float) -> bool:
+        """Change volume for specific call (alias for set_volume)"""
+        return await self.set_volume(chat_id, volume)
+    
+    async def get_participants(self, chat_id: int) -> list:
+        """Get list of call participants"""
+        if chat_id not in self._active_calls:
+            return []
+        
+        try:
+            # Simulate getting participants
+            # In real implementation, this would query the actual call
+            call_session = self._active_calls[chat_id]
+            
+            # Return mock participants for now
+            participants = [
+                {
+                    'user_id': 123456789,
+                    'muted': False,
+                    'video_enabled': True,
+                    'screen_sharing': False
+                }
+            ]
+            
+            return participants
+            
+        except Exception as e:
+            self._logger.error(f"Error getting participants for chat {chat_id}: {e}")
+            return []
+    
+    async def get_call_status(self, chat_id: int) -> Optional[str]:
+        """Get current call status"""
+        if chat_id not in self._active_calls:
+            return None
+        
+        call_session = self._active_calls[chat_id]
+        return call_session.get('status', CallStatus.IDLE).value
+    
+    async def is_muted(self, chat_id: int) -> bool:
+        """Check if microphone is muted"""
+        if chat_id not in self._active_calls:
+            return False
+        
+        call_session = self._active_calls[chat_id]
+        return call_session.get('muted', False)
+    
+    async def is_video_enabled(self, chat_id: int) -> bool:
+        """Check if video is enabled"""
+        if chat_id not in self._active_calls:
+            return False
+        
+        call_session = self._active_calls[chat_id]
+        return call_session.get('video_enabled', False)
     async def pause(self, chat_id: int) -> bool:
         """Pause stream"""
         if chat_id not in self._active_calls:

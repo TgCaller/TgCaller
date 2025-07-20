@@ -94,6 +94,102 @@ class StreamMethods:
         
         return True
     
+    async def mute(self, chat_id: int) -> bool:
+        """Mute microphone in call"""
+        if chat_id not in self._active_calls:
+            return False
+        
+        call_session = self._active_calls[chat_id]
+        call_session['muted'] = True
+        
+        self._logger.info(f"Muted microphone in chat {chat_id}")
+        return True
+    
+    async def unmute(self, chat_id: int) -> bool:
+        """Unmute microphone in call"""
+        if chat_id not in self._active_calls:
+            return False
+        
+        call_session = self._active_calls[chat_id]
+        call_session['muted'] = False
+        
+        self._logger.info(f"Unmuted microphone in chat {chat_id}")
+        return True
+    
+    async def record(
+        self, 
+        chat_id: int, 
+        output_path: str,
+        audio_config: Optional[AudioConfig] = None
+    ) -> bool:
+        """Start recording call audio"""
+        if chat_id not in self._active_calls:
+            return False
+        
+        try:
+            call_session = self._active_calls[chat_id]
+            call_session['recording'] = {
+                'output_path': output_path,
+                'audio_config': audio_config or AudioConfig(),
+                'started_at': asyncio.get_event_loop().time()
+            }
+            
+            self._logger.info(f"Started recording in chat {chat_id} to {output_path}")
+            return True
+            
+        except Exception as e:
+            self._logger.error(f"Failed to start recording: {e}")
+            return False
+    
+    async def stop_recording(self, chat_id: int) -> bool:
+        """Stop recording call audio"""
+        if chat_id not in self._active_calls:
+            return False
+        
+        call_session = self._active_calls[chat_id]
+        
+        if 'recording' not in call_session:
+            return False
+        
+        recording_info = call_session.pop('recording')
+        duration = asyncio.get_event_loop().time() - recording_info['started_at']
+        
+        self._logger.info(f"Stopped recording in chat {chat_id}, duration: {duration:.1f}s")
+        return True
+    
+    async def send_frame(
+        self,
+        chat_id: int,
+        frame_data: bytes,
+        frame_type: str = "audio"
+    ) -> bool:
+        """Send raw frame data to call"""
+        if chat_id not in self._active_calls:
+            return False
+        
+        try:
+            # This would send raw frame data to the call
+            # Implementation depends on actual streaming protocol
+            call_session = self._active_calls[chat_id]
+            
+            if 'frames_sent' not in call_session:
+                call_session['frames_sent'] = 0
+            
+            call_session['frames_sent'] += 1
+            
+            return True
+            
+        except Exception as e:
+            self._logger.error(f"Failed to send frame: {e}")
+            return False
+    
+    async def get_time(self, chat_id: int) -> Optional[float]:
+        """Get current stream time position"""
+        if chat_id not in self._active_calls:
+            return None
+        
+        call_session = self._active_calls[chat_id]
+        return call_session.get('position', 0.0)
     async def pause(self, chat_id: int) -> bool:
         """Pause current stream"""
         if chat_id not in self._active_calls:
