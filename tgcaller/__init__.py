@@ -29,6 +29,9 @@ from .exceptions import (
     StreamError,
     ConfigurationError,
 )
+from .api import CustomAPIServer, on_custom_update
+from .devices import MediaDevices, DeviceInfo, InputDevice, SpeakerDevice, CameraDevice, ScreenDevice
+from .handlers.event_system import Filters, BaseFilter, and_filter, or_filter
 
 # Advanced features (optional imports)
 try:
@@ -68,6 +71,24 @@ __all__ = [
     "CallError",
     "StreamError",
     "ConfigurationError",
+    
+    # API System
+    "CustomAPIServer",
+    "on_custom_update",
+    
+    # Device System
+    "MediaDevices",
+    "DeviceInfo",
+    "InputDevice",
+    "SpeakerDevice", 
+    "CameraDevice",
+    "ScreenDevice",
+    
+    # Event System
+    "Filters",
+    "BaseFilter",
+    "and_filter",
+    "or_filter",
     
     # Advanced features
     "advanced",

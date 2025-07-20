@@ -11,7 +11,10 @@ from pyrogram import Client
 from .types import AudioConfig, VideoConfig, MediaStream, CallUpdate, CallStatus
 from .exceptions import TgCallerError, ConnectionError, MediaError, StreamError
 from .handlers import EventHandler
+from .handlers.event_system import EventHandlerSystem, Filters, BaseFilter
 from .methods import CallMethods, StreamMethods
+from .api import CustomAPIServer, on_custom_update
+from .devices import MediaDevices
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +76,10 @@ class TgCaller:
         
         # Initialize components
         self._event_handler = EventHandler(self)
+        
+        # Initialize new systems
+        self._event_system = EventHandlerSystem()
+        self._custom_api_server: Optional[CustomAPIServer] = None
         
         # Mix in methods
         self._setup_methods()
@@ -193,11 +200,59 @@ class TgCaller:
             return f
         return decorator(func) if func else decorator
     
+    def on_custom_update(self, func: Callable = None):
+        """
+        Decorator for custom API update handler
+        
+        Only one handler can be registered at a time.
+        
+        Example:
+            ```python
+            @caller.on_custom_update
+            async def handle_custom_request(client, data):
+                return {"message": "Request processed"}
+            ```
+        """
+        def decorator(f):
+            if self._custom_api_server:
+                self._custom_api_server.set_custom_handler(f)
+            f._is_custom_update_handler = True
+            return f
+        return decorator(func) if func else decorator
+    
     def _add_handler(self, event_type: str, handler: Callable) -> None:
         """Add event handler"""
         if event_type not in self._event_handlers:
             self._event_handlers[event_type] = []
         self._event_handlers[event_type].append(handler)
+    
+    def add_handler(
+        self,
+        func: Callable,
+        filters: Optional[BaseFilter] = None,
+        priority: int = 0
+    ):
+        """
+        Add event handler with optional filters
+        
+        Args:
+            func: Handler function
+            filters: Optional filter to apply
+            priority: Handler priority (higher = called first)
+        """
+        self._event_system.add_handler(func, filters, priority)
+    
+    def remove_handler(self, func: Callable) -> bool:
+        """
+        Remove event handler
+        
+        Args:
+            func: Handler function to remove
+            
+        Returns:
+            True if handler was removed
+        """
+        return self._event_system.remove_handler(func)
     
     async def _emit_event(self, event_type: str, *args, **kwargs) -> None:
         """Emit event to handlers"""
@@ -211,6 +266,51 @@ class TgCaller:
                 except Exception as e:
                     self._logger.error(f"Error in event handler {handler.__name__}: {e}")
                     await self._emit_event('error', e)
+        
+        # Also propagate through new event system
+        if args:
+            await self._event_system._propagate(args[0], self._client)
+    
+    def enable_custom_api(
+        self, 
+        host: str = "localhost", 
+        port: int = 8080
+    ) -> CustomAPIServer:
+        """
+        Enable custom HTTP API server
+        
+        Args:
+            host: Server host
+            port: Server port
+            
+        Returns:
+            CustomAPIServer instance
+        """
+        if self._custom_api_server:
+            raise ValueError("Custom API server already enabled")
+        
+        self._custom_api_server = CustomAPIServer(self, host, port)
+        
+        # Set handler if already registered
+        for handler_list in self._event_handlers.values():
+            for handler in handler_list:
+                if hasattr(handler, '_is_custom_update_handler'):
+                    self._custom_api_server.set_custom_handler(handler)
+                    break
+        
+        return self._custom_api_server
+    
+    async def start_custom_api(self):
+        """Start custom API server"""
+        if not self._custom_api_server:
+            raise ValueError("Custom API server not enabled. Call enable_custom_api() first")
+        
+        await self._custom_api_server.start()
+    
+    async def stop_custom_api(self):
+        """Stop custom API server"""
+        if self._custom_api_server:
+            await self._custom_api_server.stop()
     
     async def _validate_media(self, stream: MediaStream):
         """Validate media stream"""
@@ -289,3 +389,13 @@ class TgCaller:
     def is_running(self) -> bool:
         """Check if TgCaller service is running"""
         return self._is_connected
+    
+    @property
+    def media_devices(self) -> MediaDevices:
+        """Get media devices interface"""
+        return MediaDevices
+    
+    @property
+    def filters(self) -> Filters:
+        """Get filters interface"""
+        return Filters
