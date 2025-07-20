@@ -15,6 +15,7 @@ from .handlers.event_system import EventHandlerSystem, Filters, BaseFilter
 from .methods import CallMethods, StreamMethods
 from .api import CustomAPIServer, on_custom_update
 from .devices import MediaDevices
+from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +82,13 @@ class TgCaller:
         self._event_system = EventHandlerSystem()
         self._custom_api_server: Optional[CustomAPIServer] = None
         
+        # Initialize internal managers
+        self._connection_manager = ConnectionManager(self)
+        self._cache_manager = CacheManager()
+        self._stream_handler = StreamHandler(self)
+        self._call_handler = CallHandler(self)
+        self._retry_manager = RetryManager()
+        
         # Mix in methods
         self._setup_methods()
         
@@ -143,6 +151,12 @@ class TgCaller:
             # Leave all active calls
             for chat_id in list(self._active_calls.keys()):
                 await self.leave_call(chat_id)
+            
+            # Cleanup internal managers
+            await self._connection_manager.cleanup_all()
+            await self._cache_manager.cleanup()
+            await self._stream_handler.cleanup_all()
+            await self._call_handler.cleanup_all()
             
             # Cleanup
             await self._event_handler.cleanup()
@@ -399,3 +413,28 @@ class TgCaller:
     def filters(self) -> Filters:
         """Get filters interface"""
         return Filters
+    
+    @property
+    def connection_manager(self) -> ConnectionManager:
+        """Get connection manager"""
+        return self._connection_manager
+    
+    @property
+    def cache_manager(self) -> CacheManager:
+        """Get cache manager"""
+        return self._cache_manager
+    
+    @property
+    def stream_handler(self) -> StreamHandler:
+        """Get stream handler"""
+        return self._stream_handler
+    
+    @property
+    def call_handler(self) -> CallHandler:
+        """Get call handler"""
+        return self._call_handler
+    
+    @property
+    def retry_manager(self) -> RetryManager:
+        """Get retry manager"""
+        return self._retry_manager

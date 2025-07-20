@@ -20,6 +20,25 @@ from .types import (
     CallUpdate,
     CallStatus,
     StreamType,
+    GroupCallParticipant,
+    UpdatedGroupCallParticipant,
+    ParticipantAction,
+    VideoInfo,
+    AudioQuality,
+    VideoQuality,
+    QualityConfig,
+    Frame,
+    FrameInfo,
+    StreamFrames,
+    Device,
+    DeviceType,
+    Direction,
+    ExternalMedia,
+    RecordStream,
+    RecordingFormat,
+    RecordingStatus,
+    StreamEnded,
+    StreamEndReason,
 )
 from .exceptions import (
     TgCallerError,
@@ -32,6 +51,8 @@ from .exceptions import (
 from .api import CustomAPIServer, on_custom_update
 from .devices import MediaDevices, DeviceInfo, InputDevice, SpeakerDevice, CameraDevice, ScreenDevice
 from .handlers.event_system import Filters, BaseFilter, and_filter, or_filter
+from .utilities import CpuMonitor, PingMonitor, CallHolder, PeerResolver
+from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
 
 # Advanced features (optional imports)
 try:
@@ -64,6 +85,37 @@ __all__ = [
     "CallStatus",
     "StreamType",
     
+    # Participant types
+    "GroupCallParticipant",
+    "UpdatedGroupCallParticipant",
+    "ParticipantAction",
+    "VideoInfo",
+    
+    # Quality types
+    "AudioQuality",
+    "VideoQuality", 
+    "QualityConfig",
+    
+    # Frame types
+    "Frame",
+    "FrameInfo",
+    "StreamFrames",
+    
+    # Device types
+    "Device",
+    "DeviceType",
+    "Direction",
+    "ExternalMedia",
+    
+    # Recording types
+    "RecordStream",
+    "RecordingFormat",
+    "RecordingStatus",
+    
+    # Stream event types
+    "StreamEnded",
+    "StreamEndReason",
+    
     # Exceptions
     "TgCallerError",
     "ConnectionError",
@@ -89,6 +141,19 @@ __all__ = [
     "BaseFilter",
     "and_filter",
     "or_filter",
+    
+    # Utilities
+    "CpuMonitor",
+    "PingMonitor",
+    "CallHolder", 
+    "PeerResolver",
+    
+    # Internal Systems
+    "ConnectionManager",
+    "CacheManager",
+    "StreamHandler",
+    "CallHandler",
+    "RetryManager",
     
     # Advanced features
     "advanced",
