@@ -15,6 +15,7 @@ from .raw_streaming import RawStreamer
 from .screen_sharing import ScreenShare
 from .transcription import WhisperTranscription
 from .youtube_dl import YouTubeDownloader
+from .youtube_streaming import AdvancedYouTubeStreamer, PerformanceMonitor
 
 __all__ = [
     "BridgedCallManager",
@@ -31,4 +32,6 @@ __all__ = [
     "ScreenShare",
     "WhisperTranscription",
     "YouTubeDownloader",
+    "AdvancedYouTubeStreamer",
+    "PerformanceMonitor",
 ]

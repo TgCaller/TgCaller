@@ -23,6 +23,9 @@ mss>=9.0.1
 yt-dlp>=2023.6.22
 requests>=2.31.0
 
+# FastStreamBuffer dependencies
+numpy>=1.24.0
+
 # Speech transcription
 openai-whisper>=20231117
 

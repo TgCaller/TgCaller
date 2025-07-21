@@ -401,3 +401,69 @@ async def process_multiple_streams():
 ```
 
 These advanced features enable you to build sophisticated applications with TgCaller, from simple music bots to complex conference systems with real-time processing capabilities.
+
+## FastStreamBuffer - Ultra-Low-Latency Streaming
+
+FastStreamBuffer provides ultra-low-latency streaming capabilities with async buffered chunks.
+
+### Basic Usage
+
+```python
+from tgcaller.streaming import FastStreamBuffer, BufferConfig
+from tgcaller.advanced import AdvancedYouTubeStreamer
+
+# Create buffer manager
+buffer_manager = BufferManager(max_buffers=10)
+
+# Create advanced YouTube streamer
+youtube_streamer = AdvancedYouTubeStreamer(caller, buffer_manager)
+
+# Stream with ultra-low latency
+await youtube_streamer.stream_youtube_ultra_low_latency(
+    chat_id, 
+    "https://youtube.com/watch?v=...",
+    quality="720p"
+)
+```
+
+### Custom Buffer Configuration
+
+```python
+from tgcaller.streaming import BufferConfig
+
+# Ultra-low-latency configuration
+config = BufferConfig(
+    max_buffer_size=30,
+    min_buffer_size=5,
+    target_buffer_size=15,
+    chunk_duration_ms=10.0,  # 10ms chunks
+    max_latency_ms=50.0,     # 50ms max latency
+    adaptive_quality=True,
+    use_threading=True
+)
+
+buffer = FastStreamBuffer(config)
+```
+
+### Performance Monitoring
+
+```python
+# Get streaming statistics
+stats = youtube_streamer.get_stream_stats(chat_id)
+print(f"Latency: {stats['avg_latency_ms']:.1f}ms")
+print(f"Buffer Health: {stats['health_percent']:.1f}%")
+print(f"Throughput: {stats['throughput_mbps']:.2f} Mbps")
+
+# Get buffer manager statistics
+global_stats = buffer_manager.get_global_stats()
+print(f"Total Buffers: {global_stats.total_buffers}")
+print(f"Average Health: {global_stats.avg_health:.1f}%")
+```
+
+### Advanced Features
+
+- **Adaptive Quality Control**: Automatically adjusts quality based on network conditions
+- **Buffer Optimization**: Real-time buffer size and latency optimization
+- **Hardware Acceleration**: Uses GPU acceleration when available
+- **Multi-Stream Management**: Handle multiple concurrent streams efficiently
+- **Performance Monitoring**: Real-time performance metrics and alerts

@@ -53,6 +53,7 @@ from .devices import MediaDevices, DeviceInfo, InputDevice, SpeakerDevice, Camer
 from .handlers.event_system import Filters, BaseFilter, and_filter, or_filter
 from .utilities import CpuMonitor, PingMonitor, CallHolder, PeerResolver
 from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
+from . import streaming
 
 # Advanced features (optional imports)
 try:
@@ -66,6 +67,7 @@ try:
         "ScreenShare",
         "WhisperTranscription",
         "YouTubeDownloader",
+        "AdvancedYouTubeStreamer",
     ]
 except ImportError:
     advanced = None
@@ -157,4 +159,5 @@ __all__ = [
     
     # Advanced features
     "advanced",
+    "streaming",
 ] + __all_advanced__
