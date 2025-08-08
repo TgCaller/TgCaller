@@ -1,0 +1,12 @@
+{
+  "name": "tgcaller-project",
+  "version": "1.0.0",
+  "description": "TgCaller project structure",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
