@@ -1,0 +1,1 @@
+# TgCaller Configuration Types
