@@ -1,0 +1,1 @@
+# Pending Connection Type

@@ -1,0 +1,1 @@
+# Cache Entry - Redis schema
