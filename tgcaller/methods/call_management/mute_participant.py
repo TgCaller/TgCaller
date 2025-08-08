@@ -1,0 +1,1 @@
+# Mute Participant Method
