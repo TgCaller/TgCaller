@@ -102,6 +102,7 @@ class PyrogramGroupCallBackend:
         # Payload creation may allocate ICE/DTLS resources before it returns.
         # Keep it inside the cleanup boundary so invalid data or engine errors
         # cannot leak partially initialized media resources.
+        joined_on_server = False
         try:
             payload = await _resolve(
                 self.media_engine.create_join_payload(chat_id, audio_config, video_config)
@@ -116,11 +117,11 @@ class PyrogramGroupCallBackend:
                     video_stopped=bool(video_config is None),
                 )
             )
+            joined_on_server = True
             await _resolve(self.media_engine.handle_join_updates(chat_id, updates))
             self._calls[chat_id] = call
 
             if not await self.is_healthy(chat_id):
-                self._calls.pop(chat_id, None)
                 raise ConnectionError(
                     "Telegram accepted the join request, but the media engine "
                     "did not establish a healthy call connection"
@@ -128,9 +129,22 @@ class PyrogramGroupCallBackend:
             return True
         except Exception:
             self._calls.pop(chat_id, None)
+            # If Telegram accepted the join but local negotiation/health checks
+            # failed, compensate with a leave RPC before tearing down the engine.
+            # Cleanup failures must never hide the original connection error.
+            if joined_on_server:
+                try:
+                    _, LeaveGroupCall, _, _, _ = await self._rpc_types()
+                    source_id = await _resolve(self.media_engine.source_id(chat_id))
+                    await self.client.invoke(LeaveGroupCall(call=call, source=source_id))
+                except Exception:
+                    pass
             # Failed payload creation, validation, signaling or negotiation must
             # not leak ICE/DTLS/media resources.
-            await _resolve(self.media_engine.close(chat_id))
+            try:
+                await _resolve(self.media_engine.close(chat_id))
+            except Exception:
+                pass
             raise
 
     async def disconnect_call(self, chat_id):
