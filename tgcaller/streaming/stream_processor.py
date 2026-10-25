@@ -196,6 +196,9 @@ class StreamProcessor:
             if audio_filters:
                 cmd.extend(['-af', audio_filters])
         
+        # Explicitly map only the decoded PCM audio stream.
+        cmd.extend(["-map", "0:a:0", "-vn", "-sn", "-dn"])
+
         # Output format specific settings
         if output_format == "opus":
             cmd.extend([
@@ -314,6 +317,16 @@ class StreamProcessor:
                     "original_size": len(chunk.data),
                     "processed_size": len(stdout),
                     "output_format": output_format,
+                    # Opus is emitted as an independent Ogg container per chunk;
+                    # AAC is emitted as an ADTS frame stream. Consumers must not
+                    # treat these byte strings as raw PCM or blindly join Ogg chunks.
+                    "container_format": {
+                        "raw": "s16le",
+                        "opus": "ogg",
+                        "aac": "adts",
+                    }[output_format],
+                    "chunk_containerized": output_format != "raw",
+                    "must_not_concatenate": output_format == "opus",
                 },
             )
         except Exception as e:
