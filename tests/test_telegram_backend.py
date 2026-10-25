@@ -4,6 +4,7 @@ import pytest
 
 from tgcaller.exceptions import ConnectionError
 from tgcaller.mtproto import PyrogramGroupCallBackend
+from tgcaller.mtproto.telegram_backend import _validate_join_payload
 
 
 def test_backend_requires_real_media_engine():
@@ -161,3 +162,42 @@ async def test_disconnect_always_closes_engine_after_rpc_error(monkeypatch):
         await backend.disconnect_call(-100123)
     assert engine.closed is True
     assert -100123 not in backend._calls
+
+
+
+def test_join_payload_requires_real_transport_parameters():
+    valid = {
+        "ssrc": 123,
+        "ufrag": "ice-user",
+        "pwd": "ice-password",
+        "fingerprints": [
+            {"hash": "sha-256", "fingerprint": "AA:BB", "setup": "passive"}
+        ],
+    }
+    assert _validate_join_payload(valid) is valid
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"ssrc": 0, "ufrag": "u", "pwd": "p", "fingerprints": [{"hash": "sha-256", "fingerprint": "x", "setup": "passive"}]},
+        {"ssrc": 123, "ufrag": "", "pwd": "p", "fingerprints": [{"hash": "sha-256", "fingerprint": "x", "setup": "passive"}]},
+        {"ssrc": 123, "ufrag": "u", "pwd": "p", "fingerprints": []},
+    ],
+)
+def test_join_payload_rejects_missing_or_placeholder_transport_parameters(payload):
+    with pytest.raises(ConnectionError):
+        _validate_join_payload(payload)
+
+
+def test_video_join_payload_requires_source_groups():
+    valid_audio = {
+        "ssrc": 123,
+        "ufrag": "ice-user",
+        "pwd": "ice-password",
+        "fingerprints": [
+            {"hash": "sha-256", "fingerprint": "AA:BB", "setup": "passive"}
+        ],
+    }
+    with pytest.raises(ConnectionError, match="ssrc-groups"):
+        _validate_join_payload(valid_audio, video_config={"enabled": True})
