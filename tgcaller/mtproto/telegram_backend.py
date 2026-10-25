@@ -157,7 +157,9 @@ class PyrogramGroupCallBackend:
             if joined_on_server:
                 try:
                     _, LeaveGroupCall, _, _, _ = await self._rpc_types()
-                    source_id = await _resolve(self.media_engine.source_id(chat_id))
+                    source_id = _validate_source_id(
+                        await _resolve(self.media_engine.source_id(chat_id))
+                    )
                     await self.client.invoke(LeaveGroupCall(call=call, source=source_id))
                 except Exception:
                     pass
