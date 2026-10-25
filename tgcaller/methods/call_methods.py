@@ -78,15 +78,11 @@ class CallMethods:
         if chat_id not in self._active_calls:
             return []
         
-        # Never fabricate participant identities or states. Until the native
-        # Telegram call backend exposes participant updates, return an empty
-        # list rather than presenting synthetic data as real call information.
-        self._logger.warning(
-            "Participant enumeration is unavailable until the Telegram call "
-            "backend is configured (chat_id=%s)",
-            chat_id,
-        )
-        return []
+        backend = self._require_calls_backend()
+        get_participants = getattr(backend, "get_participants", None)
+        if not callable(get_participants):
+            raise CallError("The configured call backend does not support participants")
+        return await get_participants(chat_id)
     
     async def get_call_status(self, chat_id: int) -> Optional[str]:
         """Get current call status"""
@@ -159,8 +155,11 @@ class CallMethods:
         if not 0.0 <= volume <= 1.0:
             raise ValueError("Volume must be between 0.0 and 1.0")
         
-        call_session = self._active_calls[chat_id]
-        call_session['volume'] = volume
-        
-        self._logger.info(f"Set volume to {volume} in chat {chat_id}")
+        backend = self._require_calls_backend()
+        change_volume = getattr(backend, "change_volume_call", None)
+        if not callable(change_volume):
+            raise CallError("The configured call backend does not support volume control")
+        await change_volume(chat_id, int(round(volume * 100)))
+        self._active_calls[chat_id]["volume"] = volume
+        self._logger.info("Set volume to %s in chat %s", volume, chat_id)
         return True
