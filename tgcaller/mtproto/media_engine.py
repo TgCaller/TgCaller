@@ -4,7 +4,7 @@ This protocol deliberately does not provide a fake or generic WebRTC engine.
 Implementations must speak Telegram's group-call media protocol and own the
 lifecycle of their ICE/DTLS/media resources.
 """
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Dict, List, Protocol, runtime_checkable
 
 
 @runtime_checkable
