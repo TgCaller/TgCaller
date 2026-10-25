@@ -274,6 +274,16 @@ class StreamProcessor:
             if output_format is None:
                 raise RuntimeError("FFmpeg processor has not been configured")
 
+            # s16le PCM must contain complete sample frames. One frame contains
+            # one 16-bit sample for each configured audio channel.
+            sample_frame_bytes = self.config.audio_channels * 2
+            if len(chunk.data) % sample_frame_bytes:
+                raise ValueError(
+                    "PCM chunk length must be a multiple of "
+                    f"audio_channels * 2 ({sample_frame_bytes} bytes); "
+                    f"received {len(chunk.data)} bytes"
+                )
+
             # Raw PCM already matches this processor's input/output contract.
             # When filters are disabled, avoid spawning FFmpeg for every chunk.
             if output_format == "raw" and not self.config.enable_filters:
