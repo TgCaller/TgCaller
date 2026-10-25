@@ -726,6 +726,9 @@ async def test_connect_releases_unhealthy_stale_session_before_rejoining(monkeyp
         async def handle_join_updates(self, chat_id, updates):
             return None
 
+        async def source_id(self, chat_id):
+            return 456
+
     class Client:
         def __init__(self):
             self.requests = []
