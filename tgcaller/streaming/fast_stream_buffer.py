@@ -241,17 +241,20 @@ class FastStreamBuffer:
                 if self.state == BufferState.IDLE:
                     break
                 
-                # Create chunk processing task
-                if len(chunk_tasks) < self.config.max_concurrent_chunks:
-                    task = asyncio.create_task(
-                        self._process_raw_chunk(raw_data)
+                # Reap completed work before checking capacity. If all worker slots
+                # are occupied, apply backpressure instead of silently discarding media.
+                chunk_tasks = [task for task in chunk_tasks if not task.done()]
+                if len(chunk_tasks) >= self.config.max_concurrent_chunks:
+                    await asyncio.wait(
+                        chunk_tasks,
+                        return_when=asyncio.FIRST_COMPLETED,
                     )
-                    chunk_tasks.append(task)
-                
-                # Clean completed tasks
-                chunk_tasks = [t for t in chunk_tasks if not t.done()]
-                
-                # Yield control
+                    chunk_tasks = [task for task in chunk_tasks if not task.done()]
+
+                task = asyncio.create_task(self._process_raw_chunk(raw_data))
+                chunk_tasks.append(task)
+
+                # Yield control so completed tasks can be reaped promptly.
                 await asyncio.sleep(0)
             
             # Wait for remaining tasks
