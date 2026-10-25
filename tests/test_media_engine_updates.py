@@ -61,8 +61,6 @@ def test_rejects_updates_without_connection_parameters():
 
 
 def test_rejects_connection_update_without_data_json():
-    update = SimpleNamespace()
-    update.__class__.__name__ = "UpdateGroupCallConnection"
-
+    update_type = type("UpdateGroupCallConnection", (), {})
     with pytest.raises(ValueError, match="no JSON params"):
-        extract_group_call_connection_params(update)
+        extract_group_call_connection_params(update_type())
