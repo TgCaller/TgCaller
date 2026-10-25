@@ -146,3 +146,46 @@ class TestTgCaller:
         
         assert len(caller._event_handlers['stream_end']) == 1
         assert len(caller._event_handlers['error']) == 1
+
+    @pytest.mark.asyncio
+    async def test_stream_start_event_dispatch(self, caller):
+        await caller.start()
+        received = []
+
+        @caller.on_stream_start
+        async def on_stream_start(client, update):
+            received.append(update)
+
+        update = object()
+        await caller._emit_event("stream_start", update)
+
+        assert received == [update]
+        await caller.stop()
+
+    @pytest.mark.asyncio
+    async def test_stream_stopped_event_dispatch(self, caller):
+        await caller.start()
+        received = []
+
+        @caller.on_stream_stopped
+        async def on_stream_stopped(client, update):
+            received.append(update)
+
+        update = object()
+        await caller._emit_event("stream_stopped", update)
+
+        assert received == [update]
+        await caller.stop()
+
+    @pytest.mark.asyncio
+    async def test_on_left_uses_call_left_event(self, caller):
+        received = []
+
+        @caller.on_left
+        async def on_left(client, update):
+            received.append(update)
+
+        update = object()
+        await caller._emit_event("call_left", update)
+
+        assert received == [update]
