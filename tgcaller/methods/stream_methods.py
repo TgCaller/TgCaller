@@ -264,8 +264,8 @@ class StreamMethods:
         if (
             isinstance(volume, bool)
             or not isinstance(volume, (int, float))
-            or not math.isfinite(volume)
             or not 0.0 <= volume <= 1.0
+            or (isinstance(volume, float) and not math.isfinite(volume))
         ):
             raise ValueError("Volume must be a finite number between 0.0 and 1.0")
         
@@ -291,8 +291,8 @@ class StreamMethods:
         if (
             isinstance(position, bool)
             or not isinstance(position, (int, float))
-            or not math.isfinite(position)
             or position < 0
+            or (isinstance(position, float) and not math.isfinite(position))
         ):
             raise ValueError("Position must be a finite, non-negative number of seconds")
         if not await self._connection.seek(chat_id, position):
