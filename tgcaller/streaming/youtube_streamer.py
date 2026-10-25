@@ -5,6 +5,7 @@ YouTube Streamer with FastStreamBuffer integration
 import asyncio
 import logging
 import subprocess
+import time
 from typing import Optional, AsyncGenerator, Dict, Any
 from dataclasses import dataclass
 from pathlib import Path
