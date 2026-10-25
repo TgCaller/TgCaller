@@ -9,6 +9,7 @@ import json
 from typing import Any, Callable, Dict
 
 from ..exceptions import ConnectionError
+from .media_engine import TelegramMediaEngine
 
 
 async def _resolve(value):
@@ -60,7 +61,9 @@ class PyrogramGroupCallBackend:
     and get_participants. It must implement Telegram's real call protocol.
     """
 
-    def __init__(self, client: Any, resolve_call: Callable, media_engine: Any):
+    def __init__(
+        self, client: Any, resolve_call: Callable, media_engine: TelegramMediaEngine
+    ):
         if client is None:
             raise TypeError("client is required")
         if not callable(resolve_call):
