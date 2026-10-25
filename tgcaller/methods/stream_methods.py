@@ -74,10 +74,9 @@ class StreamMethods:
         if chat_id not in self._active_calls:
             return False
         
-        call_session = self._active_calls[chat_id]
-        call_session['muted'] = True
-        
-        self._logger.info(f"Muted microphone in chat {chat_id}")
+        await self._require_calls_backend().mute(chat_id)
+        self._active_calls[chat_id]["muted"] = True
+        self._logger.info("Muted microphone in chat %s", chat_id)
         return True
     
     async def unmute(self, chat_id: int) -> bool:
@@ -85,10 +84,9 @@ class StreamMethods:
         if chat_id not in self._active_calls:
             return False
         
-        call_session = self._active_calls[chat_id]
-        call_session['muted'] = False
-        
-        self._logger.info(f"Unmuted microphone in chat {chat_id}")
+        await self._require_calls_backend().unmute(chat_id)
+        self._active_calls[chat_id]["muted"] = False
+        self._logger.info("Unmuted microphone in chat %s", chat_id)
         return True
     
     async def record(
@@ -163,8 +161,11 @@ class StreamMethods:
         if chat_id not in self._active_calls:
             return None
         
-        call_session = self._active_calls[chat_id]
-        return call_session.get('position', 0.0)
+        backend = self._require_calls_backend()
+        get_time = getattr(backend, "time", None)
+        if not callable(get_time):
+            return None
+        return float(await get_time(chat_id))
     async def pause(self, chat_id: int) -> bool:
         """Pause current stream"""
         if chat_id not in self._active_calls:
@@ -175,6 +176,7 @@ class StreamMethods:
         if 'current_stream' not in call_session:
             return False
         
+        await self._require_calls_backend().pause(chat_id)
         call_session['status'] = CallStatus.PAUSED
         
         update = CallUpdate(
@@ -199,6 +201,7 @@ class StreamMethods:
         if call_session.get('status') != CallStatus.PAUSED:
             return False
         
+        await self._require_calls_backend().resume(chat_id)
         call_session['status'] = CallStatus.PLAYING
         
         update = CallUpdate(
@@ -218,10 +221,13 @@ class StreamMethods:
         if chat_id not in self._active_calls:
             return False
         
-        call_session = self._active_calls[chat_id]
-        call_session['volume'] = volume
-        
-        self._logger.info(f"Set volume to {volume} in chat {chat_id}")
+        backend = self._require_calls_backend()
+        change_volume = getattr(backend, "change_volume_call", None)
+        if not callable(change_volume):
+            raise StreamError("The configured call backend does not support volume control")
+        await change_volume(chat_id, int(round(volume * 100)))
+        self._active_calls[chat_id]["volume"] = volume
+        self._logger.info("Set volume to %s in chat %s", volume, chat_id)
         return True
     
     async def seek(self, chat_id: int, position: float) -> bool:
