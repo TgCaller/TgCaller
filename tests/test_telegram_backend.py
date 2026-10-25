@@ -303,3 +303,24 @@ async def test_check_call_rpc_error_clears_stale_state(monkeypatch):
     assert await backend.check_call(-100123) is False
     assert engine.closed is True
     assert -100123 not in backend._calls
+
+@pytest.mark.asyncio
+async def test_disconnect_cleans_engine_when_local_call_state_is_missing():
+    class Engine:
+        closed = False
+
+        async def close(self, chat_id):
+            self.closed = True
+
+    class Client:
+        async def invoke(self, request):
+            raise AssertionError("No leave RPC should be sent without a stored call")
+
+    engine = Engine()
+    backend = PyrogramGroupCallBackend(
+        Client(), resolve_call=lambda chat_id: object(), media_engine=engine
+    )
+
+    assert await backend.disconnect_call(-100123) is True
+    assert engine.closed is True
+    assert -100123 not in backend._calls
