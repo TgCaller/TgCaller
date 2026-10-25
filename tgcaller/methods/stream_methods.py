@@ -20,80 +20,55 @@ class StreamMethods:
         audio_config: Optional[AudioConfig] = None,
         video_config: Optional[VideoConfig] = None
     ) -> bool:
-        """
-        Play media in call
-        
-        Args:
-            chat_id: Chat ID
-            source: Media source
-            audio_config: Audio configuration
-            video_config: Video configuration
-            
-        Returns:
-            True if successful
-        """
-        # Auto-join if not in call
-        if chat_id not in self._active_calls:
-            await self.join_call(chat_id, audio_config, video_config)
-        
+        """Play media through the configured Telegram call backend."""
+        backend = self._require_calls_backend()
         try:
-            # Create MediaStream if needed
-            if not isinstance(source, MediaStream):
-                stream = MediaStream(
-                    source=source,
-                    audio_config=audio_config,
-                    video_config=video_config
-                )
-            else:
-                stream = source
-            
-            # Validate media
+            stream = source if isinstance(source, MediaStream) else MediaStream(
+                source=source,
+                audio_config=audio_config,
+                video_config=video_config,
+            )
             await self._validate_media(stream)
-            
-            # Update call session
+            # Join/start the call first if needed; the backend's play(None)
+            # path establishes a call without starting a media source.
+            if chat_id not in self._active_calls:
+                await self.join_call(chat_id, audio_config, video_config)
+            await backend.play(chat_id, stream.source)
             call_session = self._active_calls[chat_id]
-            call_session['current_stream'] = stream
-            call_session['status'] = CallStatus.PLAYING
-            
-            # Start playback simulation
-            asyncio.create_task(self._simulate_playback(chat_id, stream))
-            
-            # Emit event
+            call_session["current_stream"] = stream
+            call_session["status"] = CallStatus.PLAYING
             update = CallUpdate(
                 chat_id=chat_id,
                 status=CallStatus.PLAYING,
-                message=f"Playing: {stream.source}"
+                message=f"Playing: {stream.source}",
             )
-            await self._emit_event('stream_started', update)
-            
-            self._logger.info(f"Started playing {stream.source} in chat {chat_id}")
+            await self._emit_event("stream_started", update)
+            self._logger.info("Started real playback %s in chat %s", stream.source, chat_id)
             return True
-            
-        except Exception as e:
-            raise StreamError(f"Failed to play media: {e}")
-    
+        except Exception as exc:
+            raise StreamError(f"Failed to play media in Telegram call: {exc}") from exc
+
     async def stop_stream(self, chat_id: int) -> bool:
-        """Stop current stream"""
+        """Stop media playback while keeping the Telegram call open."""
         if chat_id not in self._active_calls:
             return False
-        
         call_session = self._active_calls[chat_id]
-        
-        if 'current_stream' not in call_session:
+        if "current_stream" not in call_session:
             return False
-        
-        call_session['status'] = CallStatus.CONNECTED
-        call_session.pop('current_stream', None)
-        
-        update = CallUpdate(
-            chat_id=chat_id,
-            status=CallStatus.CONNECTED,
-            message="Stream stopped"
-        )
-        await self._emit_event('stream_stopped', update)
-        
-        return True
-    
+        try:
+            await self._require_calls_backend().play(chat_id, None)
+            call_session.pop("current_stream", None)
+            call_session["status"] = CallStatus.CONNECTED
+            update = CallUpdate(
+                chat_id=chat_id,
+                status=CallStatus.CONNECTED,
+                message="Stream stopped",
+            )
+            await self._emit_event("stream_stopped", update)
+            return True
+        except Exception as exc:
+            raise StreamError(f"Failed to stop media playback: {exc}") from exc
+
     async def mute(self, chat_id: int) -> bool:
         """Mute microphone in call"""
         if chat_id not in self._active_calls:
