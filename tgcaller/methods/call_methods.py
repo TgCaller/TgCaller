@@ -82,10 +82,13 @@ class CallMethods:
         
         try:
             call_session = self._active_calls[chat_id]
+            disconnected = await self._connection_manager.disconnect_call(chat_id)
+            if not disconnected:
+                return False
             call_session['status'] = CallStatus.ENDED
-            
+
             del self._active_calls[chat_id]
-            
+
             update = CallUpdate(
                 chat_id=chat_id,
                 status=CallStatus.ENDED,
@@ -110,21 +113,7 @@ class CallMethods:
             return []
         
         try:
-            # Simulate getting participants
-            # In real implementation, this would query the actual call
-            call_session = self._active_calls[chat_id]
-            
-            # Return mock participants for now
-            participants = [
-                {
-                    'user_id': 123456789,
-                    'muted': False,
-                    'video_enabled': True,
-                    'screen_sharing': False
-                }
-            ]
-            
-            return participants
+            return await self._connection.get_participants(chat_id)
             
         except Exception as e:
             self._logger.error(f"Error getting participants for chat {chat_id}: {e}")
