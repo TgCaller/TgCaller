@@ -941,6 +941,9 @@ async def test_failed_join_rollback_does_not_send_invalid_source_id(monkeypatch)
     with pytest.raises(RuntimeError, match="negotiation failed"):
         await backend.connect_call(-100123)
 
-    assert len(client.requests) == 1
+    assert len(client.requests) == 2
+    # The rollback must use the SSRC from the successful Join RPC payload,
+    # not a source ID that became invalid during failed negotiation.
+    assert client.requests[1].kwargs["source"] == 123
     assert engine.closed is True
     assert -100123 not in backend._calls
