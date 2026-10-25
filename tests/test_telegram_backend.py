@@ -804,3 +804,55 @@ async def test_disconnect_rejects_invalid_source_id_and_still_closes_engine(monk
 
     assert engine.closed is True
     assert -100123 not in backend._calls
+
+
+@pytest.mark.asyncio
+async def test_join_rejects_source_id_that_differs_from_payload_ssrc(monkeypatch):
+    class Request:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class DataJSON:
+        def __init__(self, data):
+            self.data = data
+
+    class InputPeerSelf:
+        pass
+
+    class Engine:
+        closed = False
+
+        async def create_join_payload(self, chat_id, audio_config, video_config):
+            return {
+                "ssrc": 123,
+                "ufrag": "ice-user",
+                "pwd": "ice-password",
+                "fingerprints": [
+                    {"hash": "sha-256", "fingerprint": "AA:BB", "setup": "passive"}
+                ],
+            }
+
+        async def source_id(self, chat_id):
+            return 456
+
+        async def close(self, chat_id):
+            self.closed = True
+
+    class Client:
+        async def invoke(self, request):
+            raise AssertionError("Join RPC must not run for mismatched SSRC")
+
+    async def rpc_types():
+        return Request, Request, Request, DataJSON, InputPeerSelf
+
+    engine = Engine()
+    backend = PyrogramGroupCallBackend(
+        Client(), resolve_call=lambda chat_id: object(), media_engine=engine
+    )
+    monkeypatch.setattr(backend, "_rpc_types", rpc_types)
+
+    with pytest.raises(ConnectionError, match="must match the audio SSRC"):
+        await backend.connect_call(-100123)
+
+    assert engine.closed is True
+    assert -100123 not in backend._calls
