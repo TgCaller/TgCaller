@@ -49,19 +49,20 @@ class CustomAPIServer:
     async def _handle_custom_request(self, request) -> Response:
         """Handle custom API requests"""
         try:
-            # Check if handler is registered
-            if not self.custom_handler:
-                return web.json_response(
-                    {"error": "NO_CUSTOM_API_DECORATOR"},
-                    status=400
-                )
-            
-            # Parse JSON
+            # Parse JSON first so malformed requests receive a stable error,
+            # even when no custom handler has been registered.
             try:
                 data = await request.json()
             except (json.JSONDecodeError, ValueError):
                 return web.json_response(
                     {"error": "INVALID_JSON_FORMAT_REQUEST"},
+                    status=400
+                )
+
+            # Check if handler is registered after validating the request body.
+            if not self.custom_handler:
+                return web.json_response(
+                    {"error": "NO_CUSTOM_API_DECORATOR"},
                     status=400
                 )
             
