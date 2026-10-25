@@ -697,3 +697,71 @@ async def test_cancelled_join_closes_media_engine(monkeypatch):
 
     assert engine.closed is True
     assert -100123 not in backend._calls
+
+
+@pytest.mark.asyncio
+async def test_connect_releases_unhealthy_stale_session_before_rejoining(monkeypatch):
+    class Request:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class DataJSON:
+        def __init__(self, data):
+            self.data = data
+
+    class InputPeerSelf:
+        pass
+
+    class Engine:
+        async def create_join_payload(self, chat_id, audio_config, video_config):
+            return {
+                "ssrc": 456,
+                "ufrag": "fresh-ufrag",
+                "pwd": "fresh-password",
+                "fingerprints": [
+                    {"hash": "sha-256", "fingerprint": "CC:DD", "setup": "passive"}
+                ],
+            }
+
+        async def handle_join_updates(self, chat_id, updates):
+            return None
+
+    class Client:
+        def __init__(self):
+            self.requests = []
+
+        async def invoke(self, request):
+            self.requests.append(request)
+            return object()
+
+    engine = Engine()
+    client = Client()
+    backend = PyrogramGroupCallBackend(
+        client, resolve_call=lambda chat_id: object(), media_engine=engine
+    )
+    old_call = object()
+    backend._calls[-100123] = old_call
+    disconnects = []
+
+    async def disconnect_stale(chat_id):
+        disconnects.append(chat_id)
+        backend._calls.pop(chat_id, None)
+        return True
+
+    health_results = iter([False, True])
+
+    async def healthy(chat_id):
+        return next(health_results)
+
+    async def rpc_types():
+        return Request, Request, Request, DataJSON, InputPeerSelf
+
+    monkeypatch.setattr(backend, "disconnect_call", disconnect_stale)
+    monkeypatch.setattr(backend, "is_healthy", healthy)
+    monkeypatch.setattr(backend, "_rpc_types", rpc_types)
+
+    assert await backend.connect_call(-100123) is True
+    assert disconnects == [-100123]
+    assert -100123 in backend._calls
+    assert backend._calls[-100123] is not old_call
+    assert len(client.requests) == 1
