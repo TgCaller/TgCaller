@@ -906,8 +906,13 @@ async def test_failed_join_rollback_does_not_send_invalid_source_id(monkeypatch)
                 ],
             }
 
+        def __init__(self):
+            self.source_id_calls = 0
+
         async def source_id(self, chat_id):
-            return 0
+            self.source_id_calls += 1
+            # Initial SSRC validation succeeds; rollback sees the invalid ID.
+            return 123 if self.source_id_calls == 1 else 0
 
         async def handle_join_updates(self, chat_id, updates):
             raise RuntimeError("negotiation failed")
