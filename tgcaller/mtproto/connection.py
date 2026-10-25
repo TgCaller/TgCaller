@@ -60,5 +60,25 @@ class Connection:
         result = method(chat_id)
         return bool(await result if inspect.isawaitable(result) else result)
 
+    async def pause_stream(self, chat_id: int) -> bool:
+        """Pause playback only when the configured backend supports it."""
+        if self.backend is None:
+            return False
+        method = getattr(self.backend, "pause_stream", None)
+        if method is None or not callable(method):
+            return False
+        result = method(chat_id)
+        return bool(await result if inspect.isawaitable(result) else result)
+
+    async def resume_stream(self, chat_id: int) -> bool:
+        """Resume playback only when the configured backend supports it."""
+        if self.backend is None:
+            return False
+        method = getattr(self.backend, "resume_stream", None)
+        if method is None or not callable(method):
+            return False
+        result = method(chat_id)
+        return bool(await result if inspect.isawaitable(result) else result)
+
     async def send_frame(self, chat_id: int, frame_data: bytes, frame_type: str = "audio") -> bool:
         return bool(await self._invoke("send_frame", chat_id, frame_data, frame_type))
