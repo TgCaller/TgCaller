@@ -97,7 +97,7 @@ class StreamProcessor:
         
         # Processing state
         self.is_processing = False
-        self.ffmpeg_process: Optional[subprocess.Popen] = None
+        self.ffmpeg_process: Optional[asyncio.subprocess.Process] = None
         self.temp_files: List[Path] = []
         
         # Statistics
@@ -151,21 +151,22 @@ class StreamProcessor:
         try:
             cmd = self._build_processing_command(output_format)
             
-            self.ffmpeg_process = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                bufsize=0
+            self.ffmpeg_process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                # Avoid an unread stderr pipe filling up and blocking FFmpeg.
+                stderr=asyncio.subprocess.DEVNULL,
             )
-            
-            # Verify process started
-            await asyncio.sleep(0.1)
-            if self.ffmpeg_process.poll() is not None:
-                stderr = self.ffmpeg_process.stderr.read().decode()
-                self.logger.error(f"FFmpeg processor failed to start: {stderr}")
+
+            if self.ffmpeg_process.returncode is not None:
+                self.logger.error(
+                    "FFmpeg processor exited during startup with code %s",
+                    self.ffmpeg_process.returncode,
+                )
+                await self._cleanup_processor()
                 return False
-            
+
             self.logger.info("FFmpeg processor started")
             return True
             
@@ -302,39 +303,26 @@ class StreamProcessor:
             return None
     
     async def _write_to_ffmpeg(self, data: bytes):
-        """Write data to FFmpeg stdin"""
-        try:
-            if self.ffmpeg_process and self.ffmpeg_process.stdin:
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(
-                    None,
-                    lambda: self.ffmpeg_process.stdin.write(data)
-                )
-                await loop.run_in_executor(
-                    None,
-                    self.ffmpeg_process.stdin.flush
-                )
-                
-        except Exception as e:
-            self.logger.error(f"Error writing to FFmpeg: {e}")
-    
-    async def _read_from_ffmpeg(self) -> Optional[bytes]:
-        """Read processed data from FFmpeg stdout"""
-        try:
-            if not self.ffmpeg_process or not self.ffmpeg_process.stdout:
-                return None
-            
-            loop = asyncio.get_event_loop()
-            data = await loop.run_in_executor(
-                None,
-                lambda: self.ffmpeg_process.stdout.read(self.config.buffer_size)
+        """Write PCM bytes to FFmpeg without blocking the event loop."""
+        process = self.ffmpeg_process
+        if not process or not process.stdin:
+            raise RuntimeError("FFmpeg stdin is not available")
+        if process.returncode is not None:
+            raise RuntimeError(
+                f"FFmpeg exited with return code {process.returncode}"
             )
-            
-            return data if data else None
-            
-        except Exception as e:
-            self.logger.error(f"Error reading from FFmpeg: {e}")
+
+        process.stdin.write(data)
+        await process.stdin.drain()
+
+    async def _read_from_ffmpeg(self) -> Optional[bytes]:
+        """Read available output bytes asynchronously from FFmpeg stdout."""
+        process = self.ffmpeg_process
+        if not process or not process.stdout:
             return None
+
+        data = await process.stdout.read(max(1, self.config.buffer_size))
+        return data or None
     
     def _update_processing_stats(self, bytes_processed: int, processing_time_ms: float):
         """Update processing statistics"""
@@ -353,21 +341,26 @@ class StreamProcessor:
         try:
             self.is_processing = False
             
-            # Close FFmpeg process
-            if self.ffmpeg_process:
-                if self.ffmpeg_process.stdin:
-                    self.ffmpeg_process.stdin.close()
-                
-                self.ffmpeg_process.terminate()
-                
+            # Close stdin first so FFmpeg can flush and exit naturally.
+            process = self.ffmpeg_process
+            if process:
+                if process.stdin and not process.stdin.is_closing():
+                    process.stdin.close()
+                    try:
+                        await process.stdin.wait_closed()
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass
+
                 try:
-                    await asyncio.wait_for(
-                        asyncio.create_task(self._wait_for_ffmpeg()),
-                        timeout=5.0
-                    )
+                    await asyncio.wait_for(process.wait(), timeout=2.0)
                 except asyncio.TimeoutError:
-                    self.ffmpeg_process.kill()
-                
+                    process.terminate()
+                    try:
+                        await asyncio.wait_for(process.wait(), timeout=2.0)
+                    except asyncio.TimeoutError:
+                        process.kill()
+                        await process.wait()
+
                 self.ffmpeg_process = None
             
             # Cleanup temporary files
@@ -384,10 +377,10 @@ class StreamProcessor:
             self.logger.error(f"Error during processor cleanup: {e}")
     
     async def _wait_for_ffmpeg(self):
-        """Wait for FFmpeg process to terminate"""
-        if self.ffmpeg_process:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.ffmpeg_process.wait)
+        """Wait for the asynchronous FFmpeg subprocess to terminate."""
+        process = self.ffmpeg_process
+        if process:
+            await process.wait()
     
     async def analyze_stream_format(self, sample_data: bytes) -> Dict[str, Any]:
         """Analyze stream format using FFprobe"""
