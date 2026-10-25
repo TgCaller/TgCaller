@@ -16,7 +16,7 @@ maintainers = [
 ]
 keywords = [
     "telegram", "calls", "voip", "streaming", "audio", "video",
-    "pytgcalls", "alternative", "modern", "fast", "reliable",
+    "modern", "fast", "reliable",
     "screen-sharing", "transcription", "youtube", "microphone",
     "bridged-calls", "filters", "advanced"
 ]
