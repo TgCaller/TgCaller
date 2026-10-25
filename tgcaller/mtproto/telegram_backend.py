@@ -16,6 +16,15 @@ async def _resolve(value):
     return await value if inspect.isawaitable(value) else value
 
 
+def _validate_source_id(source_id):
+    """Validate the active main connection's Telegram SSRC/source ID."""
+    if isinstance(source_id, bool) or not isinstance(source_id, int) or source_id <= 0:
+        raise ConnectionError(
+            "Media engine must provide a non-zero integer source ID"
+        )
+    return source_id
+
+
 def _validate_join_payload(payload, video_config=None):
     """Reject incomplete or placeholder Telegram group-call negotiation data."""
     if not isinstance(payload, dict) or not payload:
@@ -162,7 +171,9 @@ class PyrogramGroupCallBackend:
             return True
         try:
             _, LeaveGroupCall, _, _, _ = await self._rpc_types()
-            source_id = await _resolve(self.media_engine.source_id(chat_id))
+            source_id = _validate_source_id(
+                await _resolve(self.media_engine.source_id(chat_id))
+            )
             await self.client.invoke(LeaveGroupCall(call=call, source=source_id))
         except BaseException:
             # Preserve the original RPC/cancellation error if cleanup also fails.
@@ -198,9 +209,9 @@ class PyrogramGroupCallBackend:
                 "This Pyrogram version does not expose phone.CheckGroupCall"
             ) from exc
 
-        source_id = await _resolve(self.media_engine.source_id(chat_id))
-        if isinstance(source_id, bool) or not isinstance(source_id, int) or source_id <= 0:
-            raise ConnectionError("Media engine must provide a non-zero integer source ID")
+        source_id = _validate_source_id(
+            await _resolve(self.media_engine.source_id(chat_id))
+        )
         try:
             recognized = await self.client.invoke(
                 CheckGroupCall(call=call, sources=[source_id])
