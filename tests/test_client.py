@@ -264,6 +264,14 @@ class TestTgCaller:
 
         backend.get_position = None
         assert await caller.get_position(chat_id) is None
+
+        backend.get_position = AsyncMock(side_effect=[float("nan"), float("inf"), -1, True])
+        for _ in range(4):
+            assert await caller.get_position(chat_id) is None
+
+        for invalid_position in (float("nan"), float("inf"), float("-inf")):
+            with pytest.raises(ValueError):
+                await caller.seek(chat_id, invalid_position)
         await caller.stop()
 
     @pytest.mark.asyncio
