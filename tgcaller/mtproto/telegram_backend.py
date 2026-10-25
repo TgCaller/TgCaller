@@ -133,6 +133,9 @@ class PyrogramGroupCallBackend:
     async def disconnect_call(self, chat_id):
         call = self._calls.get(chat_id)
         if call is None:
+            # Local call state can be missing after a partial failure while the
+            # engine still owns ICE/DTLS resources. Cleanup must remain idempotent.
+            await _resolve(self.media_engine.close(chat_id))
             return True
         try:
             _, LeaveGroupCall, _, _, _ = await self._rpc_types()
