@@ -68,26 +68,31 @@ class PyrogramGroupCallBackend:
                 "Media engine returned no valid Telegram group-call join payload"
             )
 
-        updates = await self.client.invoke(
-            JoinGroupCall(
-                call=call,
-                join_as=InputPeerSelf(),
-                params=DataJSON(data=json.dumps(payload, separators=(",", ":"))),
-                muted=bool(audio_config is None),
-                video_stopped=bool(video_config is None),
+        try:
+            updates = await self.client.invoke(
+                JoinGroupCall(
+                    call=call,
+                    join_as=InputPeerSelf(),
+                    params=DataJSON(data=json.dumps(payload, separators=(",", ":"))),
+                    muted=bool(audio_config is None),
+                    video_stopped=bool(video_config is None),
+                )
             )
-        )
-        await _resolve(self.media_engine.handle_join_updates(chat_id, updates))
-        self._calls[chat_id] = call
+            await _resolve(self.media_engine.handle_join_updates(chat_id, updates))
+            self._calls[chat_id] = call
 
-        if not await self.is_healthy(chat_id):
+            if not await self.is_healthy(chat_id):
+                self._calls.pop(chat_id, None)
+                raise ConnectionError(
+                    "Telegram accepted the join request, but the media engine "
+                    "did not establish a healthy call connection"
+                )
+            return True
+        except Exception:
             self._calls.pop(chat_id, None)
+            # Failed signaling or negotiation must not leak ICE/DTLS/media resources.
             await _resolve(self.media_engine.close(chat_id))
-            raise ConnectionError(
-                "Telegram accepted the join request, but the media engine "
-                "did not establish a healthy call connection"
-            )
-        return True
+            raise
 
     async def disconnect_call(self, chat_id):
         call = self._calls.get(chat_id)
