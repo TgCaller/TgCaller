@@ -856,3 +856,86 @@ async def test_join_rejects_source_id_that_differs_from_payload_ssrc(monkeypatch
 
     assert engine.closed is True
     assert -100123 not in backend._calls
+
+
+@pytest.mark.asyncio
+async def test_failed_join_rollback_does_not_send_invalid_source_id(monkeypatch):
+    import sys
+    import types
+
+    class Request:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class DataJSON:
+        def __init__(self, data):
+            self.data = data
+
+    class InputPeerSelf:
+        pass
+
+    pyrogram = types.ModuleType("pyrogram")
+    raw = types.ModuleType("pyrogram.raw")
+    functions = types.ModuleType("pyrogram.raw.functions")
+    phone = types.ModuleType("pyrogram.raw.functions.phone")
+    raw_types = types.ModuleType("pyrogram.raw.types")
+    phone.JoinGroupCall = Request
+    phone.LeaveGroupCall = Request
+    phone.GetGroupCall = Request
+    raw_types.DataJSON = DataJSON
+    raw_types.InputPeerSelf = InputPeerSelf
+    for name, module in [
+        ("pyrogram", pyrogram),
+        ("pyrogram.raw", raw),
+        ("pyrogram.raw.functions", functions),
+        ("pyrogram.raw.functions.phone", phone),
+        ("pyrogram.raw.types", raw_types),
+    ]:
+        monkeypatch.setitem(sys.modules, name, module)
+
+    class Engine:
+        closed = False
+
+        async def create_join_payload(self, chat_id, audio_config, video_config):
+            return {
+                "ssrc": 123,
+                "ufrag": "ice-user",
+                "pwd": "ice-password",
+                "fingerprints": [
+                    {"hash": "sha-256", "fingerprint": "AA:BB", "setup": "passive"}
+                ],
+            }
+
+        async def source_id(self, chat_id):
+            return 0
+
+        async def handle_join_updates(self, chat_id, updates):
+            raise RuntimeError("negotiation failed")
+
+        async def close(self, chat_id):
+            self.closed = True
+
+    class Client:
+        def __init__(self):
+            self.requests = []
+
+        async def invoke(self, request):
+            self.requests.append(request)
+            return object()
+
+    engine = Engine()
+    client = Client()
+    backend = PyrogramGroupCallBackend(
+        client, resolve_call=lambda chat_id: object(), media_engine=engine
+    )
+
+    async def rpc_types():
+        return Request, Request, Request, DataJSON, InputPeerSelf
+
+    monkeypatch.setattr(backend, "_rpc_types", rpc_types)
+    with pytest.raises(RuntimeError, match="negotiation failed"):
+        await backend.connect_call(-100123)
+
+    assert len(client.requests) == 1
+    assert engine.closed is True
+    assert -100123 not in backend._calls
