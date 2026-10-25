@@ -252,6 +252,28 @@ class StreamProcessor:
             if output_format is None:
                 raise RuntimeError("FFmpeg processor has not been configured")
 
+            # Raw PCM already matches this processor's input/output contract.
+            # When filters are disabled, avoid spawning FFmpeg for every chunk.
+            if output_format == "raw" and not self.config.enable_filters:
+                processing_time = (asyncio.get_running_loop().time() - start_time) * 1000
+                self._update_processing_stats(len(chunk.data), processing_time)
+                return StreamChunk(
+                    data=chunk.data,
+                    timestamp=chunk.timestamp,
+                    sequence=chunk.sequence,
+                    chunk_type=chunk.chunk_type,
+                    duration_ms=chunk.duration_ms,
+                    metadata={
+                        **chunk.metadata,
+                        "processed": True,
+                        "processing_time_ms": processing_time,
+                        "original_size": len(chunk.data),
+                        "processed_size": len(chunk.data),
+                        "output_format": output_format,
+                        "processing_path": "raw_passthrough",
+                    },
+                )
+
             command = self._build_processing_command(output_format)
             process = await asyncio.create_subprocess_exec(
                 *command,
