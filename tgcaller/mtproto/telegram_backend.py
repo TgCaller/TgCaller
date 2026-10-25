@@ -210,3 +210,57 @@ class PyrogramGroupCallBackend:
         if chat_id not in self._calls:
             raise ConnectionError(f"Not connected to Telegram call in chat {chat_id}")
         return bool(await _resolve(self.media_engine.send_frame(chat_id, frame_data, frame_type)))
+
+async def resolve_active_group_call(client: Any, chat_id: int):
+    """Resolve a chat's active Telegram group call to an InputGroupCall object.
+
+    Supports basic groups and channels/supergroups using Pyrogram's raw API.
+    The returned object is suitable for the backend resolve_call callback.
+    It does not create a call or establish media.
+    """
+    try:
+        from pyrogram.raw.functions.channels import GetFullChannel
+        from pyrogram.raw.functions.messages import GetFullChat
+        from pyrogram.raw.types import InputChannel, InputPeerChannel, InputPeerChat
+    except ImportError as exc:
+        raise ConnectionError(
+            "This Pyrogram version does not expose raw full-chat group-call APIs"
+        ) from exc
+
+    try:
+        peer = await client.resolve_peer(chat_id)
+    except Exception as exc:
+        raise ConnectionError(
+            f"Could not resolve Telegram chat peer for {chat_id}"
+        ) from exc
+
+    try:
+        if isinstance(peer, InputPeerChannel):
+            response = await client.invoke(
+                GetFullChannel(
+                    channel=InputChannel(
+                        channel_id=peer.channel_id,
+                        access_hash=peer.access_hash,
+                    )
+                )
+            )
+        elif isinstance(peer, InputPeerChat):
+            response = await client.invoke(GetFullChat(chat_id=peer.chat_id))
+        else:
+            raise ConnectionError(
+                f"Chat {chat_id} is not a basic group, supergroup, or channel"
+            )
+    except ConnectionError:
+        raise
+    except Exception as exc:
+        raise ConnectionError(
+            f"Could not fetch full Telegram chat information for {chat_id}"
+        ) from exc
+
+    full_chat = getattr(response, "full_chat", None)
+    call = getattr(full_chat, "call", None)
+    if call is None:
+        raise ConnectionError(
+            f"No active Telegram group call is available for chat {chat_id}"
+        )
+    return call
