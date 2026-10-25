@@ -153,7 +153,7 @@ class MediaDevices:
                     for key, property_name in (
                         ("fourcc", "CAP_PROP_FOURCC"),
                         ("brightness", "CAP_PROP_BRIGHTNESS"),
-                        ("contrast", "CAP_PROP_CONTRAST),
+                        ("contrast", "CAP_PROP_CONTRAST"),
                     ):
                         try:
                             metadata[key] = cap.get(getattr(cv2, property_name))
