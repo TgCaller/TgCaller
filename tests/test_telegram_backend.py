@@ -60,6 +60,32 @@ async def test_backend_rejects_empty_join_payload_and_closes_engine():
 
 
 @pytest.mark.asyncio
+async def test_payload_creation_error_closes_engine_and_clears_call():
+    class Engine:
+        closed = False
+
+        async def create_join_payload(self, chat_id, audio_config, video_config):
+            raise RuntimeError("media engine initialization failed")
+
+        async def close(self, chat_id):
+            self.closed = True
+
+    class Client:
+        async def invoke(self, request):
+            raise AssertionError("RPC must not run if payload creation failed")
+
+    engine = Engine()
+    backend = PyrogramGroupCallBackend(
+        Client(), resolve_call=lambda chat_id: object(), media_engine=engine
+    )
+    with pytest.raises(RuntimeError, match="media engine initialization failed"):
+        await backend.connect_call(-100123)
+
+    assert engine.closed is True
+    assert -100123 not in backend._calls
+
+
+@pytest.mark.asyncio
 async def test_join_negotiation_failure_closes_engine_and_clears_call(monkeypatch):
     import sys
     import types
