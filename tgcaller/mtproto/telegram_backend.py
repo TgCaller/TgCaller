@@ -15,6 +15,42 @@ async def _resolve(value):
     return await value if inspect.isawaitable(value) else value
 
 
+def _validate_join_payload(payload, video_config=None):
+    """Reject incomplete or placeholder Telegram group-call negotiation data."""
+    if not isinstance(payload, dict) or not payload:
+        raise ConnectionError(
+            "Media engine returned no valid Telegram group-call join payload"
+        )
+
+    ssrc = payload.get("ssrc")
+    if isinstance(ssrc, bool) or not isinstance(ssrc, int) or ssrc <= 0:
+        raise ConnectionError("Join payload must contain a non-zero integer audio ssrc")
+
+    for key in ("ufrag", "pwd"):
+        if not isinstance(payload.get(key), str) or not payload[key].strip():
+            raise ConnectionError(f"Join payload must contain a non-empty {key}")
+
+    fingerprints = payload.get("fingerprints")
+    if not isinstance(fingerprints, list) or not fingerprints:
+        raise ConnectionError("Join payload must contain at least one DTLS fingerprint")
+    for item in fingerprints:
+        if not isinstance(item, dict) or not all(
+            isinstance(item.get(key), str) and item[key].strip()
+            for key in ("hash", "fingerprint", "setup")
+        ):
+            raise ConnectionError(
+                "Each DTLS fingerprint must include hash, fingerprint, and setup"
+            )
+
+    if video_config is not None:
+        groups = payload.get("ssrc-groups")
+        if not isinstance(groups, list) or not groups:
+            raise ConnectionError(
+                "Video join payload must contain non-empty ssrc-groups"
+            )
+    return payload
+
+
 class PyrogramGroupCallBackend:
     """Bridge TgCaller transport calls to Pyrogram raw group-call RPCs.
 
@@ -63,10 +99,7 @@ class PyrogramGroupCallBackend:
         payload = await _resolve(
             self.media_engine.create_join_payload(chat_id, audio_config, video_config)
         )
-        if not isinstance(payload, dict) or not payload:
-            raise ConnectionError(
-                "Media engine returned no valid Telegram group-call join payload"
-            )
+        _validate_join_payload(payload, video_config)
 
         try:
             updates = await self.client.invoke(
