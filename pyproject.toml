@@ -85,7 +85,7 @@ cli = [
     "colorama>=0.4.6",
 ]
 all = [
-    "tgcaller[dev,media,audio,advanced,cli]"
+    "tgcaller[dev,media,audio,advanced,calls,cli]"
 ]
 
 [project.urls]
