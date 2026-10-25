@@ -99,12 +99,14 @@ class PyrogramGroupCallBackend:
                 f"No active Telegram group call could be resolved for chat {chat_id}"
             )
 
-        payload = await _resolve(
-            self.media_engine.create_join_payload(chat_id, audio_config, video_config)
-        )
-        _validate_join_payload(payload, video_config)
-
+        # Payload creation may allocate ICE/DTLS resources before it returns.
+        # Keep it inside the cleanup boundary so invalid data or engine errors
+        # cannot leak partially initialized media resources.
         try:
+            payload = await _resolve(
+                self.media_engine.create_join_payload(chat_id, audio_config, video_config)
+            )
+            _validate_join_payload(payload, video_config)
             updates = await self.client.invoke(
                 JoinGroupCall(
                     call=call,
@@ -126,7 +128,8 @@ class PyrogramGroupCallBackend:
             return True
         except Exception:
             self._calls.pop(chat_id, None)
-            # Failed signaling or negotiation must not leak ICE/DTLS/media resources.
+            # Failed payload creation, validation, signaling or negotiation must
+            # not leak ICE/DTLS/media resources.
             await _resolve(self.media_engine.close(chat_id))
             raise
 
