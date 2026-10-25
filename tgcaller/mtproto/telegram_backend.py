@@ -143,6 +143,31 @@ class PyrogramGroupCallBackend:
     async def is_healthy(self, chat_id):
         return bool(await _resolve(self.media_engine.is_connected(chat_id)))
 
+    async def check_call(self, chat_id):
+        """Check whether Telegram still recognizes this call's media source.
+
+        This is a server-side membership check, not a media-flow health check.
+        Call it while the media engine is reconnecting; if the source is absent,
+        the caller must rebuild the media connection and join payload.
+        """
+        call = self._calls.get(chat_id)
+        if call is None:
+            return False
+        try:
+            from pyrogram.raw.functions.phone import CheckGroupCall
+        except ImportError as exc:
+            raise ConnectionError(
+                "This Pyrogram version does not expose phone.CheckGroupCall"
+            ) from exc
+
+        source_id = await _resolve(self.media_engine.source_id(chat_id))
+        if isinstance(source_id, bool) or not isinstance(source_id, int) or source_id <= 0:
+            raise ConnectionError("Media engine must provide a non-zero integer source ID")
+        recognized = await self.client.invoke(
+            CheckGroupCall(call=call, sources=[source_id])
+        )
+        return source_id in recognized
+
     async def get_participants(self, chat_id):
         call = self._calls.get(chat_id)
         if call is None:
