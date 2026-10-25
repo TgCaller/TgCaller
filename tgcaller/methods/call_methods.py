@@ -69,11 +69,17 @@ class CallMethods:
             self._logger.info(f"Joined call in chat {chat_id}")
             return True
 
-        except Exception as e:
+        except BaseException as e:
+            # Cancellation can occur while the transport is negotiating. Remove
+            # the provisional local session, but preserve task cancellation.
             self._active_calls.pop(chat_id, None)
+            if isinstance(e, asyncio.CancelledError):
+                raise
             if isinstance(e, CallError):
                 raise
-            raise CallError(f"Failed to join call: {e}")
+            if isinstance(e, Exception):
+                raise CallError(f"Failed to join call: {e}") from e
+            raise
     
     async def leave_call(self, chat_id: int) -> bool:
         """Leave a call"""
