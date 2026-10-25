@@ -208,3 +208,42 @@ def test_video_join_payload_requires_source_groups():
     }
     with pytest.raises(ConnectionError, match="ssrc-groups"):
         _validate_join_payload(valid_audio, video_config={"enabled": True})
+
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("recognized", "expected"), [([123], True), ([], False)])
+async def test_check_call_reports_server_membership(monkeypatch, recognized, expected):
+    import sys
+    import types
+
+    class CheckGroupCall:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    pyrogram = types.ModuleType("pyrogram")
+    raw = types.ModuleType("pyrogram.raw")
+    functions = types.ModuleType("pyrogram.raw.functions")
+    phone = types.ModuleType("pyrogram.raw.functions.phone")
+    phone.CheckGroupCall = CheckGroupCall
+    monkeypatch.setitem(sys.modules, "pyrogram", pyrogram)
+    monkeypatch.setitem(sys.modules, "pyrogram.raw", raw)
+    monkeypatch.setitem(sys.modules, "pyrogram.raw.functions", functions)
+    monkeypatch.setitem(sys.modules, "pyrogram.raw.functions.phone", phone)
+
+    class Engine:
+        async def source_id(self, chat_id):
+            return 123
+
+    class Client:
+        async def invoke(self, request):
+            assert request.kwargs["sources"] == [123]
+            return recognized
+
+    backend = PyrogramGroupCallBackend(
+        Client(), resolve_call=lambda chat_id: object(), media_engine=Engine()
+    )
+    call = object()
+    backend._calls[-100123] = call
+
+    assert await backend.check_call(-100123) is expected
