@@ -288,17 +288,20 @@ class StreamMethods:
         call_session = self._active_calls[chat_id]
         if 'current_stream' not in call_session:
             return False
-        if (
-            isinstance(position, bool)
-            or not isinstance(position, (int, float))
-            or position < 0
-            or (isinstance(position, float) and not math.isfinite(position))
-        ):
+        if isinstance(position, bool) or not isinstance(position, (int, float)):
             raise ValueError("Position must be a finite, non-negative number of seconds")
-        if not await self._connection.seek(chat_id, position):
+        try:
+            normalized_position = float(position)
+        except (OverflowError, ValueError):
+            raise ValueError(
+                "Position must be a finite, non-negative number of seconds"
+            ) from None
+        if not math.isfinite(normalized_position) or normalized_position < 0:
+            raise ValueError("Position must be a finite, non-negative number of seconds")
+        if not await self._connection.seek(chat_id, normalized_position):
             return False
 
-        self._logger.info(f"Seeked to {position}s in chat {chat_id}")
+        self._logger.info(f"Seeked to {normalized_position}s in chat {chat_id}")
         return True
     
     async def get_position(self, chat_id: int) -> Optional[float]:
