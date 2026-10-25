@@ -201,7 +201,13 @@ class StreamMethods:
         
         if 'current_stream' not in call_session:
             return False
-        
+        if call_session.get('status') != CallStatus.PLAYING:
+            return False
+
+        # Do not report a pause unless the real transport confirms it.
+        if not await self._connection.pause_stream(chat_id):
+            return False
+
         call_session['status'] = CallStatus.PAUSED
         
         update = CallUpdate(
@@ -225,7 +231,11 @@ class StreamMethods:
         
         if call_session.get('status') != CallStatus.PAUSED:
             return False
-        
+
+        # Keep the local state unchanged if the transport cannot resume.
+        if not await self._connection.resume_stream(chat_id):
+            return False
+
         call_session['status'] = CallStatus.PLAYING
         
         update = CallUpdate(
