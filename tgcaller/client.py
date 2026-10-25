@@ -65,6 +65,7 @@ class TgCaller:
             'stream_start': [],
             'stream_paused': [],
             'stream_resumed': [],
+            'stream_stopped': [],
             'call_joined': [],
             'call_left': [],
             'kicked': [],
@@ -196,6 +197,13 @@ class TgCaller:
             return f
         return decorator(func) if func else decorator
     
+    def on_stream_stopped(self, func: Callable = None):
+        """Decorator for stream stopped events"""
+        def decorator(f):
+            self._add_handler('stream_stopped', f)
+            return f
+        return decorator(func) if func else decorator
+    
     def on_kicked(self, func: Callable = None):
         """Decorator for kicked events"""
         def decorator(f):
@@ -206,7 +214,7 @@ class TgCaller:
     def on_left(self, func: Callable = None):
         """Decorator for left events"""
         def decorator(f):
-            self._add_handler('left', f)
+            self._add_handler('call_left', f)
             return f
         return decorator(func) if func else decorator
     
