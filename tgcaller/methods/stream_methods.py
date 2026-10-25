@@ -90,72 +90,61 @@ class StreamMethods:
         return True
     
     async def record(
-        self, 
-        chat_id: int, 
+        self,
+        chat_id: int,
         output_path: str,
-        audio_config: Optional[AudioConfig] = None
+        audio_config: Optional[AudioConfig] = None,
     ) -> bool:
-        """Start recording call audio"""
+        """Start backend recording, or report unsupported capability."""
         if chat_id not in self._active_calls:
             return False
-        
-        try:
-            call_session = self._active_calls[chat_id]
-            call_session['recording'] = {
-                'output_path': output_path,
-                'audio_config': audio_config or AudioConfig(),
-                'started_at': asyncio.get_event_loop().time()
-            }
-            
-            self._logger.info(f"Started recording in chat {chat_id} to {output_path}")
-            return True
-            
-        except Exception as e:
-            self._logger.error(f"Failed to start recording: {e}")
-            return False
-    
-    async def stop_recording(self, chat_id: int) -> bool:
-        """Stop recording call audio"""
-        if chat_id not in self._active_calls:
-            return False
-        
-        call_session = self._active_calls[chat_id]
-        
-        if 'recording' not in call_session:
-            return False
-        
-        recording_info = call_session.pop('recording')
-        duration = asyncio.get_event_loop().time() - recording_info['started_at']
-        
-        self._logger.info(f"Stopped recording in chat {chat_id}, duration: {duration:.1f}s")
+        backend = self._require_calls_backend()
+        record_call = getattr(backend, "record", None)
+        if not callable(record_call):
+            raise StreamError("The configured call backend does not support recording")
+        await record_call(chat_id, output_path)
+        self._active_calls[chat_id]["recording"] = {
+            "output_path": output_path,
+            "audio_config": audio_config or AudioConfig(),
+            "started_at": asyncio.get_event_loop().time(),
+        }
         return True
-    
+
+    async def stop_recording(self, chat_id: int) -> bool:
+        """Stop backend recording only when the backend exposes that operation."""
+        if chat_id not in self._active_calls:
+            return False
+        call_session = self._active_calls[chat_id]
+        if "recording" not in call_session:
+            return False
+        backend = self._require_calls_backend()
+        stop_recording = getattr(backend, "stop_recording", None)
+        if not callable(stop_recording):
+            raise StreamError(
+                "The configured call backend does not expose stop_recording"
+            )
+        await stop_recording(chat_id)
+        call_session.pop("recording", None)
+        return True
+
     async def send_frame(
         self,
         chat_id: int,
         frame_data: bytes,
-        frame_type: str = "audio"
+        frame_type: str = "audio",
     ) -> bool:
-        """Send raw frame data to call"""
+        """Send a raw frame only when the backend supports the required frame API."""
         if chat_id not in self._active_calls:
             return False
-        
-        try:
-            # This would send raw frame data to the call
-            # Implementation depends on actual streaming protocol
-            call_session = self._active_calls[chat_id]
-            
-            if 'frames_sent' not in call_session:
-                call_session['frames_sent'] = 0
-            
-            call_session['frames_sent'] += 1
-            
-            return True
-            
-        except Exception as e:
-            self._logger.error(f"Failed to send frame: {e}")
-            return False
-    
+        backend = self._require_calls_backend()
+        send_frame = getattr(backend, "send_frame", None)
+        if not callable(send_frame):
+            raise StreamError("The configured call backend does not support raw frames")
+        raise StreamError(
+            "Raw frame transport requires a typed Device and frame metadata; "
+            "use the advanced frame adapter rather than passing frame_type alone."
+        )
+
     async def get_time(self, chat_id: int) -> Optional[float]:
         """Get current stream time position"""
         if chat_id not in self._active_calls:
