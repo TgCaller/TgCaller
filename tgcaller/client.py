@@ -16,6 +16,7 @@ from .methods import CallMethods, StreamMethods
 from .api import CustomAPIServer, on_custom_update
 from .devices import MediaDevices
 from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
+from .mtproto import Connection
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,8 @@ class TgCaller:
     def __init__(
         self,
         client: Client,
-        log_level: int = logging.WARNING
+        log_level: int = logging.WARNING,
+        connection_backend: Optional[Any] = None,
     ):
         """
         Initialize TgCaller
@@ -59,6 +61,8 @@ class TgCaller:
             raise TypeError("client must be a Pyrogram Client instance")
             
         self._client = client
+        # A concrete backend must provide real Telegram call signaling and media transport.
+        self._connection = Connection(client, backend=connection_backend)
         self._active_calls: Dict[int, Any] = {}
         self._event_handlers: Dict[str, List[Callable]] = {
             'stream_end': [],
