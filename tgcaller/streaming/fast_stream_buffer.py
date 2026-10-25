@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 import threading
 from collections import deque
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -342,11 +341,10 @@ class FastStreamBuffer:
                     self.stats['underruns'] += 1
                 return None
             
-            # Get chunk based on priority
-            if self.config.prioritize_recent:
-                chunk = self.buffer.pop()  # Get newest
-            else:
-                chunk = self.buffer.popleft()  # Get oldest
+            # Preserve media sequence order: always consume the oldest chunk first.
+            # Recent-chunk preference is handled by dropping stale chunks on overflow,
+            # not by reversing playback order.
+            chunk = self.buffer.popleft()
             
             # Update state based on remaining buffer
             remaining = len(self.buffer)
