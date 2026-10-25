@@ -53,28 +53,13 @@ from .devices import MediaDevices, DeviceInfo, InputDevice, SpeakerDevice, Camer
 from .handlers.event_system import Filters, BaseFilter, and_filter, or_filter
 from .utilities import CpuMonitor, PingMonitor, CallHolder, PeerResolver
 from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
-# Streaming uses optional media dependencies; load it only when requested.
-def __getattr__(name: str):
-    if name == "streaming":
-        from importlib import import_module
-
-        module = import_module(".streaming", __name__)
-        globals()[name] = module
-        return module
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
+# Optional features are resolved lazily so importing the core API remains lightweight.
 __all_advanced__ = [
     "BridgedCallManager",
     "MicrophoneCapture",
     "CustomAPIHandler",
     "AudioFilters",
     "VideoFilters",
-    "ExternalCapture",
-    "FIFOConverter",
-    "FrameSender",
-    "MultiClientManager",
-    "P2PCallManager",
-    "RawStreamer",
     "ScreenShare",
     "WhisperTranscription",
     "YouTubeDownloader",
@@ -82,35 +67,25 @@ __all_advanced__ = [
     "PerformanceMonitor",
 ]
 
-try:
-    from . import advanced as advanced_module
-except ImportError as exc:
-    missing = getattr(exc, "name", None)
-    if missing is not None and missing.startswith("tgcaller"):
-        raise
-    advanced = None
-    for _name in __all_advanced__:
-        globals()[_name] = None
-else:
-    advanced = advanced_module
-    from .advanced import (
-        AdvancedYouTubeStreamer,
-        AudioFilters,
-        BridgedCallManager,
-        CustomAPIHandler,
-        ExternalCapture,
-        FIFOConverter,
-        FrameSender,
-        MicrophoneCapture,
-        MultiClientManager,
-        P2PCallManager,
-        RawStreamer,
-        ScreenShare,
-        VideoFilters,
-        WhisperTranscription,
-        YouTubeDownloader,
-        PerformanceMonitor,
-    )
+
+def __getattr__(name: str):
+    from importlib import import_module
+
+    if name == "streaming":
+        module = import_module(".streaming", __name__)
+        globals()[name] = module
+        return module
+    if name == "advanced":
+        module = import_module(".advanced", __name__)
+        globals()[name] = module
+        return module
+    if name in __all_advanced__:
+        module = import_module(".advanced", __name__)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Main client
