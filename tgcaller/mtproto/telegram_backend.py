@@ -163,10 +163,24 @@ class PyrogramGroupCallBackend:
         source_id = await _resolve(self.media_engine.source_id(chat_id))
         if isinstance(source_id, bool) or not isinstance(source_id, int) or source_id <= 0:
             raise ConnectionError("Media engine must provide a non-zero integer source ID")
-        recognized = await self.client.invoke(
-            CheckGroupCall(call=call, sources=[source_id])
-        )
-        return source_id in recognized
+        try:
+            recognized = await self.client.invoke(
+                CheckGroupCall(call=call, sources=[source_id])
+            )
+        except Exception:
+            # Telegram instructs clients to rejoin when this check errors.
+            await _resolve(self.media_engine.close(chat_id))
+            self._calls.pop(chat_id, None)
+            return False
+
+        if source_id in recognized:
+            return True
+
+        # The server no longer recognizes this source. Drop stale local state so
+        # connect_call() can generate a fresh payload and perform a real rejoin.
+        await _resolve(self.media_engine.close(chat_id))
+        self._calls.pop(chat_id, None)
+        return False
 
     async def get_participants(self, chat_id):
         call = self._calls.get(chat_id)
