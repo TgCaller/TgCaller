@@ -324,3 +324,131 @@ async def test_disconnect_cleans_engine_when_local_call_state_is_missing():
     assert await backend.disconnect_call(-100123) is True
     assert engine.closed is True
     assert -100123 not in backend._calls
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("peer_kind", ["channel", "basic_group"])
+async def test_resolve_active_group_call_supports_channels_and_basic_groups(
+    monkeypatch, peer_kind
+):
+    import sys
+    import types
+
+    class InputPeerChannel:
+        def __init__(self, channel_id, access_hash):
+            self.channel_id = channel_id
+            self.access_hash = access_hash
+
+    class InputPeerChat:
+        def __init__(self, chat_id):
+            self.chat_id = chat_id
+
+    class InputChannel:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class GetFullChannel:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class GetFullChat:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    pyrogram = types.ModuleType("pyrogram")
+    raw = types.ModuleType("pyrogram.raw")
+    functions = types.ModuleType("pyrogram.raw.functions")
+    channels = types.ModuleType("pyrogram.raw.functions.channels")
+    messages = types.ModuleType("pyrogram.raw.functions.messages")
+    raw_types = types.ModuleType("pyrogram.raw.types")
+    channels.GetFullChannel = GetFullChannel
+    messages.GetFullChat = GetFullChat
+    raw_types.InputChannel = InputChannel
+    raw_types.InputPeerChannel = InputPeerChannel
+    raw_types.InputPeerChat = InputPeerChat
+    for name, module in [
+        ("pyrogram", pyrogram),
+        ("pyrogram.raw", raw),
+        ("pyrogram.raw.functions", functions),
+        ("pyrogram.raw.functions.channels", channels),
+        ("pyrogram.raw.functions.messages", messages),
+        ("pyrogram.raw.types", raw_types),
+    ]:
+        monkeypatch.setitem(sys.modules, name, module)
+
+    call = object()
+
+    class Client:
+        async def resolve_peer(self, chat_id):
+            if peer_kind == "channel":
+                return InputPeerChannel(channel_id=44, access_hash=55)
+            return InputPeerChat(chat_id=66)
+
+        async def invoke(self, request):
+            if peer_kind == "channel":
+                assert isinstance(request, GetFullChannel)
+                assert request.kwargs["channel"].kwargs == {
+                    "channel_id": 44,
+                    "access_hash": 55,
+                }
+            else:
+                assert isinstance(request, GetFullChat)
+                assert request.kwargs == {"chat_id": 66}
+            return types.SimpleNamespace(full_chat=types.SimpleNamespace(call=call))
+
+    from tgcaller.mtproto.telegram_backend import resolve_active_group_call
+
+    assert await resolve_active_group_call(Client(), -100123) is call
+
+
+@pytest.mark.asyncio
+async def test_resolve_active_group_call_fails_when_no_call_is_active(monkeypatch):
+    import sys
+    import types
+
+    class InputPeerChat:
+        def __init__(self, chat_id):
+            self.chat_id = chat_id
+
+    class GetFullChat:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class InputChannel:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class InputPeerChannel:
+        pass
+
+    pyrogram = types.ModuleType("pyrogram")
+    raw = types.ModuleType("pyrogram.raw")
+    functions = types.ModuleType("pyrogram.raw.functions")
+    channels = types.ModuleType("pyrogram.raw.functions.channels")
+    messages = types.ModuleType("pyrogram.raw.functions.messages")
+    raw_types = types.ModuleType("pyrogram.raw.types")
+    channels.GetFullChannel = object
+    messages.GetFullChat = GetFullChat
+    raw_types.InputChannel = InputChannel
+    raw_types.InputPeerChannel = InputPeerChannel
+    raw_types.InputPeerChat = InputPeerChat
+    for name, module in [
+        ("pyrogram", pyrogram),
+        ("pyrogram.raw", raw),
+        ("pyrogram.raw.functions", functions),
+        ("pyrogram.raw.functions.channels", channels),
+        ("pyrogram.raw.functions.messages", messages),
+        ("pyrogram.raw.types", raw_types),
+    ]:
+        monkeypatch.setitem(sys.modules, name, module)
+
+    class Client:
+        async def resolve_peer(self, chat_id):
+            return InputPeerChat(chat_id=66)
+
+        async def invoke(self, request):
+            return types.SimpleNamespace(full_chat=types.SimpleNamespace(call=None))
+
+    from tgcaller.mtproto.telegram_backend import resolve_active_group_call
+
+    with pytest.raises(ConnectionError, match="No active Telegram group call"):
+        await resolve_active_group_call(Client(), -100123)
