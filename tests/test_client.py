@@ -19,6 +19,11 @@ class FakeCallsBackend:
     def __init__(self):
         self.play_calls = []
         self.volume_calls = []
+        self.leave_calls = []
+        self.pause_calls = []
+        self.resume_calls = []
+        self.mute_calls = []
+        self.unmute_calls = []
         self.started = False
 
     async def start(self):
@@ -28,18 +33,23 @@ class FakeCallsBackend:
         self.play_calls.append((chat_id, stream))
 
     async def leave_call(self, chat_id):
+        self.leave_calls.append(chat_id)
         return True
 
     async def pause(self, chat_id):
+        self.pause_calls.append(chat_id)
         return True
 
     async def resume(self, chat_id):
+        self.resume_calls.append(chat_id)
         return True
 
     async def mute(self, chat_id):
+        self.mute_calls.append(chat_id)
         return True
 
     async def unmute(self, chat_id):
+        self.unmute_calls.append(chat_id)
         return True
 
     async def change_volume_call(self, chat_id, volume):
@@ -91,11 +101,12 @@ class TestTgCaller:
             pass
     
     @pytest.mark.asyncio
-    async def test_start_stop(self, caller, mock_client):
+    async def test_start_stop(self, caller, mock_client, mock_calls_backend):
         """Test starting and stopping TgCaller"""
         # Test start
         await caller.start()
         assert caller.is_running
+        assert mock_calls_backend.started is True
         mock_client.start.assert_called_once()
         
         # Test stop
@@ -116,7 +127,7 @@ class TestTgCaller:
         assert (chat_id, None) in mock_calls_backend.play_calls
     
     @pytest.mark.asyncio
-    async def test_leave_call(self, caller, mock_client):
+    async def test_leave_call(self, caller, mock_client, mock_calls_backend):
         """Test leaving a call"""
         await caller.start()
         
@@ -129,6 +140,7 @@ class TestTgCaller:
         # Then leave
         result = await caller.leave_call(chat_id)
         assert result is True
+        assert mock_calls_backend.leave_calls == [chat_id]
         assert not caller.is_connected(chat_id)
     
     @pytest.mark.asyncio
@@ -145,7 +157,7 @@ class TestTgCaller:
         assert (chat_id, temp_audio_file) in mock_calls_backend.play_calls
     
     @pytest.mark.asyncio
-    async def test_pause_resume(self, caller, mock_client, temp_audio_file):
+    async def test_pause_resume(self, caller, mock_client, temp_audio_file, mock_calls_backend):
         """Test pause and resume"""
         await caller.start()
         
@@ -157,10 +169,12 @@ class TestTgCaller:
         # Pause
         result = await caller.pause(chat_id)
         assert result is True
+        assert mock_calls_backend.pause_calls == [chat_id]
         
         # Resume
         result = await caller.resume(chat_id)
         assert result is True
+        assert mock_calls_backend.resume_calls == [chat_id]
     
     @pytest.mark.asyncio
     async def test_volume_control(self, caller, mock_client, mock_calls_backend):
