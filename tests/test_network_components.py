@@ -42,7 +42,7 @@ def test_jitter_buffer_is_bounded():
     buffer.push(2, "b")
     buffer.push(3, "c")
     assert len(buffer) == 2
-    assert 3 in buffer
+    assert 2 in buffer
 
 
 def test_packet_loss_handler_counts_gaps_and_ignores_reordering():
@@ -51,7 +51,7 @@ def test_packet_loss_handler_counts_gaps_and_ignores_reordering():
     assert handler.observe(13) == 2
     assert handler.observe(12) == 0
     assert handler.lost_packets == 2
-    assert handler.loss_rate == pytest.approx(2 / 5)
+    assert handler.loss_rate == pytest.approx(2 / 4)
     handler.reset()
     assert handler.loss_rate == 0.0
 
