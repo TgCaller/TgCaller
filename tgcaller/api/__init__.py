@@ -1,12 +1,8 @@
 
 """Public API exports for TgCaller."""
 
+from .custom_api import CustomAPIServer
 from .decorators import on_custom_update
-
-try:
-    from .server import CustomAPIServer
-except ImportError:
-    CustomAPIServer = None
 
 __all__ = [
     "CustomAPIServer",
