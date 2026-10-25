@@ -48,6 +48,25 @@ class Connection:
     async def get_participants(self, chat_id: int):
         return await self._invoke("get_participants", chat_id)
 
+    async def get_position(self, chat_id: int) -> Optional[float]:
+        """Return authoritative playback position when the backend supports it."""
+        if self.backend is None:
+            return None
+        method = getattr(self.backend, "get_position", None)
+        if method is None or not callable(method):
+            return None
+        result = method(chat_id)
+        result = await result if inspect.isawaitable(result) else result
+        if result is None:
+            return None
+        if (
+            isinstance(result, bool)
+            or not isinstance(result, (int, float))
+            or result < 0
+        ):
+            return None
+        return float(result)
+
     async def play_stream(self, chat_id: int, stream):
         return bool(await self._invoke("play_stream", chat_id, stream))
 
