@@ -144,3 +144,32 @@ async def test_processor_records_ffmpeg_nonzero_exit_as_error(monkeypatch):
 
     assert result is None
     assert processor.processing_stats["errors"] == 1
+
+
+@pytest.mark.asyncio
+async def test_raw_passthrough_skips_ffmpeg_when_filters_disabled(monkeypatch):
+    from tgcaller.streaming import stream_processor as module
+
+    async def unexpected_ffmpeg_call(*args, **kwargs):
+        raise AssertionError("raw passthrough should not spawn FFmpeg")
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", unexpected_ffmpeg_call)
+    processor = StreamProcessor(ProcessorConfig(enable_filters=False))
+    assert await processor._start_ffmpeg_processor("raw")
+    original = b"unaltered-pcm-bytes"
+    chunk = StreamChunk(
+        data=original,
+        timestamp=4.0,
+        sequence=9,
+        metadata={"source": "test"},
+    )
+
+    result = await processor._process_single_chunk(chunk)
+
+    assert result is not None
+    assert result.data == original
+    assert result.sequence == 9
+    assert result.metadata["processing_path"] == "raw_passthrough"
+    assert result.metadata["processed_size"] == len(original)
+    assert processor.processing_stats["chunks_processed"] == 1
+    assert processor.processing_stats["errors"] == 0
