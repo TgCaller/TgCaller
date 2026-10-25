@@ -765,3 +765,39 @@ async def test_connect_releases_unhealthy_stale_session_before_rejoining(monkeyp
     assert -100123 in backend._calls
     assert backend._calls[-100123] is not old_call
     assert len(client.requests) == 1
+
+
+@pytest.mark.asyncio
+async def test_disconnect_rejects_invalid_source_id_and_still_closes_engine(monkeypatch):
+    class Request:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class Engine:
+        closed = False
+
+        async def source_id(self, chat_id):
+            return 0
+
+        async def close(self, chat_id):
+            self.closed = True
+
+    class Client:
+        async def invoke(self, request):
+            raise AssertionError("LeaveGroupCall must not receive an invalid source ID")
+
+    async def rpc_types():
+        return Request, Request, Request, object, object
+
+    engine = Engine()
+    backend = PyrogramGroupCallBackend(
+        Client(), resolve_call=lambda chat_id: object(), media_engine=engine
+    )
+    backend._calls[-100123] = object()
+    monkeypatch.setattr(backend, "_rpc_types", rpc_types)
+
+    with pytest.raises(ConnectionError, match="non-zero integer source ID"):
+        await backend.disconnect_call(-100123)
+
+    assert engine.closed is True
+    assert -100123 not in backend._calls
