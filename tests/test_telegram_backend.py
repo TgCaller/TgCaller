@@ -86,7 +86,14 @@ async def test_join_negotiation_failure_closes_engine_and_clears_call(monkeypatc
         closed = False
 
         async def create_join_payload(self, chat_id, audio_config, video_config):
-            return {"ssrc": 123}
+            return {
+                "ssrc": 123,
+                "ufrag": "ice-user",
+                "pwd": "ice-password",
+                "fingerprints": [
+                    {"hash": "sha-256", "fingerprint": "AA:BB", "setup": "passive"}
+                ],
+            }
 
         async def handle_join_updates(self, chat_id, updates):
             raise RuntimeError("bad negotiation update")
