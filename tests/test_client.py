@@ -35,6 +35,14 @@ class FakeTransport:
     async def stop_stream(self, chat_id):
         return True
 
+    async def pause_stream(self, chat_id):
+        self.pause_calls = getattr(self, "pause_calls", 0) + 1
+        return True
+
+    async def resume_stream(self, chat_id):
+        self.resume_calls = getattr(self, "resume_calls", 0) + 1
+        return True
+
     async def send_frame(self, chat_id, frame_data, frame_type):
         return True
 
@@ -147,10 +155,18 @@ class TestTgCaller:
         # Pause
         result = await caller.pause(chat_id)
         assert result is True
-        
+        assert caller._connection.backend.pause_calls == 1
+        assert await caller.get_call_status(chat_id) == CallStatus.PAUSED.value
+
+        # A second pause is not reported as a successful transport action.
+        assert await caller.pause(chat_id) is False
+        assert caller._connection.backend.pause_calls == 1
+
         # Resume
         result = await caller.resume(chat_id)
         assert result is True
+        assert caller._connection.backend.resume_calls == 1
+        assert await caller.get_call_status(chat_id) == CallStatus.PLAYING.value
     
     @pytest.mark.asyncio
     async def test_volume_control(self, caller, mock_client):
