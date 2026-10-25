@@ -24,10 +24,17 @@ class FakeCallsBackend:
         self.resume_calls = []
         self.mute_calls = []
         self.unmute_calls = []
+        self.update_handler = None
         self.started = False
 
     async def start(self):
         self.started = True
+
+    def on_update(self, filters=None):
+        def register(handler):
+            self.update_handler = handler
+            return handler
+        return register
 
     async def play(self, chat_id, stream=None):
         self.play_calls.append((chat_id, stream))
@@ -193,6 +200,24 @@ class TestTgCaller:
         with pytest.raises(ValueError):
             await caller.set_volume(chat_id, 1.5)
     
+    @pytest.mark.asyncio
+    async def test_backend_stream_end_update(self, caller, mock_calls_backend, temp_audio_file):
+        """Backend stream-end updates should reach TgCaller's event bridge."""
+        await caller.start()
+        chat_id = -1001234567890
+        await caller.play(chat_id, temp_audio_file)
+        assert mock_calls_backend.update_handler is not None
+
+        class StreamEnded:
+            def __init__(self, chat_id):
+                self.chat_id = chat_id
+
+        await mock_calls_backend.update_handler(mock_calls_backend, StreamEnded(chat_id))
+        assert "current_stream" not in caller._active_calls[chat_id]
+        assert caller._active_calls[chat_id]["status"] == CallStatus.CONNECTED
+
+        await caller.stop()
+
     def test_event_handlers(self, caller):
         """Test event handler decorators"""
         
