@@ -53,7 +53,15 @@ from .devices import MediaDevices, DeviceInfo, InputDevice, SpeakerDevice, Camer
 from .handlers.event_system import Filters, BaseFilter, and_filter, or_filter
 from .utilities import CpuMonitor, PingMonitor, CallHolder, PeerResolver
 from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
-from . import streaming
+# Streaming uses optional media dependencies; load it only when requested.
+def __getattr__(name: str):
+    if name == "streaming":
+        from importlib import import_module
+
+        module = import_module(".streaming", __name__)
+        globals()[name] = module
+        return module
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all_advanced__ = [
     "BridgedCallManager",
