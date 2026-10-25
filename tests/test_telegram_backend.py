@@ -137,17 +137,26 @@ async def test_join_negotiation_failure_closes_engine_and_clears_call(monkeypatc
             self.closed = True
 
     class Client:
+        def __init__(self):
+            self.requests = []
+
         async def invoke(self, request):
+            self.requests.append(request)
             return object()
 
+    client = Client()
     engine = Engine()
     backend = PyrogramGroupCallBackend(
-        Client(), resolve_call=lambda chat_id: object(), media_engine=engine
+        client, resolve_call=lambda chat_id: object(), media_engine=engine
     )
     with pytest.raises(RuntimeError, match="bad negotiation update"):
         await backend.connect_call(-100123)
     assert engine.closed is True
     assert -100123 not in backend._calls
+    # Telegram accepted the join, so a failed local negotiation must attempt
+    # a compensating leave before media resources are closed.
+    assert len(client.requests) == 2
+    assert "source" in client.requests[1].kwargs
 
 
 @pytest.mark.asyncio
