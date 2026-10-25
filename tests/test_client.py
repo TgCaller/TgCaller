@@ -248,3 +248,16 @@ class TestTgCaller:
         call_cleanup.assert_awaited_once()
         event_cleanup.assert_awaited_once()
 
+    @pytest.mark.asyncio
+    async def test_cancelled_join_removes_provisional_call_session(self, caller):
+        await caller.start()
+        caller._connection_manager.connect_call = AsyncMock(
+            side_effect=asyncio.CancelledError()
+        )
+
+        with pytest.raises(asyncio.CancelledError):
+            await caller.join_call(-1001234567890)
+
+        assert caller.get_active_calls() == []
+        await caller.stop()
+
