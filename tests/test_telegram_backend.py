@@ -245,8 +245,9 @@ async def test_check_call_reports_server_membership(monkeypatch, recognized, exp
             assert request.kwargs["sources"] == [123]
             return recognized
 
+    engine = Engine()
     backend = PyrogramGroupCallBackend(
-        Client(), resolve_call=lambda chat_id: object(), media_engine=Engine()
+        Client(), resolve_call=lambda chat_id: object(), media_engine=engine
     )
     call = object()
     backend._calls[-100123] = call
