@@ -127,7 +127,9 @@ class PyrogramGroupCallBackend:
                     "did not establish a healthy call connection"
                 )
             return True
-        except Exception:
+        except BaseException:
+            # CancelledError is a BaseException on supported Python versions.
+            # Cleanup must also run when the caller cancels join/negotiation.
             self._calls.pop(chat_id, None)
             # If Telegram accepted the join but local negotiation/health checks
             # failed, compensate with a leave RPC before tearing down the engine.
