@@ -76,6 +76,9 @@ advanced = [
     "mss>=9.0.1",
     "torch>=2.0.0",
 ]
+calls = [
+    "py-tgcalls[pyrogram]>=3.0.0; python_version >= '3.10'",
+]
 cli = [
     "rich>=13.0.0",
     "pyfiglet>=0.8.0",
