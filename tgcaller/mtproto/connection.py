@@ -80,5 +80,33 @@ class Connection:
         result = method(chat_id)
         return bool(await result if inspect.isawaitable(result) else result)
 
+    async def _optional_operation(self, name: str, *args) -> bool:
+        """Call an optional backend capability without simulating success."""
+        if self.backend is None:
+            return False
+        method = getattr(self.backend, name, None)
+        if method is None or not callable(method):
+            return False
+        result = method(*args)
+        return bool(await result if inspect.isawaitable(result) else result)
+
+    async def mute(self, chat_id: int) -> bool:
+        return await self._optional_operation("mute", chat_id)
+
+    async def unmute(self, chat_id: int) -> bool:
+        return await self._optional_operation("unmute", chat_id)
+
+    async def set_volume(self, chat_id: int, volume: float) -> bool:
+        return await self._optional_operation("set_volume", chat_id, volume)
+
+    async def seek(self, chat_id: int, position: float) -> bool:
+        return await self._optional_operation("seek", chat_id, position)
+
+    async def start_recording(self, chat_id: int, output_path: str, audio_config=None) -> bool:
+        return await self._optional_operation("start_recording", chat_id, output_path, audio_config)
+
+    async def stop_recording(self, chat_id: int) -> bool:
+        return await self._optional_operation("stop_recording", chat_id)
+
     async def send_frame(self, chat_id: int, frame_data: bytes, frame_type: str = "audio") -> bool:
         return bool(await self._invoke("send_frame", chat_id, frame_data, frame_type))
