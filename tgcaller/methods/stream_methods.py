@@ -260,9 +260,14 @@ class StreamMethods:
         return True
     
     async def set_volume(self, chat_id: int, volume: float) -> bool:
-        """Set volume level (0.0 to 1.0)"""
-        if not 0.0 <= volume <= 1.0:
-            raise ValueError("Volume must be between 0.0 and 1.0")
+        """Set volume level (0.0 to 1.0)."""
+        if (
+            isinstance(volume, bool)
+            or not isinstance(volume, (int, float))
+            or not math.isfinite(volume)
+            or not 0.0 <= volume <= 1.0
+        ):
+            raise ValueError("Volume must be a finite number between 0.0 and 1.0")
         
         if chat_id not in self._active_calls:
             return False
