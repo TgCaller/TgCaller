@@ -16,6 +16,27 @@ The call lifecycle also needs to handle `phone.checkGroupCall` source checks, ca
 
 Reference: https://core.telegram.org/api/group-calls
 
+## Active-call resolution helper
+
+The signaling adapter now exports `resolve_active_group_call(client, chat_id)`.
+It uses Pyrogram's raw full-chat methods to retrieve the active `InputGroupCall`
+for a basic group, supergroup, or channel. It fails with an actionable
+`ConnectionError` if the chat cannot be resolved or has no active call.
+
+```python
+from tgcaller.mtproto import PyrogramGroupCallBackend, resolve_active_group_call
+
+backend = PyrogramGroupCallBackend(
+    client=app,
+    resolve_call=lambda chat_id: resolve_active_group_call(app, chat_id),
+    media_engine=your_telegram_compatible_media_engine,
+)
+```
+
+This helper only resolves the signaling target. It does not create a call,
+generate join parameters, or implement audio/video transport. A real
+`TelegramMediaEngine` implementation is still required.
+
 ## Required implementation stages
 
 1. **MTProto signaling adapter** — resolve the active `InputGroupCall`, invoke the official raw API methods, parse returned updates, and track call IDs/access hashes and SSRCs.
