@@ -604,3 +604,60 @@ async def test_check_call_missing_source_clears_state_when_engine_close_raises(m
 
     assert await backend.check_call(-100123) is False
     assert -100123 not in backend._calls
+
+
+
+@pytest.mark.asyncio
+async def test_disconnect_preserves_leave_error_when_engine_cleanup_also_fails(monkeypatch):
+    import sys
+    import types
+
+    class Request:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class DataJSON:
+        def __init__(self, data):
+            self.data = data
+
+    class InputPeerSelf:
+        pass
+
+    pyrogram = types.ModuleType("pyrogram")
+    raw = types.ModuleType("pyrogram.raw")
+    functions = types.ModuleType("pyrogram.raw.functions")
+    phone = types.ModuleType("pyrogram.raw.functions.phone")
+    raw_types = types.ModuleType("pyrogram.raw.types")
+    phone.JoinGroupCall = Request
+    phone.LeaveGroupCall = Request
+    phone.GetGroupCall = Request
+    raw_types.DataJSON = DataJSON
+    raw_types.InputPeerSelf = InputPeerSelf
+    for name, module in [
+        ("pyrogram", pyrogram),
+        ("pyrogram.raw", raw),
+        ("pyrogram.raw.functions", functions),
+        ("pyrogram.raw.functions.phone", phone),
+        ("pyrogram.raw.types", raw_types),
+    ]:
+        monkeypatch.setitem(sys.modules, name, module)
+
+    class Engine:
+        async def source_id(self, chat_id):
+            return 123
+
+        async def close(self, chat_id):
+            raise RuntimeError("engine shutdown failed")
+
+    class Client:
+        async def invoke(self, request):
+            raise RuntimeError("leave rpc failed")
+
+    backend = PyrogramGroupCallBackend(
+        Client(), resolve_call=lambda chat_id: object(), media_engine=Engine()
+    )
+    backend._calls[-100123] = object()
+
+    with pytest.raises(RuntimeError, match="leave rpc failed"):
+        await backend.disconnect_call(-100123)
+    assert -100123 not in backend._calls
