@@ -69,6 +69,16 @@ __all_advanced__ = [
 
 try:
     from . import advanced as advanced_module
+except (ImportError, ModuleNotFoundError) as exc:
+    if exc.name is not None and not exc.name.startswith("tgcaller"):
+        advanced = None
+        for _name in __all_advanced__:
+            globals()[_name] = None
+        __all_advanced__ = []
+    else:
+        raise
+else:
+    advanced = advanced_module
     from .advanced import (
         AdvancedYouTubeStreamer,
         AudioFilters,
@@ -80,18 +90,6 @@ try:
         WhisperTranscription,
         YouTubeDownloader,
     )
-    advanced = advanced_module
-except ImportError:
-    advanced = None
-    BridgedCallManager = None
-    MicrophoneCapture = None
-    CustomAPIHandler = None
-    AudioFilters = None
-    VideoFilters = None
-    ScreenShare = None
-    WhisperTranscription = None
-    YouTubeDownloader = None
-    AdvancedYouTubeStreamer = None
 
 __all__ = [
     # Main client
