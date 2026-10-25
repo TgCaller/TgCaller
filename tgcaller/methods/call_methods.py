@@ -105,26 +105,15 @@ class CallMethods:
         if chat_id not in self._active_calls:
             return []
         
-        try:
-            # Simulate getting participants
-            # In real implementation, this would query the actual call
-            call_session = self._active_calls[chat_id]
-            
-            # Return mock participants for now
-            participants = [
-                {
-                    'user_id': 123456789,
-                    'muted': False,
-                    'video_enabled': True,
-                    'screen_sharing': False
-                }
-            ]
-            
-            return participants
-            
-        except Exception as e:
-            self._logger.error(f"Error getting participants for chat {chat_id}: {e}")
-            return []
+        # Never fabricate participant identities or states. Until the native
+        # Telegram call backend exposes participant updates, return an empty
+        # list rather than presenting synthetic data as real call information.
+        self._logger.warning(
+            "Participant enumeration is unavailable until the Telegram call "
+            "backend is configured (chat_id=%s)",
+            chat_id,
+        )
+        return []
     
     async def get_call_status(self, chat_id: int) -> Optional[str]:
         """Get current call status"""
