@@ -64,7 +64,7 @@ class StreamMethods:
                 status=CallStatus.PLAYING,
                 message=f"Playing: {stream.source}"
             )
-            await self._emit_event('stream_started', update)
+            await self._emit_event('stream_start', update)
             
             self._logger.info(f"Started playing {stream.source} in chat {chat_id}")
             return True
