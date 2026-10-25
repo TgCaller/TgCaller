@@ -89,8 +89,12 @@ class PyrogramGroupCallBackend:
         return JoinGroupCall, LeaveGroupCall, GetGroupCall, DataJSON, InputPeerSelf
 
     async def connect_call(self, chat_id, audio_config=None, video_config=None):
-        if chat_id in self._calls and await self.is_healthy(chat_id):
-            return True
+        if chat_id in self._calls:
+            if await self.is_healthy(chat_id):
+                return True
+            # A stale local session must be torn down before allocating a new
+            # join payload; otherwise old ICE/DTLS resources can leak or overlap.
+            await self.disconnect_call(chat_id)
 
         JoinGroupCall, _, _, DataJSON, InputPeerSelf = await self._rpc_types()
         call = await _resolve(self.resolve_call(chat_id))
