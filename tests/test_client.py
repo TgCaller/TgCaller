@@ -286,9 +286,22 @@ class TestTgCaller:
         result = await caller.set_volume(chat_id, 0.8)
         assert result is True
         
-        # Test invalid volume
-        with pytest.raises(ValueError):
-            await caller.set_volume(chat_id, 1.5)
+        # Reject out-of-range, non-finite, boolean, and non-numeric values.
+        for invalid_volume in (
+            -0.1,
+            1.5,
+            float("nan"),
+            float("inf"),
+            float("-inf"),
+            True,
+            "0.5",
+        ):
+            with pytest.raises(ValueError):
+                await caller.set_volume(chat_id, invalid_volume)
+
+        # Invalid input must not reach the backend.
+        assert caller._connection.backend.last_volume == 0.8
+        await caller.stop()
     
     def test_event_handlers(self, caller):
         """Test event handler decorators"""
