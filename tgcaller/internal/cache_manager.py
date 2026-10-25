@@ -52,8 +52,15 @@ class CacheManager:
         self.call_configs: Dict[int, Any] = {}
         self.stream_sources: Dict[int, Dict[str, Any]] = {}
         
-        # Start cleanup task
-        self.cleanup_task = asyncio.create_task(self._cleanup_loop())
+        # Start cleanup only when constructed inside a running event loop.
+        # Synchronous construction is common for client setup and unit tests.
+        self.cleanup_task = None
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            self.cleanup_task = loop.create_task(self._cleanup_loop())
     
     def get(self, key: str, default: Any = None) -> Any:
         """Get value from cache"""
@@ -117,6 +124,11 @@ class CacheManager:
         del self.cache[lru_key]
         self.evictions += 1
     
+    async def start(self):
+        """Start the periodic cache cleanup task when an event loop is running."""
+        if self.cleanup_task is None or self.cleanup_task.done():
+            self.cleanup_task = asyncio.create_task(self._cleanup_loop())
+
     async def _cleanup_loop(self):
         """Periodic cleanup of expired entries"""
         while True:
