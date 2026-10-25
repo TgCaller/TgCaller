@@ -19,6 +19,10 @@ class TestConnectionManager:
         caller._active_calls = {}
         caller._emit_event = AsyncMock()
         caller._logger = Mock()
+        caller._connection = Mock()
+        caller._connection.connect_call = AsyncMock(return_value=True)
+        caller._connection.disconnect_call = AsyncMock(return_value=True)
+        caller._connection.is_healthy = AsyncMock(return_value=True)
         return caller
     
     @pytest.fixture
