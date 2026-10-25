@@ -48,5 +48,17 @@ class Connection:
     async def get_participants(self, chat_id: int):
         return await self._invoke("get_participants", chat_id)
 
+    async def play_stream(self, chat_id: int, stream):
+        return bool(await self._invoke("play_stream", chat_id, stream))
+
+    async def stop_stream(self, chat_id: int) -> bool:
+        if self.backend is None:
+            return False
+        method = getattr(self.backend, "stop_stream", None)
+        if method is None:
+            return False
+        result = method(chat_id)
+        return bool(await result if inspect.isawaitable(result) else result)
+
     async def send_frame(self, chat_id: int, frame_data: bytes, frame_type: str = "audio") -> bool:
         return bool(await self._invoke("send_frame", chat_id, frame_data, frame_type))
