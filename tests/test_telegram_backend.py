@@ -661,3 +661,39 @@ async def test_disconnect_preserves_leave_error_when_engine_cleanup_also_fails(m
     with pytest.raises(RuntimeError, match="leave rpc failed"):
         await backend.disconnect_call(-100123)
     assert -100123 not in backend._calls
+
+
+@pytest.mark.asyncio
+async def test_cancelled_join_closes_media_engine(monkeypatch):
+    import asyncio
+
+    class Engine:
+        closed = False
+
+        async def create_join_payload(self, chat_id, audio_config, video_config):
+            raise asyncio.CancelledError()
+
+        async def close(self, chat_id):
+            self.closed = True
+
+    class Client:
+        async def invoke(self, request):
+            raise AssertionError("join RPC must not run after payload creation is cancelled")
+
+    engine = Engine()
+    backend = PyrogramGroupCallBackend(
+        Client(),
+        resolve_call=lambda chat_id: object(),
+        media_engine=engine,
+    )
+
+    async def fake_rpc_types():
+        return object, object, object, object, object
+
+    monkeypatch.setattr(backend, "_rpc_types", fake_rpc_types)
+
+    with pytest.raises(asyncio.CancelledError):
+        await backend.connect_call(-100123)
+
+    assert engine.closed is True
+    assert -100123 not in backend._calls
