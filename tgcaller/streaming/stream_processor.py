@@ -174,7 +174,17 @@ class StreamProcessor:
             return False
     
     def _build_processing_command(self, output_format: str) -> List[str]:
-        """Build FFmpeg processing command"""
+        """Build an audio-only FFmpeg command for supported output formats.
+
+        This processor accepts raw signed 16-bit PCM audio. Video formats such
+        as H.264 are not valid outputs for this audio-only input pipeline.
+        """
+        if output_format not in {"raw", "opus", "aac"}:
+            raise ValueError(
+                f"Unsupported audio output format: {output_format!r}. "
+                "Choose 'raw', 'opus', or 'aac'."
+            )
+
         cmd = ['ffmpeg']
         
         # Input settings
@@ -185,9 +195,8 @@ class StreamProcessor:
             '-i', 'pipe:0'
         ])
         
-        # Hardware acceleration
-        if self.config.use_hardware_acceleration:
-            cmd.extend(['-hwaccel', 'auto'])
+        # This pipeline processes audio-only PCM. Video hardware acceleration
+        # does not accelerate this input and must not be advertised as active.
         
         # Thread settings
         if self.config.thread_count > 0:
