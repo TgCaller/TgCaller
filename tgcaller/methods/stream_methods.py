@@ -201,12 +201,8 @@ class StreamMethods:
             return False
     
     async def get_time(self, chat_id: int) -> Optional[float]:
-        """Get current stream time position"""
-        if chat_id not in self._active_calls:
-            return None
-        
-        call_session = self._active_calls[chat_id]
-        return call_session.get('position', 0.0)
+        """Get the current playback position reported by the transport."""
+        return await self.get_position(chat_id)
     async def pause(self, chat_id: int) -> bool:
         """Pause current stream"""
         if chat_id not in self._active_calls:
@@ -291,14 +287,11 @@ class StreamMethods:
         if not await self._connection.seek(chat_id, position):
             return False
 
-        call_session['position'] = float(position)
         self._logger.info(f"Seeked to {position}s in chat {chat_id}")
         return True
     
     async def get_position(self, chat_id: int) -> Optional[float]:
-        """Get current stream position"""
+        """Get current stream position, or None if the transport cannot report it."""
         if chat_id not in self._active_calls:
             return None
-        
-        call_session = self._active_calls[chat_id]
-        return call_session.get('position', 0.0)
+        return await self._connection.get_position(chat_id)
