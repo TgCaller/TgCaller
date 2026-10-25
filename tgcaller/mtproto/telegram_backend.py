@@ -160,8 +160,9 @@ class PyrogramGroupCallBackend:
             await self.client.invoke(LeaveGroupCall(call=call, source=source_id))
             return True
         finally:
-            await _resolve(self.media_engine.close(chat_id))
+            # Clear state even if engine shutdown itself raises.
             self._calls.pop(chat_id, None)
+            await _resolve(self.media_engine.close(chat_id))
 
     async def is_healthy(self, chat_id):
         return bool(await _resolve(self.media_engine.is_connected(chat_id)))
@@ -192,8 +193,13 @@ class PyrogramGroupCallBackend:
             )
         except Exception:
             # Telegram instructs clients to rejoin when this check errors.
-            await _resolve(self.media_engine.close(chat_id))
+            # Clear state before cleanup so a shutdown error cannot leave a
+            # stale call that connect_call() mistakes for an active session.
             self._calls.pop(chat_id, None)
+            try:
+                await _resolve(self.media_engine.close(chat_id))
+            except Exception:
+                pass
             return False
 
         if source_id in recognized:
@@ -201,8 +207,11 @@ class PyrogramGroupCallBackend:
 
         # The server no longer recognizes this source. Drop stale local state so
         # connect_call() can generate a fresh payload and perform a real rejoin.
-        await _resolve(self.media_engine.close(chat_id))
         self._calls.pop(chat_id, None)
+        try:
+            await _resolve(self.media_engine.close(chat_id))
+        except Exception:
+            pass
         return False
 
     async def get_participants(self, chat_id):
