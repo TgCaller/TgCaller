@@ -129,6 +129,9 @@ class TgCaller:
             if not self._client.is_connected:
                 await self._client.start()
             
+            # Start background maintenance tasks after an event loop is available
+            await self._cache_manager.start()
+
             # Setup event handlers
             await self._event_handler.setup()
             
