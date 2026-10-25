@@ -551,12 +551,10 @@ class QualityController:
         try:
             quality_config = self.quality_levels[self.current_quality]
             
-            # Apply compression if needed
-            if quality_config['compression'] > 0:
-                chunk.data = await self._compress_chunk_data(
-                    chunk.data, 
-                    quality_config['compression']
-                )
+            # Do not truncate or rewrite encoded media bytes to simulate compression.
+            # Arbitrary byte slicing corrupts PCM samples and encoded audio/video
+            # frames. This controller currently signals a target quality only;
+            # a real codec/encoder must perform any bitrate adaptation.
             
             # Update metadata
             chunk.metadata['quality_level'] = self.current_quality
@@ -569,19 +567,14 @@ class QualityController:
             return chunk
     
     async def _compress_chunk_data(self, data: bytes, compression_level: float) -> bytes:
-        """Apply compression to chunk data"""
-        try:
-            # Simple compression simulation
-            # In real implementation, this would use actual audio/video compression
-            compression_ratio = 1.0 - compression_level
-            target_size = int(len(data) * compression_ratio)
-            
-            if target_size < len(data):
-                # Simulate compression by truncating (not ideal, but for demo)
-                return data[:target_size]
-            
-            return data
-            
-        except Exception as e:
-            self.logger.error(f"Error compressing chunk data: {e}")
-            return data
+        """Deprecated safe fallback: never corrupt media by truncating bytes.
+
+        This method remains for compatibility with callers, but byte-level
+        truncation is not compression and can corrupt audio samples or video
+        frames. Real compression must be performed by a codec/encoder.
+        """
+        if not isinstance(data, bytes):
+            raise TypeError("data must be bytes")
+        if not 0.0 <= compression_level <= 1.0:
+            raise ValueError("compression_level must be between 0 and 1")
+        return data
