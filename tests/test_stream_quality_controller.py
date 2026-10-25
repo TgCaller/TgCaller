@@ -47,3 +47,24 @@ async def test_legacy_compression_helper_rejects_invalid_level():
 
     with pytest.raises(ValueError):
         await controller._compress_chunk_data(b"media", 1.5)
+
+
+from tgcaller.streaming.stream_processor import ProcessorConfig, StreamProcessor
+
+
+@pytest.mark.parametrize("output_format", ["raw", "opus", "aac"])
+def test_audio_processor_builds_supported_output_commands(output_format):
+    processor = StreamProcessor(ProcessorConfig(use_hardware_acceleration=False))
+    command = processor._build_processing_command(output_format)
+
+    assert command[0] == "ffmpeg"
+    assert "pipe:0" in command
+    assert "pipe:1" in command
+
+
+@pytest.mark.parametrize("output_format", ["h264", "mp4", "video", "unknown"])
+def test_audio_processor_rejects_unsupported_formats(output_format):
+    processor = StreamProcessor()
+
+    with pytest.raises(ValueError, match="Unsupported audio output format"):
+        processor._build_processing_command(output_format)
