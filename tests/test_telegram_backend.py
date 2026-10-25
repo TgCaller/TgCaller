@@ -232,8 +232,13 @@ async def test_check_call_reports_server_membership(monkeypatch, recognized, exp
     monkeypatch.setitem(sys.modules, "pyrogram.raw.functions.phone", phone)
 
     class Engine:
+        closed = False
+
         async def source_id(self, chat_id):
             return 123
+
+        async def close(self, chat_id):
+            self.closed = True
 
     class Client:
         async def invoke(self, request):
@@ -247,3 +252,53 @@ async def test_check_call_reports_server_membership(monkeypatch, recognized, exp
     backend._calls[-100123] = call
 
     assert await backend.check_call(-100123) is expected
+    if expected:
+        assert -100123 in backend._calls
+        assert engine.closed is False
+    else:
+        assert -100123 not in backend._calls
+        assert engine.closed is True
+
+
+
+@pytest.mark.asyncio
+async def test_check_call_rpc_error_clears_stale_state(monkeypatch):
+    import sys
+    import types
+
+    class CheckGroupCall:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    pyrogram = types.ModuleType("pyrogram")
+    raw = types.ModuleType("pyrogram.raw")
+    functions = types.ModuleType("pyrogram.raw.functions")
+    phone = types.ModuleType("pyrogram.raw.functions.phone")
+    phone.CheckGroupCall = CheckGroupCall
+    monkeypatch.setitem(sys.modules, "pyrogram", pyrogram)
+    monkeypatch.setitem(sys.modules, "pyrogram.raw", raw)
+    monkeypatch.setitem(sys.modules, "pyrogram.raw.functions", functions)
+    monkeypatch.setitem(sys.modules, "pyrogram.raw.functions.phone", phone)
+
+    class Engine:
+        closed = False
+
+        async def source_id(self, chat_id):
+            return 123
+
+        async def close(self, chat_id):
+            self.closed = True
+
+    class Client:
+        async def invoke(self, request):
+            raise RuntimeError("GROUPCALL_JOIN_MISSING")
+
+    engine = Engine()
+    backend = PyrogramGroupCallBackend(
+        Client(), resolve_call=lambda chat_id: object(), media_engine=engine
+    )
+    backend._calls[-100123] = object()
+
+    assert await backend.check_call(-100123) is False
+    assert engine.closed is True
+    assert -100123 not in backend._calls
