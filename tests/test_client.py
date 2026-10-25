@@ -57,6 +57,9 @@ class FakeTransport:
         self.last_position = position
         return True
 
+    async def get_position(self, chat_id):
+        return getattr(self, "reported_position", None)
+
     async def start_recording(self, chat_id, output_path, audio_config):
         return True
 
@@ -240,6 +243,27 @@ class TestTgCaller:
         caller._connection.backend.start_recording = None
         assert await caller.record(chat_id, "/tmp/tgcaller-test-recording.wav") is False
         assert "recording" not in caller._active_calls[chat_id]
+        await caller.stop()
+
+    @pytest.mark.asyncio
+    async def test_playback_position_uses_transport_and_returns_none_when_unsupported(
+        self, caller, mock_client, temp_audio_file
+    ):
+        await caller.start()
+        chat_id = -1001234567890
+        await caller.play(chat_id, temp_audio_file)
+        backend = caller._connection.backend
+
+        # Unknown position must not be reported as a fabricated 0.0 seconds.
+        assert await caller.get_position(chat_id) is None
+        assert await caller.get_time(chat_id) is None
+
+        backend.reported_position = 12.5
+        assert await caller.get_position(chat_id) == 12.5
+        assert await caller.get_time(chat_id) == 12.5
+
+        backend.get_position = None
+        assert await caller.get_position(chat_id) is None
         await caller.stop()
 
     @pytest.mark.asyncio
