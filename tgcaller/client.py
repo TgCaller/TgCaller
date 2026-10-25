@@ -46,8 +46,7 @@ class TgCaller:
     def __init__(
         self,
         client: Client,
-        log_level: int = logging.WARNING,
-        calls_backend=None,
+        log_level: int = logging.WARNING
     ):
         """
         Initialize TgCaller
@@ -60,17 +59,6 @@ class TgCaller:
             raise TypeError("client must be a Pyrogram Client instance")
             
         self._client = client
-        # PyTgCalls is optional; callers may also inject a compatible backend.
-        if calls_backend is None:
-            try:
-                from pytgcalls import PyTgCalls
-            except ImportError:
-                self._calls_backend = None
-            else:
-                self._calls_backend = PyTgCalls(client)
-        else:
-            self._calls_backend = calls_backend
-        self._calls_backend_started = False
         self._active_calls: Dict[int, Any] = {}
         self._event_handlers: Dict[str, List[Callable]] = {
             'stream_end': [],
@@ -107,21 +95,6 @@ class TgCaller:
         # Connection state
         self._is_connected = False
         
-    def _require_calls_backend(self):
-        """Return the real call backend or raise a clear configuration error."""
-        if self._calls_backend is None:
-            from .exceptions import ConfigurationError
-            raise ConfigurationError(
-                "Real Telegram calls require PyTgCalls. Install "
-                "'tgcaller[calls]' on Python 3.10+, or pass calls_backend."
-            )
-        if not self._calls_backend_started:
-            from .exceptions import ConfigurationError
-            raise ConfigurationError(
-                "The Telegram call backend is not started; call await caller.start() first."
-            )
-        return self._calls_backend
-
     def _setup_methods(self):
         """Setup method mixins"""
         # Add call methods
@@ -156,11 +129,6 @@ class TgCaller:
             if not self._client.is_connected:
                 await self._client.start()
             
-            # Start the real call transport if the optional backend is installed.
-            if self._calls_backend is not None and not self._calls_backend_started:
-                await self._calls_backend.start()
-                self._calls_backend_started = True
-
             # Start background maintenance tasks after an event loop is available
             await self._cache_manager.start()
 
@@ -187,15 +155,6 @@ class TgCaller:
             for chat_id in list(self._active_calls.keys()):
                 await self.leave_call(chat_id)
             
-            # Stop the backend if it provides a lifecycle stop method.
-            if self._calls_backend is not None and self._calls_backend_started:
-                stop_backend = getattr(self._calls_backend, "stop", None)
-                if callable(stop_backend):
-                    result = stop_backend()
-                    if asyncio.iscoroutine(result):
-                        await result
-                self._calls_backend_started = False
-
             # Cleanup internal managers
             await self._connection_manager.cleanup_all()
             await self._cache_manager.cleanup()
