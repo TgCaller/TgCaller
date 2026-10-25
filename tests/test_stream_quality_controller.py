@@ -60,6 +60,8 @@ def test_audio_processor_builds_supported_output_commands(output_format):
     assert command[0] == "ffmpeg"
     assert "pipe:0" in command
     assert "pipe:1" in command
+    assert command[command.index("-map") + 1] == "0:a:0"
+    assert "-vn" in command
 
 
 @pytest.mark.parametrize("output_format", ["h264", "mp4", "video", "unknown"])
@@ -173,3 +175,36 @@ async def test_raw_passthrough_skips_ffmpeg_when_filters_disabled(monkeypatch):
     assert result.metadata["processed_size"] == len(original)
     assert processor.processing_stats["chunks_processed"] == 1
     assert processor.processing_stats["errors"] == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("output_format", "container_format", "must_not_concatenate"),
+    [("raw", "s16le", False), ("opus", "ogg", True), ("aac", "adts", False)],
+)
+async def test_processor_marks_encoded_chunk_container_contract(
+    monkeypatch, output_format, container_format, must_not_concatenate
+):
+    from tgcaller.streaming import stream_processor as module
+
+    fake_process = _FakeFFmpegProcess(stdout=b"complete-output")
+
+    async def fake_create_subprocess_exec(*args, **kwargs):
+        return fake_process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+    processor = StreamProcessor()
+    assert await processor._start_ffmpeg_processor(output_format)
+    chunk = StreamChunk(
+        data=b"input-pcm",
+        timestamp=5.0,
+        sequence=10,
+        metadata={},
+    )
+
+    result = await processor._process_single_chunk(chunk)
+
+    assert result is not None
+    assert result.metadata["container_format"] == container_format
+    assert result.metadata["chunk_containerized"] is (output_format != "raw")
+    assert result.metadata["must_not_concatenate"] is must_not_concatenate
