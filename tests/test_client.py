@@ -103,7 +103,7 @@ class TestTgCaller:
         assert not caller.is_running
     
     @pytest.mark.asyncio
-    async def test_join_call(self, caller, mock_client):
+    async def test_join_call(self, caller, mock_client, mock_calls_backend):
         """Test joining a call"""
         await caller.start()
         
@@ -113,6 +113,7 @@ class TestTgCaller:
         assert result is True
         assert caller.is_connected(chat_id)
         assert chat_id in caller.get_active_calls()
+        assert (chat_id, None) in mock_calls_backend.play_calls
     
     @pytest.mark.asyncio
     async def test_leave_call(self, caller, mock_client):
@@ -131,7 +132,7 @@ class TestTgCaller:
         assert not caller.is_connected(chat_id)
     
     @pytest.mark.asyncio
-    async def test_play_media(self, caller, mock_client, temp_audio_file):
+    async def test_play_media(self, caller, mock_client, temp_audio_file, mock_calls_backend):
         """Test playing media"""
         await caller.start()
         
@@ -141,6 +142,7 @@ class TestTgCaller:
         result = await caller.play(chat_id, temp_audio_file)
         assert result is True
         assert caller.is_connected(chat_id)
+        assert (chat_id, temp_audio_file) in mock_calls_backend.play_calls
     
     @pytest.mark.asyncio
     async def test_pause_resume(self, caller, mock_client, temp_audio_file):
@@ -161,7 +163,7 @@ class TestTgCaller:
         assert result is True
     
     @pytest.mark.asyncio
-    async def test_volume_control(self, caller, mock_client):
+    async def test_volume_control(self, caller, mock_client, mock_calls_backend):
         """Test volume control"""
         await caller.start()
         
@@ -171,6 +173,7 @@ class TestTgCaller:
         # Set volume
         result = await caller.set_volume(chat_id, 0.8)
         assert result is True
+        assert (chat_id, 80) in mock_calls_backend.volume_calls
         
         # Test invalid volume
         with pytest.raises(ValueError):
