@@ -36,39 +36,43 @@ class CallMethods:
             return True  # Already in call
         
         try:
-            # Set default parameters
             if audio_config is None:
                 audio_config = AudioConfig()
-            
-            # Create call session
+
             call_session = {
                 'chat_id': chat_id,
                 'audio_config': audio_config,
                 'video_config': video_config,
-                'status': CallStatus.CONNECTING
+                'status': CallStatus.CONNECTING,
             }
-            
             self._active_calls[chat_id] = call_session
-            
-            # Simulate connection
-            await asyncio.sleep(0.5)
-            
-            # Update status
+
+            # ConnectionManager delegates to the configured real transport.
+            # A missing or failed backend must never be reported as a joined call.
+            connected = await self._connection_manager.connect_call(
+                chat_id, audio_config, video_config
+            )
+            if not connected:
+                self._active_calls.pop(chat_id, None)
+                raise CallError(
+                    "Could not join Telegram group call: no working call transport "
+                    "is configured or the transport connection failed."
+                )
+
             call_session['status'] = CallStatus.CONNECTED
-            
-            # Emit event
             update = CallUpdate(
                 chat_id=chat_id,
                 status=CallStatus.CONNECTED,
-                message="Successfully joined call"
+                message="Successfully joined call",
             )
             await self._emit_event('call_joined', update)
-            
             self._logger.info(f"Joined call in chat {chat_id}")
             return True
-            
+
         except Exception as e:
             self._active_calls.pop(chat_id, None)
+            if isinstance(e, CallError):
+                raise
             raise CallError(f"Failed to join call: {e}")
     
     async def leave_call(self, chat_id: int) -> bool:
