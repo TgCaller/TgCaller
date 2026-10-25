@@ -1,0 +1,129 @@
+"""Independent Pyrogram MTProto signaling adapter.
+
+This adapter requires a separately implemented Telegram-compatible media engine.
+It does not generate fake WebRTC parameters and cannot work with a generic
+aiortc peer connection unless that engine implements Telegram group-call negotiation.
+"""
+import inspect
+import json
+from typing import Any, Callable, Dict
+
+from ..exceptions import ConnectionError
+
+
+async def _resolve(value):
+    return await value if inspect.isawaitable(value) else value
+
+
+class PyrogramGroupCallBackend:
+    """Bridge TgCaller transport calls to Pyrogram raw group-call RPCs.
+
+    resolve_call maps chat_id to a Pyrogram InputGroupCall raw TL object.
+    media_engine must implement create_join_payload, handle_join_updates,
+    is_connected, source_id, close, play_stream, stop_stream, send_frame,
+    and get_participants. It must implement Telegram's real call protocol.
+    """
+
+    def __init__(self, client: Any, resolve_call: Callable, media_engine: Any):
+        if client is None:
+            raise TypeError("client is required")
+        if not callable(resolve_call):
+            raise TypeError("resolve_call must be callable")
+        if media_engine is None:
+            raise TypeError(
+                "media_engine is required; join payloads must come from a "
+                "real Telegram-compatible media engine"
+            )
+        self.client = client
+        self.resolve_call = resolve_call
+        self.media_engine = media_engine
+        self._calls: Dict[int, Any] = {}
+
+    async def _rpc_types(self):
+        try:
+            from pyrogram.raw.functions.phone import JoinGroupCall, LeaveGroupCall, GetGroupCall
+            from pyrogram.raw.types import DataJSON, InputPeerSelf
+        except ImportError as exc:
+            raise ConnectionError(
+                "This Pyrogram version does not expose required raw group-call APIs"
+            ) from exc
+        return JoinGroupCall, LeaveGroupCall, GetGroupCall, DataJSON, InputPeerSelf
+
+    async def connect_call(self, chat_id, audio_config=None, video_config=None):
+        if chat_id in self._calls and await self.is_healthy(chat_id):
+            return True
+
+        JoinGroupCall, _, _, DataJSON, InputPeerSelf = await self._rpc_types()
+        call = await _resolve(self.resolve_call(chat_id))
+        if call is None:
+            raise ConnectionError(
+                f"No active Telegram group call could be resolved for chat {chat_id}"
+            )
+
+        payload = await _resolve(
+            self.media_engine.create_join_payload(chat_id, audio_config, video_config)
+        )
+        if not isinstance(payload, dict) or not payload:
+            raise ConnectionError(
+                "Media engine returned no valid Telegram group-call join payload"
+            )
+
+        updates = await self.client.invoke(
+            JoinGroupCall(
+                call=call,
+                join_as=InputPeerSelf(),
+                params=DataJSON(data=json.dumps(payload, separators=(",", ":"))),
+                muted=bool(audio_config is None),
+                video_stopped=bool(video_config is None),
+            )
+        )
+        await _resolve(self.media_engine.handle_join_updates(chat_id, updates))
+        self._calls[chat_id] = call
+
+        if not await self.is_healthy(chat_id):
+            self._calls.pop(chat_id, None)
+            await _resolve(self.media_engine.close(chat_id))
+            raise ConnectionError(
+                "Telegram accepted the join request, but the media engine "
+                "did not establish a healthy call connection"
+            )
+        return True
+
+    async def disconnect_call(self, chat_id):
+        call = self._calls.get(chat_id)
+        if call is None:
+            return True
+        try:
+            _, LeaveGroupCall, _, _, _ = await self._rpc_types()
+            source_id = await _resolve(self.media_engine.source_id(chat_id))
+            await self.client.invoke(LeaveGroupCall(call=call, source=source_id))
+            return True
+        finally:
+            await _resolve(self.media_engine.close(chat_id))
+            self._calls.pop(chat_id, None)
+
+    async def is_healthy(self, chat_id):
+        return bool(await _resolve(self.media_engine.is_connected(chat_id)))
+
+    async def get_participants(self, chat_id):
+        call = self._calls.get(chat_id)
+        if call is None:
+            raise ConnectionError(f"Not connected to Telegram call in chat {chat_id}")
+        _, _, GetGroupCall, _, _ = await self._rpc_types()
+        call_info = await self.client.invoke(GetGroupCall(call=call, limit=100))
+        return await _resolve(self.media_engine.get_participants(chat_id, call_info))
+
+    async def play_stream(self, chat_id, stream):
+        if chat_id not in self._calls:
+            raise ConnectionError(f"Not connected to Telegram call in chat {chat_id}")
+        return bool(await _resolve(self.media_engine.play_stream(chat_id, stream)))
+
+    async def stop_stream(self, chat_id):
+        if chat_id not in self._calls:
+            return False
+        return bool(await _resolve(self.media_engine.stop_stream(chat_id)))
+
+    async def send_frame(self, chat_id, frame_data, frame_type):
+        if chat_id not in self._calls:
+            raise ConnectionError(f"Not connected to Telegram call in chat {chat_id}")
+        return bool(await _resolve(self.media_engine.send_frame(chat_id, frame_data, frame_type)))
