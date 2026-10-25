@@ -158,7 +158,7 @@ async def test_raw_passthrough_skips_ffmpeg_when_filters_disabled(monkeypatch):
     monkeypatch.setattr(module.asyncio, "create_subprocess_exec", unexpected_ffmpeg_call)
     processor = StreamProcessor(ProcessorConfig(enable_filters=False))
     assert await processor._start_ffmpeg_processor("raw")
-    original = b"unaltered-pcm-bytes"
+    original = b"\\x00\\x01\\x02\\x03" * 5
     chunk = StreamChunk(
         data=original,
         timestamp=4.0,
