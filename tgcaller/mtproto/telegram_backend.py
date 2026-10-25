@@ -121,6 +121,13 @@ class PyrogramGroupCallBackend:
                 self.media_engine.create_join_payload(chat_id, audio_config, video_config)
             )
             _validate_join_payload(payload, video_config)
+            source_id = _validate_source_id(
+                await _resolve(self.media_engine.source_id(chat_id))
+            )
+            if source_id != payload["ssrc"]:
+                raise ConnectionError(
+                    "Media engine source_id must match the audio SSRC in its join payload"
+                )
             updates = await self.client.invoke(
                 JoinGroupCall(
                     call=call,
