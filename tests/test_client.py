@@ -169,6 +169,26 @@ class TestTgCaller:
         assert await caller.get_call_status(chat_id) == CallStatus.PLAYING.value
     
     @pytest.mark.asyncio
+    async def test_pause_resume_fail_when_transport_does_not_support_them(
+        self, caller, mock_client, temp_audio_file
+    ):
+        await caller.start()
+        chat_id = -1001234567890
+        await caller.play(chat_id, temp_audio_file)
+        backend = caller._connection.backend
+
+        # Unsupported transport operations must not produce false success.
+        backend.pause_stream = None
+        assert await caller.pause(chat_id) is False
+        assert await caller.get_call_status(chat_id) == CallStatus.PLAYING.value
+
+        caller._active_calls[chat_id]["status"] = CallStatus.PAUSED
+        backend.resume_stream = None
+        assert await caller.resume(chat_id) is False
+        assert await caller.get_call_status(chat_id) == CallStatus.PAUSED.value
+        await caller.stop()
+
+    @pytest.mark.asyncio
     async def test_volume_control(self, caller, mock_client):
         """Test volume control"""
         await caller.start()
