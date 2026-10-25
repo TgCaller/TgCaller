@@ -3,6 +3,7 @@ Stream Management Methods
 """
 
 import asyncio
+import math
 from typing import Union, Optional
 from pathlib import Path
 
@@ -282,8 +283,13 @@ class StreamMethods:
         call_session = self._active_calls[chat_id]
         if 'current_stream' not in call_session:
             return False
-        if not isinstance(position, (int, float)) or isinstance(position, bool) or position < 0:
-            raise ValueError("Position must be a non-negative number of seconds")
+        if (
+            isinstance(position, bool)
+            or not isinstance(position, (int, float))
+            or not math.isfinite(position)
+            or position < 0
+        ):
+            raise ValueError("Position must be a finite, non-negative number of seconds")
         if not await self._connection.seek(chat_id, position):
             return False
 
