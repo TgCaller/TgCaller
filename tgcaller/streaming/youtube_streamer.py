@@ -47,7 +47,7 @@ class YouTubeStreamConfig:
     enable_audio: bool = True
     """Enable audio streaming"""
     
-    enable_video: bool = True
+    enable_video: bool = False
     """Enable video streaming"""
     
     # Performance settings
@@ -162,13 +162,16 @@ class YouTubeStreamer:
             # Setup buffer callbacks
             self._setup_buffer_callbacks()
             
-            # Start streaming pipeline
+            # Mark the stream active before starting the producer. The chunk
+            # generator checks this flag on its first iteration.
+            self.is_streaming = True
             success = await self._start_streaming_pipeline()
             
             if success:
-                self.is_streaming = True
                 self.stream_stats['start_time'] = time.time()
-                self.logger.info(f"Started YouTube streaming to chat {chat_id}")
+                self.logger.info(f"Started YouTube audio streaming to chat {chat_id}")
+            else:
+                await self.stop_streaming()
             
             return success
             
@@ -291,7 +294,19 @@ class YouTubeStreamer:
             return False
     
     def _build_ffmpeg_command(self) -> List[str]:
-        """Build FFmpeg command for streaming"""
+        """Build an audio-only FFmpeg command for the current raw-PCM pipeline.
+
+        Video is deliberately rejected until a real video packetization and
+        Telegram media-engine path exists; raw video cannot share an s16le pipe.
+        """
+        if self.config.enable_video:
+            raise NotImplementedError(
+                "YouTube video output is not implemented yet; set enable_video=False "
+                "for the supported raw-PCM audio pipeline."
+            )
+        if not self.config.enable_audio:
+            raise ValueError("At least audio output must be enabled")
+
         cmd = ['ffmpeg']
         
         # Input options
@@ -302,9 +317,8 @@ class YouTubeStreamer:
         # Input source
         cmd.extend(['-i', self.stream_url])
         
-        # Hardware acceleration
-        if self.config.use_hardware_acceleration:
-            cmd.extend(['-hwaccel', 'auto'])
+        # Keep output predictable: this pipeline transports raw PCM audio only.
+        # Hardware acceleration is not applicable to this audio-only output.
         
         # Audio settings
         if self.config.enable_audio:
@@ -316,14 +330,8 @@ class YouTubeStreamer:
         else:
             cmd.extend(['-an'])
         
-        # Video settings
-        if self.config.enable_video:
-            cmd.extend([
-                '-vcodec', 'rawvideo',
-                '-pix_fmt', 'yuv420p'
-            ])
-        else:
-            cmd.extend(['-vn'])
+        # Explicitly disable video; raw PCM stdout cannot carry video frames.
+        cmd.extend(['-vn'])
         
         # Output options
         options = self.config.ffmpeg_options.get('options', '')
