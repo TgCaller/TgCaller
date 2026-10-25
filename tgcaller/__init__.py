@@ -55,69 +55,89 @@ from .utilities import CpuMonitor, PingMonitor, CallHolder, PeerResolver
 from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
 from . import streaming
 
-# Advanced features (optional imports)
+__all_advanced__ = [
+    "BridgedCallManager",
+    "MicrophoneCapture",
+    "CustomAPIHandler",
+    "AudioFilters",
+    "VideoFilters",
+    "ScreenShare",
+    "WhisperTranscription",
+    "YouTubeDownloader",
+    "AdvancedYouTubeStreamer",
+]
+
 try:
-    from . import advanced
-    __all_advanced__ = [
-        "BridgedCallManager",
-        "MicrophoneCapture",
-        "CustomAPIHandler", 
-        "AudioFilters",
-        "VideoFilters",
-        "ScreenShare",
-        "WhisperTranscription",
-        "YouTubeDownloader",
-        "AdvancedYouTubeStreamer",
-    ]
+    from . import advanced as advanced_module
+    from .advanced import (
+        AdvancedYouTubeStreamer,
+        AudioFilters,
+        BridgedCallManager,
+        CustomAPIHandler,
+        MicrophoneCapture,
+        ScreenShare,
+        VideoFilters,
+        WhisperTranscription,
+        YouTubeDownloader,
+    )
+    advanced = advanced_module
 except ImportError:
     advanced = None
-    __all_advanced__ = []
+    BridgedCallManager = None
+    MicrophoneCapture = None
+    CustomAPIHandler = None
+    AudioFilters = None
+    VideoFilters = None
+    ScreenShare = None
+    WhisperTranscription = None
+    YouTubeDownloader = None
+    AdvancedYouTubeStreamer = None
 
 __all__ = [
     # Main client
     "TgCaller",
-    
+
     # Configuration types
     "AudioConfig",
-    "VideoConfig", 
+    "VideoConfig",
     "MediaStream",
-    
+
     # Update types
     "CallUpdate",
     "CallStatus",
     "StreamType",
-    
+
     # Participant types
     "GroupCallParticipant",
     "UpdatedGroupCallParticipant",
     "ParticipantAction",
     "VideoInfo",
-    
+
     # Quality types
     "AudioQuality",
-    "VideoQuality", 
+    "VideoQuality",
     "QualityConfig",
-    
+
     # Frame types
     "Frame",
     "FrameInfo",
     "StreamFrames",
-    
+
     # Device types
     "Device",
     "DeviceType",
     "Direction",
     "ExternalMedia",
-    
+
     # Recording types
     "RecordStream",
     "RecordingFormat",
     "RecordingStatus",
-    
+
     # Stream event types
     "StreamEnded",
     "StreamEndReason",
-    
+
     # Exceptions
     "TgCallerError",
     "ConnectionError",
@@ -125,38 +145,38 @@ __all__ = [
     "CallError",
     "StreamError",
     "ConfigurationError",
-    
+
     # API System
     "CustomAPIServer",
     "on_custom_update",
-    
+
     # Device System
     "MediaDevices",
     "DeviceInfo",
     "InputDevice",
-    "SpeakerDevice", 
+    "SpeakerDevice",
     "CameraDevice",
     "ScreenDevice",
-    
+
     # Event System
     "Filters",
     "BaseFilter",
     "and_filter",
     "or_filter",
-    
+
     # Utilities
     "CpuMonitor",
     "PingMonitor",
-    "CallHolder", 
+    "CallHolder",
     "PeerResolver",
-    
+
     # Internal Systems
     "ConnectionManager",
     "CacheManager",
     "StreamHandler",
     "CallHandler",
     "RetryManager",
-    
+
     # Advanced features
     "advanced",
     "streaming",
