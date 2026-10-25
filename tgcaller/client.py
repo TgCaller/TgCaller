@@ -148,32 +148,42 @@ class TgCaller:
             raise ConnectionError(f"Failed to start TgCaller: {e}")
     
     async def stop(self) -> None:
-        """
-        Stop TgCaller service and cleanup resources
-        """
+        """Stop TgCaller and attempt every cleanup step, even if one fails."""
         if not self._is_connected:
             self._logger.warning("TgCaller is not running")
             return
-            
+
+        errors = []
         try:
-            # Leave all active calls
+            # Try to leave every active call; leave_call handles per-call errors.
             for chat_id in list(self._active_calls.keys()):
-                await self.leave_call(chat_id)
-            
-            # Cleanup internal managers
-            await self._connection_manager.cleanup_all()
-            await self._cache_manager.cleanup()
-            await self._stream_handler.cleanup_all()
-            await self._call_handler.cleanup_all()
-            
-            # Cleanup
-            await self._event_handler.cleanup()
+                try:
+                    if not await self.leave_call(chat_id):
+                        errors.append(f"could not cleanly leave call {chat_id}")
+                except Exception as exc:
+                    errors.append(f"leave call {chat_id}: {exc}")
+
+            # A failure in one manager must not prevent the others from stopping.
+            cleanup_steps = (
+                ("connection manager", self._connection_manager.cleanup_all),
+                ("cache manager", self._cache_manager.cleanup),
+                ("stream handler", self._stream_handler.cleanup_all),
+                ("call handler", self._call_handler.cleanup_all),
+                ("event handler", self._event_handler.cleanup),
+            )
+            for name, cleanup in cleanup_steps:
+                try:
+                    await cleanup()
+                except Exception as exc:
+                    errors.append(f"{name}: {exc}")
+        finally:
+            # The service must not remain marked as running after shutdown starts.
             self._is_connected = False
-            
+
+        if errors:
+            self._logger.error("TgCaller stopped with cleanup errors: %s", "; ".join(errors))
+        else:
             self._logger.info("TgCaller stopped successfully")
-            
-        except Exception as e:
-            self._logger.error(f"Error stopping TgCaller: {e}")
     
     def on_stream_end(self, func: Callable = None):
         """
