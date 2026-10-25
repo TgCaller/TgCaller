@@ -68,3 +68,79 @@ def test_audio_processor_rejects_unsupported_formats(output_format):
 
     with pytest.raises(ValueError, match="Unsupported audio output format"):
         processor._build_processing_command(output_format)
+
+
+class _FakeFFmpegProcess:
+    def __init__(self, stdout=b"processed-audio", stderr=b"", returncode=0):
+        self.stdout_data = stdout
+        self.stderr_data = stderr
+        self.returncode = returncode
+        self.received_input = None
+        self.killed = False
+
+    async def communicate(self, input=None):
+        self.received_input = input
+        return self.stdout_data, self.stderr_data
+
+    def kill(self):
+        self.killed = True
+
+    async def wait(self):
+        return self.returncode
+
+
+@pytest.mark.asyncio
+async def test_processor_returns_complete_subprocess_output(monkeypatch):
+    from tgcaller.streaming import stream_processor as module
+
+    fake_process = _FakeFFmpegProcess(stdout=b"complete-output")
+    async def fake_create_subprocess_exec(*args, **kwargs):
+        assert kwargs["stdin"] is module.asyncio.subprocess.PIPE
+        assert kwargs["stdout"] is module.asyncio.subprocess.PIPE
+        return fake_process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+    processor = StreamProcessor()
+    assert await processor._start_ffmpeg_processor("raw")
+    chunk = StreamChunk(
+        data=b"input-pcm",
+        timestamp=2.0,
+        sequence=7,
+        metadata={},
+    )
+
+    result = await processor._process_single_chunk(chunk)
+
+    assert fake_process.received_input == b"input-pcm"
+    assert result is not None
+    assert result.data == b"complete-output"
+    assert result.sequence == 7
+    assert result.metadata["processed_size"] == len(b"complete-output")
+
+
+@pytest.mark.asyncio
+async def test_processor_records_ffmpeg_nonzero_exit_as_error(monkeypatch):
+    from tgcaller.streaming import stream_processor as module
+
+    fake_process = _FakeFFmpegProcess(
+        stdout=b"",
+        stderr=b"invalid input",
+        returncode=1,
+    )
+    async def fake_create_subprocess_exec(*args, **kwargs):
+        return fake_process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+    processor = StreamProcessor()
+    assert await processor._start_ffmpeg_processor("raw")
+    chunk = StreamChunk(
+        data=b"bad-pcm",
+        timestamp=3.0,
+        sequence=8,
+        metadata={},
+    )
+
+    result = await processor._process_single_chunk(chunk)
+
+    assert result is None
+    assert processor.processing_stats["errors"] == 1
