@@ -43,6 +43,26 @@ class FakeTransport:
         self.resume_calls = getattr(self, "resume_calls", 0) + 1
         return True
 
+    async def mute(self, chat_id):
+        return True
+
+    async def unmute(self, chat_id):
+        return True
+
+    async def set_volume(self, chat_id, volume):
+        self.last_volume = volume
+        return True
+
+    async def seek(self, chat_id, position):
+        self.last_position = position
+        return True
+
+    async def start_recording(self, chat_id, output_path, audio_config):
+        return True
+
+    async def stop_recording(self, chat_id):
+        return True
+
     async def send_frame(self, chat_id, frame_data, frame_type):
         return True
 
@@ -186,6 +206,40 @@ class TestTgCaller:
         backend.resume_stream = None
         assert await caller.resume(chat_id) is False
         assert await caller.get_call_status(chat_id) == CallStatus.PAUSED.value
+        await caller.stop()
+
+    @pytest.mark.asyncio
+    async def test_volume_seek_and_mute_fail_closed_without_transport_support(
+        self, caller, mock_client, temp_audio_file
+    ):
+        await caller.start()
+        chat_id = -1001234567890
+        await caller.play(chat_id, temp_audio_file)
+        backend = caller._connection.backend
+
+        backend.set_volume = None
+        assert await caller.set_volume(chat_id, 0.5) is False
+        assert "volume" not in caller._active_calls[chat_id]
+
+        backend.seek = None
+        assert await caller.seek(chat_id, 15) is False
+        assert caller._active_calls[chat_id].get("position", 0.0) == 0.0
+
+        backend.mute = None
+        assert await caller.mute(chat_id) is False
+        assert caller._active_calls[chat_id].get("muted", False) is False
+        await caller.stop()
+
+    @pytest.mark.asyncio
+    async def test_recording_fails_closed_without_transport_support(
+        self, caller, mock_client
+    ):
+        await caller.start()
+        chat_id = -1001234567890
+        await caller.join_call(chat_id)
+        caller._connection.backend.start_recording = None
+        assert await caller.record(chat_id, "/tmp/tgcaller-test-recording.wav") is False
+        assert "recording" not in caller._active_calls[chat_id]
         await caller.stop()
 
     @pytest.mark.asyncio
