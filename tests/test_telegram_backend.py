@@ -32,22 +32,31 @@ async def test_backend_refuses_to_join_when_no_active_call_is_resolved():
 
 
 @pytest.mark.asyncio
-async def test_backend_rejects_empty_join_payload():
+async def test_backend_rejects_empty_join_payload_and_closes_engine():
     class Engine:
+        closed = False
+
         async def create_join_payload(self, chat_id, audio_config, video_config):
+            # Simulate an engine that allocates resources before returning bad data.
             return {}
+
+        async def close(self, chat_id):
+            self.closed = True
 
     class Client:
         async def invoke(self, request):
             raise AssertionError("RPC must not be invoked with an empty payload")
 
+    engine = Engine()
     backend = PyrogramGroupCallBackend(
         Client(),
         resolve_call=lambda chat_id: object(),
-        media_engine=Engine(),
+        media_engine=engine,
     )
     with pytest.raises(ConnectionError, match="no valid Telegram group-call join payload"):
         await backend.connect_call(-100123)
+    assert engine.closed is True
+    assert -100123 not in backend._calls
 
 
 @pytest.mark.asyncio
