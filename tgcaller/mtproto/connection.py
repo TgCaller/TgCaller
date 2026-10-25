@@ -63,11 +63,16 @@ class Connection:
         if (
             isinstance(result, bool)
             or not isinstance(result, (int, float))
-            or not math.isfinite(result)
             or result < 0
+            or (isinstance(result, float) and not math.isfinite(result))
         ):
             return None
-        return float(result)
+        try:
+            return float(result)
+        except OverflowError:
+            # An arbitrarily large integer is finite but cannot be represented
+            # as a Python float playback timestamp.
+            return None
 
     async def play_stream(self, chat_id: int, stream):
         return bool(await self._invoke("play_stream", chat_id, stream))
