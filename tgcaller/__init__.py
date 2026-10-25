@@ -61,22 +61,28 @@ __all_advanced__ = [
     "CustomAPIHandler",
     "AudioFilters",
     "VideoFilters",
+    "ExternalCapture",
+    "FIFOConverter",
+    "FrameSender",
+    "MultiClientManager",
+    "P2PCallManager",
+    "RawStreamer",
     "ScreenShare",
     "WhisperTranscription",
     "YouTubeDownloader",
     "AdvancedYouTubeStreamer",
+    "PerformanceMonitor",
 ]
 
 try:
     from . import advanced as advanced_module
-except (ImportError, ModuleNotFoundError) as exc:
-    if exc.name is not None and not exc.name.startswith("tgcaller"):
-        advanced = None
-        for _name in __all_advanced__:
-            globals()[_name] = None
-        __all_advanced__ = []
-    else:
+except ImportError as exc:
+    missing = getattr(exc, "name", None)
+    if missing is not None and missing.startswith("tgcaller"):
         raise
+    advanced = None
+    for _name in __all_advanced__:
+        globals()[_name] = None
 else:
     advanced = advanced_module
     from .advanced import (
@@ -84,11 +90,18 @@ else:
         AudioFilters,
         BridgedCallManager,
         CustomAPIHandler,
+        ExternalCapture,
+        FIFOConverter,
+        FrameSender,
         MicrophoneCapture,
+        MultiClientManager,
+        P2PCallManager,
+        RawStreamer,
         ScreenShare,
         VideoFilters,
         WhisperTranscription,
         YouTubeDownloader,
+        PerformanceMonitor,
     )
 
 __all__ = [
