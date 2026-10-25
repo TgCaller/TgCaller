@@ -258,3 +258,24 @@ async def test_processor_kills_ffmpeg_when_chunk_task_is_cancelled(monkeypatch):
     assert fake_process.killed is True
     assert fake_process.returncode == -9
     assert processor.processing_stats["errors"] == 0
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("audio_sample_rate", 0),
+        ("audio_sample_rate", True),
+        ("audio_channels", -1),
+        ("audio_bitrate", 0),
+        ("thread_count", -1),
+        ("thread_count", True),
+        ("buffer_size", 0),
+    ],
+)
+def test_audio_processor_rejects_invalid_configuration(field, value):
+    config = ProcessorConfig()
+    setattr(config, field, value)
+    processor = StreamProcessor(config)
+
+    with pytest.raises(ValueError, match=field):
+        processor._build_processing_command("raw")
