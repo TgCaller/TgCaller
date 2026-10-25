@@ -13,6 +13,45 @@ from tgcaller import TgCaller
 from tgcaller.types import AudioConfig, VideoConfig, CallStatus
 
 
+class FakeCallsBackend:
+    """Deterministic fake for testing backend integration."""
+
+    def __init__(self):
+        self.play_calls = []
+        self.volume_calls = []
+        self.started = False
+
+    async def start(self):
+        self.started = True
+
+    async def play(self, chat_id, stream=None):
+        self.play_calls.append((chat_id, stream))
+
+    async def leave_call(self, chat_id):
+        return True
+
+    async def pause(self, chat_id):
+        return True
+
+    async def resume(self, chat_id):
+        return True
+
+    async def mute(self, chat_id):
+        return True
+
+    async def unmute(self, chat_id):
+        return True
+
+    async def change_volume_call(self, chat_id, volume):
+        self.volume_calls.append((chat_id, volume))
+
+    async def time(self, chat_id):
+        return 12.5
+
+    async def get_participants(self, chat_id):
+        return []
+
+
 class TestTgCaller:
     """Test TgCaller main client"""
     
@@ -26,10 +65,14 @@ class TestTgCaller:
         return client
     
     @pytest.fixture
-    def caller(self, mock_client):
-        """Create TgCaller instance"""
-        return TgCaller(mock_client)
-    
+    def mock_calls_backend(self):
+        return FakeCallsBackend()
+
+    @pytest.fixture
+    def caller(self, mock_client, mock_calls_backend):
+        """Create TgCaller with a fake transport backend."""
+        return TgCaller(mock_client, calls_backend=mock_calls_backend)
+
     @pytest.fixture
     def temp_audio_file(self):
         """Create temporary audio file for testing"""
