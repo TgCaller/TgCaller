@@ -4,6 +4,7 @@ A concrete backend must implement Telegram group-call signaling and media transp
 This class fails closed when no backend is configured instead of simulating success.
 """
 import inspect
+import math
 from typing import Any, Optional
 
 from ..exceptions import ConnectionError
@@ -62,6 +63,7 @@ class Connection:
         if (
             isinstance(result, bool)
             or not isinstance(result, (int, float))
+            or not math.isfinite(result)
             or result < 0
         ):
             return None
