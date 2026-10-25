@@ -18,84 +18,57 @@ class CallMethods:
         audio_config: Optional[AudioConfig] = None,
         video_config: Optional[VideoConfig] = None
     ) -> bool:
-        """
-        Join a voice/video call
-        
-        Args:
-            chat_id: Chat ID to join
-            audio_config: Audio configuration
-            video_config: Video configuration (optional)
-            
-        Returns:
-            True if successful
-        """
+        """Join a Telegram group call using the configured real call backend."""
         if not self._is_connected:
             raise ConnectionError("TgCaller not started")
-        
         if chat_id in self._active_calls:
-            return True  # Already in call
-        
+            return True
+
+        backend = self._require_calls_backend()
+        audio_config = audio_config or AudioConfig()
         try:
-            # Set default parameters
-            if audio_config is None:
-                audio_config = AudioConfig()
-            
-            # Create call session
+            # PyTgCalls accepts a None stream to join/start the call without
+            # starting media playback.
+            await backend.play(chat_id, None)
             call_session = {
-                'chat_id': chat_id,
-                'audio_config': audio_config,
-                'video_config': video_config,
-                'status': CallStatus.CONNECTING
+                "chat_id": chat_id,
+                "audio_config": audio_config,
+                "video_config": video_config,
+                "status": CallStatus.CONNECTED,
             }
-            
             self._active_calls[chat_id] = call_session
-            
-            # Simulate connection
-            await asyncio.sleep(0.5)
-            
-            # Update status
-            call_session['status'] = CallStatus.CONNECTED
-            
-            # Emit event
             update = CallUpdate(
                 chat_id=chat_id,
                 status=CallStatus.CONNECTED,
-                message="Successfully joined call"
+                message="Joined Telegram call",
             )
-            await self._emit_event('call_joined', update)
-            
-            self._logger.info(f"Joined call in chat {chat_id}")
+            await self._emit_event("call_joined", update)
+            self._logger.info("Joined Telegram call in chat %s", chat_id)
             return True
-            
-        except Exception as e:
+        except Exception as exc:
             self._active_calls.pop(chat_id, None)
-            raise CallError(f"Failed to join call: {e}")
-    
+            raise CallError(f"Failed to join Telegram call: {exc}") from exc
+
     async def leave_call(self, chat_id: int) -> bool:
-        """Leave a call"""
+        """Leave a Telegram call through the configured real backend."""
         if chat_id not in self._active_calls:
             return False
-        
         try:
-            call_session = self._active_calls[chat_id]
-            call_session['status'] = CallStatus.ENDED
-            
-            del self._active_calls[chat_id]
-            
+            backend = self._require_calls_backend()
+            await backend.leave_call(chat_id)
+            self._active_calls.pop(chat_id, None)
             update = CallUpdate(
                 chat_id=chat_id,
                 status=CallStatus.ENDED,
-                message="Left call"
+                message="Left Telegram call",
             )
-            await self._emit_event('call_left', update)
-            
-            self._logger.info(f"Left call in chat {chat_id}")
+            await self._emit_event("call_left", update)
+            self._logger.info("Left Telegram call in chat %s", chat_id)
             return True
-            
-        except Exception as e:
-            self._logger.error(f"Error leaving call {chat_id}: {e}")
+        except Exception as exc:
+            self._logger.error("Error leaving call %s: %s", chat_id, exc)
             return False
-    
+
     async def change_volume_call(self, chat_id: int, volume: float) -> bool:
         """Change volume for specific call (alias for set_volume)"""
         return await self.set_volume(chat_id, volume)
