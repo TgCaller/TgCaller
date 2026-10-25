@@ -107,8 +107,12 @@ class StreamMethods:
             return False
         
         call_session = self._active_calls[chat_id]
+        if call_session.get('muted', False):
+            return False
+        if not await self._connection.mute(chat_id):
+            return False
         call_session['muted'] = True
-        
+
         self._logger.info(f"Muted microphone in chat {chat_id}")
         return True
     
@@ -118,8 +122,12 @@ class StreamMethods:
             return False
         
         call_session = self._active_calls[chat_id]
+        if not call_session.get('muted', False):
+            return False
+        if not await self._connection.unmute(chat_id):
+            return False
         call_session['muted'] = False
-        
+
         self._logger.info(f"Unmuted microphone in chat {chat_id}")
         return True
     
@@ -135,9 +143,14 @@ class StreamMethods:
         
         try:
             call_session = self._active_calls[chat_id]
+            if 'recording' in call_session:
+                return False
+            config = audio_config or AudioConfig()
+            if not await self._connection.start_recording(chat_id, output_path, config):
+                return False
             call_session['recording'] = {
                 'output_path': output_path,
-                'audio_config': audio_config or AudioConfig(),
+                'audio_config': config,
                 'started_at': asyncio.get_event_loop().time()
             }
             
@@ -158,6 +171,8 @@ class StreamMethods:
         if 'recording' not in call_session:
             return False
         
+        if not await self._connection.stop_recording(chat_id):
+            return False
         recording_info = call_session.pop('recording')
         duration = asyncio.get_event_loop().time() - recording_info['started_at']
         
@@ -256,8 +271,10 @@ class StreamMethods:
             return False
         
         call_session = self._active_calls[chat_id]
+        if not await self._connection.set_volume(chat_id, volume):
+            return False
         call_session['volume'] = volume
-        
+
         self._logger.info(f"Set volume to {volume} in chat {chat_id}")
         return True
     
@@ -267,11 +284,14 @@ class StreamMethods:
             return False
         
         call_session = self._active_calls[chat_id]
-        
         if 'current_stream' not in call_session:
             return False
-        
-        call_session['position'] = position
+        if not isinstance(position, (int, float)) or isinstance(position, bool) or position < 0:
+            raise ValueError("Position must be a non-negative number of seconds")
+        if not await self._connection.seek(chat_id, position):
+            return False
+
+        call_session['position'] = float(position)
         self._logger.info(f"Seeked to {position}s in chat {chat_id}")
         return True
     
