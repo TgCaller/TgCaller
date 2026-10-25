@@ -6,7 +6,7 @@ import asyncio
 import logging
 import subprocess
 import time
-from typing import Optional, AsyncGenerator, Dict, Any
+from typing import Optional, AsyncGenerator, Dict, Any, List
 from dataclasses import dataclass
 from pathlib import Path
 
