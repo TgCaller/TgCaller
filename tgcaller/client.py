@@ -349,43 +349,6 @@ class TgCaller:
         elif not stream.is_url:
             raise MediaError(f"Invalid media source: {stream.source}")
     
-    async def _simulate_playback(self, chat_id: int, stream: MediaStream):
-        """Simulate media playback"""
-        try:
-            duration = stream.duration or 10.0
-            
-            for i in range(int(duration)):
-                if chat_id not in self._active_calls:
-                    break
-                
-                call_session = self._active_calls[chat_id]
-                
-                if call_session.get('status') != CallStatus.PLAYING:
-                    break
-                
-                call_session['position'] = i + 1
-                await asyncio.sleep(1)
-            
-            # Stream ended
-            if chat_id in self._active_calls:
-                call_session = self._active_calls[chat_id]
-                
-                if stream.repeat:
-                    await self.play(chat_id, stream)
-                else:
-                    call_session['status'] = CallStatus.CONNECTED
-                    call_session.pop('current_stream', None)
-                    
-                    update = CallUpdate(
-                        chat_id=chat_id,
-                        status=CallStatus.CONNECTED,
-                        message="Stream ended"
-                    )
-                    await self._emit_event('stream_end', update)
-                    
-        except Exception as e:
-            self._logger.error(f"Playback error in chat {chat_id}: {e}")
-    
     @property
     def client(self) -> Client:
         """Get Pyrogram client instance"""
