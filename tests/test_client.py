@@ -224,3 +224,27 @@ class TestTgCaller:
         await caller._emit_event("call_left", update)
 
         assert received == [update]
+
+    @pytest.mark.asyncio
+    async def test_stop_attempts_all_cleanup_steps_after_failure(self, caller):
+        await caller.start()
+        caller._connection_manager.cleanup_all = AsyncMock(
+            side_effect=RuntimeError("connection cleanup failed")
+        )
+        cache_cleanup = AsyncMock()
+        stream_cleanup = AsyncMock()
+        call_cleanup = AsyncMock()
+        event_cleanup = AsyncMock()
+        caller._cache_manager.cleanup = cache_cleanup
+        caller._stream_handler.cleanup_all = stream_cleanup
+        caller._call_handler.cleanup_all = call_cleanup
+        caller._event_handler.cleanup = event_cleanup
+
+        await caller.stop()
+
+        assert not caller.is_running
+        cache_cleanup.assert_awaited_once()
+        stream_cleanup.assert_awaited_once()
+        call_cleanup.assert_awaited_once()
+        event_cleanup.assert_awaited_once()
+
