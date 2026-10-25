@@ -94,6 +94,9 @@ async def test_join_negotiation_failure_closes_engine_and_clears_call(monkeypatc
         def __init__(self, **kwargs):
             self.kwargs = kwargs
 
+    class LeaveRequest(Request):
+        pass
+
     class DataJSON:
         def __init__(self, data):
             self.data = data
@@ -107,7 +110,7 @@ async def test_join_negotiation_failure_closes_engine_and_clears_call(monkeypatc
     phone = types.ModuleType("pyrogram.raw.functions.phone")
     raw_types = types.ModuleType("pyrogram.raw.types")
     phone.JoinGroupCall = Request
-    phone.LeaveGroupCall = Request
+    phone.LeaveGroupCall = LeaveRequest
     phone.GetGroupCall = Request
     raw_types.DataJSON = DataJSON
     raw_types.InputPeerSelf = InputPeerSelf
@@ -138,6 +141,7 @@ async def test_join_negotiation_failure_closes_engine_and_clears_call(monkeypatc
 
         async def close(self, chat_id):
             self.closed = True
+            raise RuntimeError("cleanup failed")
 
     class Client:
         def __init__(self):
@@ -145,6 +149,8 @@ async def test_join_negotiation_failure_closes_engine_and_clears_call(monkeypatc
 
         async def invoke(self, request):
             self.requests.append(request)
+            if isinstance(request, LeaveRequest):
+                raise RuntimeError("leave rollback failed")
             return object()
 
     client = Client()
