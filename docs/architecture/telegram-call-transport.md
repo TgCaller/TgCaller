@@ -52,3 +52,7 @@ generate join parameters, or implement audio/video transport. A real
 - Missing or unsupported transport features raise an actionable error.
 - Unit tests use explicit fakes; live integration tests are separately marked and run only with configured test credentials.
 - No runtime dependency on PyTgCalls. Any reused protocol knowledge must be implemented and tested in TgCaller's own adapter/engine.
+
+## TgCaller-owned media engine plan
+
+The implementation decision and staged acceptance gates are documented in [TgCaller-owned media engine](tgcaller-owned-media-engine.md). TgCaller will not adopt PyTgCalls or NTgCalls as its runtime media engine. Lower-level libraries may be used as building blocks, but Telegram-specific negotiation, lifecycle, recovery, and the public API remain TgCaller-owned. The engine is not complete until a live Telegram call proves actual media flow.
