@@ -208,3 +208,53 @@ async def test_processor_marks_encoded_chunk_container_contract(
     assert result.metadata["container_format"] == container_format
     assert result.metadata["chunk_containerized"] is (output_format != "raw")
     assert result.metadata["must_not_concatenate"] is must_not_concatenate
+
+
+@pytest.mark.asyncio
+async def test_processor_kills_ffmpeg_when_chunk_task_is_cancelled(monkeypatch):
+    import asyncio
+    from tgcaller.streaming import stream_processor as module
+
+    started = asyncio.Event()
+
+    class HangingFFmpegProcess:
+        def __init__(self):
+            self.returncode = None
+            self.killed = False
+
+        async def communicate(self, input=None):
+            started.set()
+            await asyncio.Event().wait()
+
+        def kill(self):
+            self.killed = True
+            self.returncode = -9
+
+        async def wait(self):
+            return self.returncode
+
+    fake_process = HangingFFmpegProcess()
+
+    async def fake_create_subprocess_exec(*args, **kwargs):
+        return fake_process
+
+    monkeypatch.setattr(module.asyncio, "create_subprocess_exec", fake_create_subprocess_exec)
+    processor = StreamProcessor()
+    assert await processor._start_ffmpeg_processor("raw")
+    chunk = StreamChunk(
+        data=b"input-pcm",
+        timestamp=6.0,
+        sequence=11,
+        metadata={},
+    )
+
+    task = asyncio.create_task(processor._process_single_chunk(chunk))
+    await started.wait()
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert fake_process.killed is True
+    assert fake_process.returncode == -9
+    assert processor.processing_stats["errors"] == 0
