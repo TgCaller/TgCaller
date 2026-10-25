@@ -133,6 +133,9 @@ async def test_join_negotiation_failure_closes_engine_and_clears_call(monkeypatc
         async def handle_join_updates(self, chat_id, updates):
             raise RuntimeError("bad negotiation update")
 
+        async def source_id(self, chat_id):
+            return 123
+
         async def close(self, chat_id):
             self.closed = True
 
