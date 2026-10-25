@@ -158,11 +158,19 @@ class PyrogramGroupCallBackend:
             _, LeaveGroupCall, _, _, _ = await self._rpc_types()
             source_id = await _resolve(self.media_engine.source_id(chat_id))
             await self.client.invoke(LeaveGroupCall(call=call, source=source_id))
-            return True
-        finally:
-            # Clear state even if engine shutdown itself raises.
+        except BaseException:
+            # Preserve the original RPC/cancellation error if cleanup also fails.
+            self._calls.pop(chat_id, None)
+            try:
+                await _resolve(self.media_engine.close(chat_id))
+            except BaseException:
+                pass
+            raise
+        else:
+            # State must be cleared before shutdown, even when shutdown fails.
             self._calls.pop(chat_id, None)
             await _resolve(self.media_engine.close(chat_id))
+            return True
 
     async def is_healthy(self, chat_id):
         return bool(await _resolve(self.media_engine.is_connected(chat_id)))
