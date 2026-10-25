@@ -50,14 +50,17 @@ class StreamMethods:
             # Validate media
             await self._validate_media(stream)
             
-            # Update call session
+            # Delegate playback to the configured media transport. Do not simulate it.
+            started = await self._connection.play_stream(chat_id, stream)
+            if not started:
+                raise StreamError(
+                    "The configured call transport could not start media playback."
+                )
+
             call_session = self._active_calls[chat_id]
             call_session['current_stream'] = stream
             call_session['status'] = CallStatus.PLAYING
-            
-            # Start playback simulation
-            asyncio.create_task(self._simulate_playback(chat_id, stream))
-            
+
             # Emit event
             update = CallUpdate(
                 chat_id=chat_id,
@@ -82,9 +85,13 @@ class StreamMethods:
         if 'current_stream' not in call_session:
             return False
         
+        stopped = await self._connection.stop_stream(chat_id)
+        if not stopped:
+            return False
+
         call_session['status'] = CallStatus.CONNECTED
         call_session.pop('current_stream', None)
-        
+
         update = CallUpdate(
             chat_id=chat_id,
             status=CallStatus.CONNECTED,
@@ -168,16 +175,11 @@ class StreamMethods:
             return False
         
         try:
-            # This would send raw frame data to the call
-            # Implementation depends on actual streaming protocol
-            call_session = self._active_calls[chat_id]
-            
-            if 'frames_sent' not in call_session:
-                call_session['frames_sent'] = 0
-            
-            call_session['frames_sent'] += 1
-            
-            return True
+            if not isinstance(frame_data, bytes):
+                raise TypeError("frame_data must be bytes")
+            if frame_type not in {"audio", "video"}:
+                raise ValueError("frame_type must be 'audio' or 'video'")
+            return await self._connection.send_frame(chat_id, frame_data, frame_type)
             
         except Exception as e:
             self._logger.error(f"Failed to send frame: {e}")
