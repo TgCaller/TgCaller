@@ -11,6 +11,32 @@ import pyrogram  # <-- Add this import
 
 from tgcaller import TgCaller
 from tgcaller.types import AudioConfig, VideoConfig, CallStatus
+from tgcaller.exceptions import CallError
+
+
+class FakeTransport:
+    """Test-only transport; this does not implement Telegram networking."""
+
+    async def connect_call(self, chat_id, audio_config, video_config):
+        return True
+
+    async def disconnect_call(self, chat_id):
+        return True
+
+    async def is_healthy(self, chat_id):
+        return True
+
+    async def get_participants(self, chat_id):
+        return []
+
+    async def play_stream(self, chat_id, stream):
+        return True
+
+    async def stop_stream(self, chat_id):
+        return True
+
+    async def send_frame(self, chat_id, frame_data, frame_type):
+        return True
 
 
 class TestTgCaller:
@@ -28,7 +54,7 @@ class TestTgCaller:
     @pytest.fixture
     def caller(self, mock_client):
         """Create TgCaller instance"""
-        return TgCaller(mock_client)
+        return TgCaller(mock_client, connection_backend=FakeTransport())
     
     @pytest.fixture
     def temp_audio_file(self):
@@ -59,6 +85,15 @@ class TestTgCaller:
         await caller.stop()
         assert not caller.is_running
     
+    @pytest.mark.asyncio
+    async def test_join_call_fails_without_real_transport(self, mock_client):
+        caller = TgCaller(mock_client)
+        await caller.start()
+        with pytest.raises(CallError, match="Could not join Telegram group call"):
+            await caller.join_call(-1001234567890)
+        assert caller.get_active_calls() == []
+        await caller.stop()
+
     @pytest.mark.asyncio
     async def test_join_call(self, caller, mock_client):
         """Test joining a call"""
