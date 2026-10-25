@@ -105,7 +105,7 @@ async def test_processor_returns_complete_subprocess_output(monkeypatch):
     processor = StreamProcessor()
     assert await processor._start_ffmpeg_processor("raw")
     chunk = StreamChunk(
-        data=b"input-pcm",
+        data=b"input-pcm!!!",
         timestamp=2.0,
         sequence=7,
         metadata={},
@@ -113,7 +113,7 @@ async def test_processor_returns_complete_subprocess_output(monkeypatch):
 
     result = await processor._process_single_chunk(chunk)
 
-    assert fake_process.received_input == b"input-pcm"
+    assert fake_process.received_input == b"input-pcm!!!"
     assert result is not None
     assert result.data == b"complete-output"
     assert result.sequence == 7
@@ -196,7 +196,7 @@ async def test_processor_marks_encoded_chunk_container_contract(
     processor = StreamProcessor()
     assert await processor._start_ffmpeg_processor(output_format)
     chunk = StreamChunk(
-        data=b"input-pcm",
+        data=b"input-pcm!!!",
         timestamp=5.0,
         sequence=10,
         metadata={},
@@ -242,7 +242,7 @@ async def test_processor_kills_ffmpeg_when_chunk_task_is_cancelled(monkeypatch):
     processor = StreamProcessor()
     assert await processor._start_ffmpeg_processor("raw")
     chunk = StreamChunk(
-        data=b"input-pcm",
+        data=b"input-pcm!!!",
         timestamp=6.0,
         sequence=11,
         metadata={},
@@ -279,3 +279,21 @@ def test_audio_processor_rejects_invalid_configuration(field, value):
 
     with pytest.raises(ValueError, match=field):
         processor._build_processing_command("raw")
+
+
+@pytest.mark.asyncio
+async def test_processor_rejects_incomplete_pcm_sample_frame():
+    processor = StreamProcessor()
+    assert await processor._start_ffmpeg_processor("raw")
+    chunk = StreamChunk(
+        data=b"bad",
+        timestamp=7.0,
+        sequence=12,
+        metadata={},
+    )
+
+    result = await processor._process_single_chunk(chunk)
+
+    assert result is None
+    assert processor.processing_stats["errors"] == 1
+    assert processor.processing_stats["chunks_processed"] == 0
