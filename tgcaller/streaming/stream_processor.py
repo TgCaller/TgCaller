@@ -173,6 +173,25 @@ class StreamProcessor:
                 "Choose 'raw', 'opus', or 'aac'."
             )
 
+        # Validate values that become FFmpeg command-line arguments. Fail early
+        # with a clear Python error rather than an opaque subprocess failure.
+        for field in ("audio_sample_rate", "audio_channels", "audio_bitrate"):
+            value = getattr(self.config, field, None)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"{field} must be a positive integer")
+        if (
+            isinstance(self.config.thread_count, bool)
+            or not isinstance(self.config.thread_count, int)
+            or self.config.thread_count < 0
+        ):
+            raise ValueError("thread_count must be a non-negative integer")
+        if (
+            isinstance(self.config.buffer_size, bool)
+            or not isinstance(self.config.buffer_size, int)
+            or self.config.buffer_size <= 0
+        ):
+            raise ValueError("buffer_size must be a positive integer")
+
         cmd = ['ffmpeg']
         
         # Input settings
