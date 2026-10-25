@@ -329,6 +329,12 @@ class StreamProcessor:
                     "must_not_concatenate": output_format == "opus",
                 },
             )
+        except asyncio.CancelledError:
+            # A cancelled consumer must not leave an FFmpeg child running.
+            if process is not None and process.returncode is None:
+                process.kill()
+                await process.wait()
+            raise
         except Exception as e:
             self.logger.error("Error processing chunk %s: %s", chunk.sequence, e)
             self.processing_stats["errors"] += 1
