@@ -1,0 +1,18 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ringGradient" x1="24" y1="24" x2="176" y2="176" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6"/>
+      <stop offset="0.52" stop-color="#60A5FA"/>
+      <stop offset="1" stop-color="#C084FC"/>
+    </linearGradient>
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#8B5CF6" flood-opacity="0.75"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="#60A5FA" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+  <circle cx="100" cy="100" r="82" stroke="url(#ringGradient)" stroke-width="2.2" opacity="0.9" filter="url(#softGlow)"/>
+  <path d="M150 100C150 126.51 126.51 150 100 150C73.4903 150 50 126.51 50 100C50 73.4903 73.4903 50 100 50" stroke="url(#ringGradient)" stroke-width="2.2" stroke-linecap="round" opacity="0.8" filter="url(#softGlow)"/>
+  <path d="M88 28C111 24 133 32 147 48C155 57 161 69 163 81" stroke="url(#ringGradient)" stroke-width="2" stroke-linecap="round" opacity="0.7" filter="url(#softGlow)"/>
+  <circle cx="164" cy="82" r="4.5" fill="#A78BFA"/>
+  <circle cx="100" cy="100" r="89" stroke="#A5B4FC" stroke-opacity="0.18" stroke-width="1.2"/>
+</svg>
