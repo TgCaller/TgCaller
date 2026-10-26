@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 import pytest
 
@@ -6,11 +7,17 @@ import tgcaller.streaming.youtube_streamer as youtube_streamer
 
 
 class FakeCaller:
+    def __init__(self):
+        self.sent_frames = []
+
     def is_connected(self, chat_id):
         return True
 
     async def join_call(self, *args):
         raise AssertionError("join_call should not be needed in this test")
+
+    async def send_frame(self, chat_id, frame_data, frame_type):
+        self.sent_frames.append((chat_id, frame_data, frame_type))
 
 
 @pytest.fixture
@@ -63,3 +70,25 @@ def test_ffmpeg_command_rejects_unimplemented_video(streamer):
 
     with pytest.raises(NotImplementedError, match="video output is not implemented"):
         streamer._build_ffmpeg_command()
+
+
+@pytest.mark.asyncio
+async def test_buffer_chunk_callback_sends_audio_to_caller(streamer):
+    streamer.current_chat_id = -100123
+    streamer.buffer = youtube_streamer.FastStreamBuffer(streamer.config.buffer_config)
+    streamer._setup_buffer_callbacks()
+    chunk = youtube_streamer.StreamChunk(
+        data=b"\x00\x00" * 16,
+        timestamp=time.time(),
+        sequence=1,
+        chunk_type="audio",
+    )
+
+    streamer.buffer.chunk_callbacks[0](chunk)
+    for _ in range(10):
+        if streamer.caller.sent_frames:
+            break
+        await asyncio.sleep(0)
+
+    assert streamer.caller.sent_frames == [(-100123, chunk.data, "audio")]
+    assert streamer.stream_stats["chunks_processed"] == 1
