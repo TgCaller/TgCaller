@@ -7,6 +7,7 @@ import pytest
 from tgcaller.mtproto.media_engine import (
     classify_group_call_connection_params,
     extract_group_call_connection_params,
+    extract_webrtc_transport_description,
 )
 
 
@@ -124,3 +125,68 @@ def test_rejects_connection_update_without_data_json():
     update_type = type("UpdateGroupCallConnection", (), {})
     with pytest.raises(ValueError, match="no JSON params"):
         extract_group_call_connection_params(update_type())
+
+
+
+def _valid_transport_response():
+    return {
+        "ufrag": "ignored-local-value",
+        "pwd": "ignored-local-password",
+        "fingerprints": [{"hash": "sha-256", "fingerprint": "AA:BB", "setup": "passive"}],
+        "transport": {
+            "ufrag": "remote-ufrag",
+            "pwd": "remote-password",
+            "fingerprints": [
+                {"hash": "sha-256", "fingerprint": "CC:DD", "setup": "active"}
+            ],
+            "candidates": [
+                {
+                    "port": "3478",
+                    "protocol": "udp",
+                    "network": "1",
+                    "generation": "0",
+                    "id": "candidate-1",
+                    "component": "1",
+                    "foundation": "foundation-1",
+                    "priority": "12345",
+                    "ip": "192.0.2.10",
+                    "type": "relay",
+                    "rel-addr": "10.0.0.1",
+                    "rel-port": "5000",
+                }
+            ],
+        },
+    }
+
+
+def test_extracts_nested_telegram_webrtc_transport_description():
+    parsed = extract_webrtc_transport_description(_valid_transport_response())
+
+    assert parsed["ufrag"] == "remote-ufrag"
+    assert parsed["pwd"] == "remote-password"
+    assert parsed["fingerprints"] == [
+        {"hash": "sha-256", "fingerprint": "CC:DD", "setup": "active"}
+    ]
+    assert parsed["candidates"][0]["ip"] == "192.0.2.10"
+    assert parsed["candidates"][0]["rel-addr"] == "10.0.0.1"
+
+
+@pytest.mark.parametrize(
+    "mutate, message",
+    [
+        (lambda p: p.update({"stream": True}), "stream/RTMP mode"),
+        (lambda p: p.pop("transport"), "transport object"),
+        (lambda p: p["transport"].pop("candidates"), "candidates list"),
+        (lambda p: p["transport"].update({"ufrag": ""}), "non-empty ufrag"),
+        (
+            lambda p: p["transport"]["candidates"][0].pop("foundation"),
+            "ICE candidate at index 0 is invalid",
+        ),
+    ],
+)
+def test_rejects_invalid_webrtc_transport_response(mutate, message):
+    params = _valid_transport_response()
+    mutate(params)
+
+    with pytest.raises(ValueError, match=message):
+        extract_webrtc_transport_description(params)
