@@ -61,7 +61,24 @@ class TgCaller:
             raise TypeError("client must be a Pyrogram Client instance")
             
         self._client = client
-        # A concrete backend must provide real Telegram call signaling and media transport.
+        # TgCaller uses its own Telegram signaling adapter and audio media engine
+        # by default. Custom transports remain injectable for applications/tests.
+        if connection_backend is None:
+            from .mtproto import (
+                AiortcTelegramMediaEngine,
+                PyrogramGroupCallBackend,
+                resolve_active_group_call,
+            )
+
+            media_engine = AiortcTelegramMediaEngine()
+            connection_backend = PyrogramGroupCallBackend(
+                client=client,
+                resolve_call=lambda chat_id: resolve_active_group_call(client, chat_id),
+                media_engine=media_engine,
+            )
+            self._owns_connection_backend = True
+        else:
+            self._owns_connection_backend = False
         self._connection = Connection(client, backend=connection_backend)
         self._active_calls: Dict[int, Any] = {}
         self._event_handlers: Dict[str, List[Callable]] = {
