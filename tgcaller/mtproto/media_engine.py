@@ -134,6 +134,13 @@ def extract_webrtc_transport_description(params: Any) -> Dict[str, Any]:
         raise ValueError(
             "Telegram WebRTC transport must contain a candidates list"
         )
+    # This engine does not implement trickle-ICE updates after the join RPC.
+    # An empty list would therefore create an SDP answer that cannot establish
+    # connectivity; reject it immediately instead of timing out as if connected.
+    if not candidates:
+        raise ValueError(
+            "Telegram WebRTC transport must contain at least one ICE candidate"
+        )
     candidate_fields = (
         "port", "protocol", "network", "generation", "id", "component",
         "foundation", "priority", "ip", "type",
