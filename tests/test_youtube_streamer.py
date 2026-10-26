@@ -84,7 +84,7 @@ async def test_buffer_chunk_callback_sends_audio_to_caller(streamer):
         chunk_type="audio",
     )
 
-    streamer.buffer.chunk_callbacks[0](chunk)
+    await streamer.buffer.chunk_callbacks[0](chunk)
     for _ in range(10):
         if streamer.caller.sent_frames:
             break
