@@ -1,4 +1,4 @@
-"""Typing contract and protocol helpers for Telegram group-call media engines.
+""""Typing contract and protocol helpers for Telegram group-call media engines.
 
 This module deliberately does not provide a fake or generic WebRTC engine.
 Implementations must speak Telegram's group-call media protocol and own the
@@ -9,18 +9,25 @@ import json
 from typing import Any, Dict, List, Protocol, runtime_checkable
 
 
-def extract_group_call_connection_params(updates: Any) -> Dict[str, Any]:
-    """Extract Telegram's local-engine response from join RPC updates.
+def extract_group_call_connection_params(
+    updates: Any, presentation: bool = False
+) -> Dict[str, Any]:
+    """Extract the main or presentation connection response from join updates.
 
     Telegram returns an UpdateGroupCallConnection whose params field contains
-    a DataJSON object. For WebRTC calls, its JSON is the local engine's
-    negotiation response. {"stream": true} and {"stream": true, "rtmp": true}
-    are distinct stream-mode responses; callers must not pass either to a
-    WebRTC negotiator.
+    a DataJSON object. Main-call and presentation connections are separate;
+    callers must select the matching update explicitly. For WebRTC calls, the
+    JSON is the local engine's negotiation response. Stream-mode responses
+    (for example {"stream": true}) must not be passed to a WebRTC negotiator.
+
+    Args:
+        updates: An Updates object, a sequence of updates, or one update.
+        presentation: Select the presentation connection instead of the main
+            connection.
 
     Raises:
-        ValueError: If the update collection has no usable connection update
-            or the returned JSON is malformed.
+        ValueError: If the requested connection update is absent or its JSON
+            is malformed.
     """
     items = getattr(updates, "updates", None)
     if items is None:
@@ -29,6 +36,9 @@ def extract_group_call_connection_params(updates: Any) -> Dict[str, Any]:
     for update in items:
         if type(update).__name__ != "UpdateGroupCallConnection":
             continue
+        if bool(getattr(update, "presentation", False)) != presentation:
+            continue
+
         params = getattr(update, "params", None)
         data = getattr(params, "data", None)
         if not isinstance(data, str) or not data.strip():
@@ -47,8 +57,10 @@ def extract_group_call_connection_params(updates: Any) -> Dict[str, Any]:
             )
         return parsed
 
+    kind = "presentation" if presentation else "main"
     raise ValueError(
-        "Telegram join response contains no UpdateGroupCallConnection"
+        "Telegram join response contains no UpdateGroupCallConnection "
+        f"for the {kind} connection"
     )
 
 
