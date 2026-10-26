@@ -193,17 +193,25 @@ class YouTubeStreamer:
                 await self.buffer.stop_buffering()
                 self.buffer = None
             
-            # Stop FFmpeg process
-            if self.ffmpeg_process:
-                self.ffmpeg_process.terminate()
-                try:
-                    await asyncio.wait_for(
-                        asyncio.create_task(self._wait_for_process()), 
-                        timeout=5.0
-                    )
-                except asyncio.TimeoutError:
-                    self.ffmpeg_process.kill()
-                
+            # Stop FFmpeg process and always reap it before dropping the handle.
+            process = self.ffmpeg_process
+            if process:
+                if process.poll() is None:
+                    process.terminate()
+                    try:
+                        await asyncio.wait_for(
+                            asyncio.get_running_loop().run_in_executor(
+                                None, process.wait
+                            ),
+                            timeout=5.0,
+                        )
+                    except asyncio.TimeoutError:
+                        process.kill()
+                        await asyncio.get_running_loop().run_in_executor(
+                            None, process.wait
+                        )
+                if process.stdout and not process.stdout.closed:
+                    process.stdout.close()
                 self.ffmpeg_process = None
             
             # Reset state
@@ -278,15 +286,19 @@ class YouTubeStreamer:
             self.ffmpeg_process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                # Never leave FFmpeg's stderr pipe unread: a full pipe can
+                # stall FFmpeg and silently freeze audio delivery.
+                stderr=subprocess.DEVNULL,
                 bufsize=0
             )
             
             # Verify process started
             await asyncio.sleep(0.1)
             if self.ffmpeg_process.poll() is not None:
-                stderr = self.ffmpeg_process.stderr.read().decode()
-                self.logger.error(f"FFmpeg failed to start: {stderr}")
+                self.logger.error(
+                    "FFmpeg exited during startup with return code %s",
+                    self.ffmpeg_process.returncode,
+                )
                 return False
             
             self.logger.info("FFmpeg process started successfully")
