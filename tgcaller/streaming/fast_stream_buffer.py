@@ -317,7 +317,21 @@ class FastStreamBuffer:
     async def _consumer_loop(self):
         """Consumer loop - processes buffered chunks"""
         try:
-            while self.state != BufferState.IDLE:
+            while self.state not in (BufferState.IDLE, BufferState.ERROR):
+                # Prime the buffer before consuming the first chunk. Without
+                # this gate, the consumer drains each chunk as soon as it is
+                # produced, so min_buffer_size never provides startup jitter
+                # protection. A short finite source must still be drained.
+                if self.state == BufferState.FILLING:
+                    with self._get_lock():
+                        buffer_ready = len(self.buffer) >= self.config.min_buffer_size
+                    producer_finished = (
+                        self.producer_task is not None and self.producer_task.done()
+                    )
+                    if not buffer_ready and not producer_finished:
+                        await asyncio.sleep(0.001)
+                        continue
+
                 chunk = await self._get_next_chunk()
                 
                 if chunk:
