@@ -16,9 +16,19 @@ async def _resolve(value):
     return await value if inspect.isawaitable(value) else value
 
 
+def _is_valid_ssrc(value):
+    """Telegram SSRC values are non-zero signed 32-bit integers."""
+    return (
+        isinstance(value, int)
+        and not isinstance(value, bool)
+        and -(2**31) <= value <= (2**31 - 1)
+        and value != 0
+    )
+
+
 def _validate_source_id(source_id):
     """Validate the active main connection's Telegram SSRC/source ID."""
-    if isinstance(source_id, bool) or not isinstance(source_id, int) or source_id <= 0:
+    if not _is_valid_ssrc(source_id):
         raise ConnectionError(
             "Media engine must provide a non-zero integer source ID"
         )
@@ -33,8 +43,10 @@ def _validate_join_payload(payload, video_config=None):
         )
 
     ssrc = payload.get("ssrc")
-    if isinstance(ssrc, bool) or not isinstance(ssrc, int) or ssrc <= 0:
-        raise ConnectionError("Join payload must contain a non-zero integer audio ssrc")
+    if not _is_valid_ssrc(ssrc):
+        raise ConnectionError(
+            "Join payload must contain a non-zero integer audio ssrc"
+        )
 
     for key in ("ufrag", "pwd"):
         if not isinstance(payload.get(key), str) or not payload[key].strip():
