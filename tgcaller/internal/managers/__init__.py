@@ -1,1 +1,0 @@
-# TgCaller Internal Managers

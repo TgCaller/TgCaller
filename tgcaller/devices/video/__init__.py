@@ -1,1 +1,0 @@
-# TgCaller Video Devices

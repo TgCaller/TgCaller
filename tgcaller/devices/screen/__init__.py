@@ -1,1 +1,0 @@
-# TgCaller Screen Devices

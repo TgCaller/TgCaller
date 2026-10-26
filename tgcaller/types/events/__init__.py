@@ -1,1 +1,0 @@
-# TgCaller Event Types
