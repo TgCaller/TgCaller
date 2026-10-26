@@ -1,4 +1,4 @@
-"""Telegram group-call media-engine contract and connection-update helpers.
+"""Typing contract and protocol helpers for Telegram group-call media engines.
 
 This module deliberately does not provide a fake or generic WebRTC engine.
 Implementations must speak Telegram's group-call media protocol and own the
@@ -9,40 +9,18 @@ import json
 from typing import Any, Dict, List, Protocol, runtime_checkable
 
 
-def classify_group_call_connection_params(params: Any) -> str:
-    """Classify Telegram connection parameters as WebRTC, stream, or RTMP.
-
-    Telegram's stream-mode responses are not WebRTC negotiation documents and
-    must be dispatched to a compatible streaming implementation.
-    """
-    if not isinstance(params, dict):
-        raise ValueError("Telegram connection params must be a JSON object")
-
-    stream = params.get("stream", False)
-    rtmp = params.get("rtmp", False)
-    if not isinstance(stream, bool) or not isinstance(rtmp, bool):
-        raise ValueError("stream and rtmp mode flags must be booleans")
-    if rtmp and not stream:
-        raise ValueError("rtmp mode requires stream mode")
-
-    if stream and rtmp:
-        return "rtmp"
-    if stream:
-        return "stream"
-    return "webrtc"
-
-
 def extract_group_call_connection_params(
     updates: Any, presentation: bool = False
 ) -> Dict[str, Any]:
-    """Extract a Telegram UpdateGroupCallConnection's DataJSON parameters.
+    """Extract the main or presentation connection parameters from join updates.
 
-    When Telegram returns both the main and presentation connection updates,
-    select the requested connection. The parsed object is classified separately
-    so stream-mode responses are never accidentally sent to a WebRTC negotiator.
+    Telegram returns an UpdateGroupCallConnection whose params field contains
+    a DataJSON object. The update's presentation flag distinguishes the main
+    connection from the separate screen-sharing connection. Stream and RTMP
+    responses are preserved for the engine to dispatch to the right transport.
 
     Raises:
-        ValueError: If the requested update is absent or its JSON is malformed.
+        ValueError: If the requested update is absent or its JSON is invalid.
     """
     items = getattr(updates, "updates", None)
     if items is None:
@@ -75,16 +53,42 @@ def extract_group_call_connection_params(
 
     if presentation:
         raise ValueError(
-            "Telegram join response has no UpdateGroupCallConnection for the presentation connection"
+            "Telegram join response contains no UpdateGroupCallConnection "
+            "for the presentation connection"
         )
     raise ValueError(
         "Telegram join response contains no UpdateGroupCallConnection"
     )
 
 
+def classify_group_call_connection_params(params: Any) -> str:
+    """Classify Telegram connection params as WebRTC, stream, or RTMP.
+
+    Telegram's stream mode is not a WebRTC negotiation response. Invalid or
+    contradictory mode flags are rejected rather than passed to a peer
+    connection and misreported as a successful join.
+    """
+    if not isinstance(params, dict):
+        raise ValueError("Telegram connection params must be a JSON object")
+
+    stream = params.get("stream", False)
+    rtmp = params.get("rtmp", False)
+    if not isinstance(stream, bool):
+        raise ValueError("Telegram connection 'stream' flag must be a boolean")
+    if not isinstance(rtmp, bool):
+        raise ValueError("Telegram connection 'rtmp' flag must be a boolean")
+    if rtmp and not stream:
+        raise ValueError(
+            "Telegram connection 'rtmp' flag requires stream mode"
+        )
+    if stream:
+        return "rtmp" if rtmp else "stream"
+    return "webrtc"
+
+
 @runtime_checkable
 class TelegramMediaEngine(Protocol):
-    """Required interface for a Telegram-compatible media runtime.
+    """Required interface for the MTProto signaling adapter's media runtime.
 
     A conforming implementation must create real Telegram-compatible join
     parameters, consume server negotiation updates, and only report connected
