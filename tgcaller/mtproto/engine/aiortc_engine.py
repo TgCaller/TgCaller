@@ -14,6 +14,7 @@ import re
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any, Dict, List, Optional
+from pathlib import Path
 
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import MediaStreamError, MediaStreamTrack
@@ -252,6 +253,8 @@ class AiortcTelegramMediaEngine:
         self.connect_timeout = float(connect_timeout)
         self.queue_size = int(queue_size)
         self._sessions: Dict[int, _Session] = {}
+        self._stream_tasks: Dict[int, asyncio.Task] = {}
+        self._stream_processes: Dict[int, Any] = {}
 
     async def create_join_payload(
         self, chat_id: int, audio_config: Any = None, video_config: Any = None
@@ -361,6 +364,7 @@ class AiortcTelegramMediaEngine:
         return session.source_id
 
     async def close(self, chat_id: int) -> None:
+        await self.stop_stream(chat_id)
         session = self._sessions.pop(chat_id, None)
         if session is None:
             return
@@ -372,23 +376,156 @@ class AiortcTelegramMediaEngine:
         finally:
             session.state = "closed"
 
+    @staticmethod
+    def _ffmpeg_command(stream: Any) -> List[str]:
+        """Build an audio-only FFmpeg command for a MediaStream source."""
+        source = getattr(stream, "source", None)
+        if not isinstance(source, (str, Path)) or not str(source):
+            raise TypeError("media source must be a non-empty file path or URL")
+
+        start_time = getattr(stream, "start_time", None)
+        duration = getattr(stream, "duration", None)
+        repeat = getattr(stream, "repeat", False)
+        if repeat:
+            raise NotImplementedError("repeat playback is not implemented yet")
+        if start_time is not None:
+            if isinstance(start_time, bool) or not isinstance(start_time, (int, float)) or not math.isfinite(start_time) or start_time < 0:
+                raise ValueError("start_time must be a finite non-negative number")
+        if duration is not None:
+            if isinstance(duration, bool) or not isinstance(duration, (int, float)) or not math.isfinite(duration) or duration <= 0:
+                raise ValueError("duration must be a finite positive number")
+
+        command = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error"]
+        if start_time is not None:
+            command.extend(["-ss", str(float(start_time))])
+        command.extend(["-i", str(source)])
+        if duration is not None:
+            command.extend(["-t", str(float(duration))])
+        command.extend([
+            "-vn", "-acodec", "pcm_s16le", "-ar", str(_SAMPLE_RATE),
+            "-ac", str(_CHANNELS), "-f", "s16le", "pipe:1",
+        ])
+        return command
+
+    async def _read_pcm_chunk(self, process: Any) -> bytes:
+        """Read one aligned PCM chunk, accumulating short subprocess pipe reads."""
+        if process.stdout is None:
+            raise ConnectionError("FFmpeg audio process has no stdout pipe")
+        data = bytearray()
+        while len(data) < 3840:
+            part = await process.stdout.read(3840 - len(data))
+            if not part:
+                break
+            data.extend(part)
+        if len(data) % _BYTES_PER_PCM_FRAME:
+            raise ConnectionError("FFmpeg produced a partial stereo PCM sample frame")
+        return bytes(data)
+
+    async def _stop_process(self, process: Any) -> None:
+        """Terminate and reap an FFmpeg subprocess without leaking it."""
+        if process.returncode is None:
+            process.terminate()
+            try:
+                await asyncio.wait_for(process.wait(), timeout=3.0)
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+        else:
+            await process.wait()
+
+    async def _pump_ffmpeg_process(self, chat_id: int, process: Any) -> None:
+        """Feed FFmpeg PCM output into the paced audio track until EOF."""
+        try:
+            while True:
+                chunk = await self._read_pcm_chunk(process)
+                if not chunk:
+                    break
+                await self.send_frame(chat_id, chunk, "audio")
+            return_code = await process.wait()
+            if return_code != 0:
+                raise ConnectionError(f"FFmpeg audio process exited with status {return_code}")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            # Playback already started; report late decode/transport errors clearly.
+            import logging
+            logging.getLogger(__name__).error("FFmpeg playback failed for chat %s: %s", chat_id, exc)
+        finally:
+            if process.returncode is None:
+                try:
+                    await self._stop_process(process)
+                except Exception:
+                    pass
+            if self._stream_processes.get(chat_id) is process:
+                self._stream_processes.pop(chat_id, None)
+            current = asyncio.current_task()
+            if self._stream_tasks.get(chat_id) is current:
+                self._stream_tasks.pop(chat_id, None)
+
     async def play_stream(self, chat_id: int, stream: Any) -> bool:
         if isinstance(stream, bytes):
             return await self.send_frame(chat_id, stream, "audio")
-        if not hasattr(stream, "__aiter__"):
-            raise TypeError("stream must be PCM bytes or an async iterable of PCM byte frames")
-        sent_any = False
-        async for chunk in stream:
-            await self.send_frame(chat_id, chunk, "audio")
-            sent_any = True
-        return sent_any
+        if hasattr(stream, "__aiter__") and not hasattr(stream, "source"):
+            sent_any = False
+            async for chunk in stream:
+                await self.send_frame(chat_id, chunk, "audio")
+                sent_any = True
+            return sent_any
+
+        session = self._sessions.get(chat_id)
+        if session is None or session.pc.connectionState != "connected":
+            raise ConnectionError(f"No connected Telegram media session for chat {chat_id}")
+        # A new source replaces an existing source deterministically.
+        await self.stop_stream(chat_id)
+        command = self._ffmpeg_command(stream)
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        self._stream_processes[chat_id] = process
+        try:
+            first_chunk = await self._read_pcm_chunk(process)
+            if not first_chunk:
+                return_code = await process.wait()
+                raise ConnectionError(
+                    "FFmpeg produced no audio output"
+                    + (f" (exit status {return_code})" if return_code else "")
+                )
+            await session.track.push(first_chunk)
+        except BaseException:
+            self._stream_processes.pop(chat_id, None)
+            try:
+                await self._stop_process(process)
+            except Exception:
+                pass
+            raise
+
+        task = asyncio.create_task(self._pump_ffmpeg_process(chat_id, process))
+        self._stream_tasks[chat_id] = task
+        return True
 
     async def stop_stream(self, chat_id: int) -> bool:
         session = self._sessions.get(chat_id)
-        if session is None:
-            return False
-        session.track.clear()
-        return True
+        task = self._stream_tasks.pop(chat_id, None)
+        process = self._stream_processes.pop(chat_id, None)
+        had_stream = task is not None or process is not None
+        if task is not None and task is not asyncio.current_task():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                pass
+        if process is not None:
+            try:
+                await self._stop_process(process)
+            except Exception:
+                pass
+        if session is not None:
+            session.track.clear()
+        return had_stream or session is not None
 
     async def send_frame(self, chat_id: int, frame_data: Any, frame_type: str) -> bool:
         session = self._sessions.get(chat_id)
