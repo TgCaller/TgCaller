@@ -18,7 +18,7 @@ _EXPORTS = {
     "YouTubeDownloader": ".youtube_dl",
     # Keep the documented legacy API available while the streaming
     # implementation is consolidated behind one canonical public interface.
-    "YouTubeStreamer": ".youtube_dl",
+    "YouTubeStreamer": "..streaming.youtube_streamer",
     "AdvancedYouTubeStreamer": ".youtube_streaming",
     "PerformanceMonitor": ".youtube_streaming",
 }
