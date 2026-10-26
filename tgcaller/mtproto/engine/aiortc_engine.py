@@ -297,16 +297,16 @@ class AiortcTelegramMediaEngine:
         session = self._sessions.get(chat_id)
         if session is None:
             raise ConnectionError("No prepared aiortc session exists for this chat")
-        params = extract_group_call_connection_params(updates)
-        mode = classify_group_call_connection_params(params)
-        if mode != "webrtc":
-            raise ConnectionError(
-                f"Telegram returned {mode} mode; this engine currently supports WebRTC only"
-            )
-        transport = extract_webrtc_transport_description(params)
-        remote_sdp = _build_remote_answer_sdp(session.local_offer_sdp, transport)
         session.state = "negotiating"
         try:
+            params = extract_group_call_connection_params(updates)
+            mode = classify_group_call_connection_params(params)
+            if mode != "webrtc":
+                raise ConnectionError(
+                    f"Telegram returned {mode} mode; this engine currently supports WebRTC only"
+                )
+            transport = extract_webrtc_transport_description(params)
+            remote_sdp = _build_remote_answer_sdp(session.local_offer_sdp, transport)
             await session.pc.setRemoteDescription(
                 RTCSessionDescription(sdp=remote_sdp, type="answer")
             )
