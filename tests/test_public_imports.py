@@ -35,6 +35,24 @@ def test_documented_advanced_youtube_import_resolves():
     assert YouTubeDownloader is not None
 
 
+def test_legacy_module_paths_reexport_canonical_implementations():
+    from tgcaller import TgCaller
+    from tgcaller.tgcaller import TgCaller as LegacyTgCaller
+    from tgcaller.ffmpeg import ProcessorConfig, StreamProcessor
+    from tgcaller.streaming import ProcessorConfig as CanonicalProcessorConfig
+    from tgcaller.streaming import StreamProcessor as CanonicalStreamProcessor
+    from tgcaller.ytdlp import YouTubeStreamer as LegacyYouTubeStreamer
+    from tgcaller.streaming import YouTubeStreamer as CanonicalYouTubeStreamer
+    from tgcaller.plugins import BasePlugin, PluginManager
+
+    assert LegacyTgCaller is TgCaller
+    assert StreamProcessor is CanonicalStreamProcessor
+    assert ProcessorConfig is CanonicalProcessorConfig
+    assert LegacyYouTubeStreamer is CanonicalYouTubeStreamer
+    assert BasePlugin is not None
+    assert PluginManager is not None
+
+
 def test_missing_advanced_symbols_are_not_reported_as_available():
     package = importlib.import_module("tgcaller")
     assert not hasattr(package, "ExternalCapture")
