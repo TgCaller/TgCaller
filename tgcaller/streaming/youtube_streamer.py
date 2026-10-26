@@ -110,6 +110,9 @@ class YouTubeStreamer:
         # State management
         self.is_streaming = False
         self.current_chat_id: Optional[int] = None
+        # Serialize frame delivery so concurrent callback tasks cannot reorder
+        # consecutive PCM chunks when the transport is slower than the producer.
+        self._send_lock = asyncio.Lock()
         
         # Statistics
         self.stream_stats = {
@@ -430,19 +433,20 @@ class YouTubeStreamer:
         self.buffer.add_stats_callback(on_stats_update)
     
     async def _send_chunk_to_caller(self, chunk: StreamChunk):
-        """Send processed chunk to TgCaller"""
+        """Send processed chunk to TgCaller in source order."""
         try:
-            if not self.current_chat_id or not self.caller.is_connected(self.current_chat_id):
-                return
-            
-            # Convert chunk to format expected by TgCaller
-            # This would integrate with TgCaller's streaming system
-            await self.caller.send_frame(
-                self.current_chat_id,
-                chunk.data,
-                chunk.chunk_type
-            )
-            
+            async with self._send_lock:
+                chat_id = self.current_chat_id
+                if chat_id is None or not self.caller.is_connected(chat_id):
+                    return
+
+                # A lock keeps async sends ordered when buffer callbacks arrive
+                # faster than the underlying media transport can consume them.
+                await self.caller.send_frame(
+                    chat_id,
+                    chunk.data,
+                    chunk.chunk_type
+                )
         except Exception as e:
             self.logger.error(f"Error sending chunk to caller: {e}")
     
