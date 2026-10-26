@@ -87,7 +87,9 @@ class YouTubeStreamer:
     - Real-time latency optimization
     """
     
-    def __init__(self, caller, config: Optional[YouTubeStreamConfig] = None):
+    def __init__(
+        self, caller, config: Optional[YouTubeStreamConfig] = None, downloader=None
+    ):
         """
         Initialize YouTube streamer
         
@@ -98,8 +100,15 @@ class YouTubeStreamer:
         if yt_dlp is None:
             raise ImportError("yt-dlp is required for YouTube streaming")
         
+        # Preserve the historical advanced.YouTubeStreamer(caller, downloader)
+        # call shape while keeping this module as the single streaming engine.
+        if config is not None and not isinstance(config, YouTubeStreamConfig):
+            if downloader is not None:
+                raise TypeError("pass a stream config or downloader, not both positionally")
+            downloader, config = config, None
         self.caller = caller
         self.config = config or YouTubeStreamConfig()
+        self.downloader = downloader
         self.logger = logger
         
         # Streaming components
@@ -192,6 +201,57 @@ class YouTubeStreamer:
             await self.stop_streaming()
             return False
     
+    async def play_youtube_url(
+        self, chat_id: int, url: str, quality: str = "best[height<=720]"
+    ) -> bool:
+        """Backward-compatible name for the canonical buffered audio pipeline."""
+        self.config.audio_quality = quality
+        return await self.stream_youtube_url(chat_id, url)
+
+    def _get_downloader(self):
+        """Load the optional download helper only when a download API is used."""
+        if self.downloader is None:
+            from ..advanced.youtube_dl import YouTubeDownloader
+            self.downloader = YouTubeDownloader()
+        return self.downloader
+
+    async def download_and_play(
+        self,
+        chat_id: int,
+        url: str,
+        quality: str = "best[height<=720]",
+        audio_only: bool = False,
+    ) -> bool:
+        """Download media and hand the resulting file to TgCaller's play API."""
+        try:
+            file_path = await self._get_downloader().download_video(
+                url, quality=quality, audio_only=audio_only
+            )
+            if not file_path:
+                return False
+            return bool(await self.caller.play(chat_id, file_path))
+        except Exception as exc:
+            self.logger.error("Error downloading and playing YouTube media: %s", exc)
+            return False
+
+    async def search_and_play(
+        self, chat_id: int, query: str, index: int = 0
+    ) -> bool:
+        """Search YouTube and stream the selected result through the same pipeline."""
+        try:
+            if isinstance(index, bool) or not isinstance(index, int) or index < 0:
+                return False
+            results = await self._get_downloader().search_videos(query, max_results=5)
+            if not results or index >= len(results):
+                return False
+            url = results[index].get("url")
+            if not url:
+                return False
+            return await self.play_youtube_url(chat_id, url)
+        except Exception as exc:
+            self.logger.error("Error searching and playing YouTube media: %s", exc)
+            return False
+
     async def stop_streaming(self):
         """Stop YouTube streaming"""
         try:
