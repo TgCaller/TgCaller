@@ -55,4 +55,4 @@ generate join parameters, or implement audio/video transport. A real
 
 ## TgCaller-owned media engine plan
 
-The implementation decision and staged acceptance gates are documented in [TgCaller-owned media engine](tgcaller-owned-media-engine.md). TgCaller will not adopt PyTgCalls or NTgCalls as its runtime media engine. Lower-level libraries may be used as building blocks, but Telegram-specific negotiation, lifecycle, recovery, and the public API remain TgCaller-owned. The engine is not complete until a live Telegram call proves actual media flow.
+The implementation decision and staged acceptance gates are documented in [Telegram media engine implementation contract](telegram-media-engine.md). TgCaller will not adopt PyTgCalls or NTgCalls as its runtime media engine. Lower-level libraries may be used as building blocks, but Telegram-specific negotiation, lifecycle, recovery, and the public API remain TgCaller-owned. The engine is not complete until a live Telegram call proves actual media flow.
