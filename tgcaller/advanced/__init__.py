@@ -10,7 +10,7 @@ from importlib import import_module
 _EXPORTS = {
     "BridgedCallManager": ".bridged_calls",
     "MicrophoneCapture": ".capture_mic",
-    "CustomAPIHandler": ".custom_api",
+    "CustomAPIHandler": ".control_api",
     "AudioFilters": ".custom_filters",
     "VideoFilters": ".custom_filters",
     "ScreenShare": ".screen_sharing",
