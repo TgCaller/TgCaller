@@ -1,4 +1,4 @@
-"""Typing contract and protocol helpers for Telegram group-call media engines.
+"""Telegram group-call media-engine contract and connection-update helpers.
 
 This module deliberately does not provide a fake or generic WebRTC engine.
 Implementations must speak Telegram's group-call media protocol and own the
@@ -9,25 +9,40 @@ import json
 from typing import Any, Dict, List, Protocol, runtime_checkable
 
 
+def classify_group_call_connection_params(params: Any) -> str:
+    """Classify Telegram connection parameters as WebRTC, stream, or RTMP.
+
+    Telegram's stream-mode responses are not WebRTC negotiation documents and
+    must be dispatched to a compatible streaming implementation.
+    """
+    if not isinstance(params, dict):
+        raise ValueError("Telegram connection params must be a JSON object")
+
+    stream = params.get("stream", False)
+    rtmp = params.get("rtmp", False)
+    if not isinstance(stream, bool) or not isinstance(rtmp, bool):
+        raise ValueError("stream and rtmp mode flags must be booleans")
+    if rtmp and not stream:
+        raise ValueError("rtmp mode requires stream mode")
+
+    if stream and rtmp:
+        return "rtmp"
+    if stream:
+        return "stream"
+    return "webrtc"
+
+
 def extract_group_call_connection_params(
     updates: Any, presentation: bool = False
 ) -> Dict[str, Any]:
-    """Extract the main or presentation connection response from join updates.
+    """Extract a Telegram UpdateGroupCallConnection's DataJSON parameters.
 
-    Telegram returns an UpdateGroupCallConnection whose params field contains
-    a DataJSON object. Main-call and presentation connections are separate;
-    callers must select the matching update explicitly. For WebRTC calls, the
-    JSON is the local engine's negotiation response. Stream-mode responses
-    (for example {"stream": true}) must not be passed to a WebRTC negotiator.
-
-    Args:
-        updates: An Updates object, a sequence of updates, or one update.
-        presentation: Select the presentation connection instead of the main
-            connection.
+    When Telegram returns both the main and presentation connection updates,
+    select the requested connection. The parsed object is classified separately
+    so stream-mode responses are never accidentally sent to a WebRTC negotiator.
 
     Raises:
-        ValueError: If the requested connection update is absent or its JSON
-            is malformed.
+        ValueError: If the requested update is absent or its JSON is malformed.
     """
     items = getattr(updates, "updates", None)
     if items is None:
@@ -55,50 +70,21 @@ def extract_group_call_connection_params(
             raise ValueError(
                 "Telegram group-call connection params must be a JSON object"
             )
+        classify_group_call_connection_params(parsed)
         return parsed
 
-    kind = "presentation" if presentation else "main"
-    raise ValueError(
-        "Telegram join response contains no UpdateGroupCallConnection "
-        f"for the {kind} connection"
-    )
-
-
-def classify_group_call_connection_params(params: Dict[str, Any]) -> str:
-    """Classify Telegram's server response as WebRTC, stream, or RTMP mode.
-
-    Telegram documents stream mode as {"stream": true}; the additional
-    {"rtmp": true} flag identifies RTMP mode. Stream-mode responses describe
-    media-download playback and must not be sent to a WebRTC negotiator.
-
-    Returns:
-        "webrtc", "stream", or "rtmp".
-
-    Raises:
-        ValueError: If params is not an object or contains contradictory or
-            incorrectly typed mode flags.
-    """
-    if not isinstance(params, dict):
-        raise ValueError("Telegram connection params must be a JSON object")
-
-    stream = params.get("stream", False)
-    rtmp = params.get("rtmp", False)
-    if not isinstance(stream, bool):
-        raise ValueError("Telegram connection param 'stream' must be a boolean")
-    if not isinstance(rtmp, bool):
-        raise ValueError("Telegram connection param 'rtmp' must be a boolean")
-    if rtmp and not stream:
+    if presentation:
         raise ValueError(
-            "Telegram RTMP mode requires the 'stream' flag to be true"
+            "Telegram join response has no UpdateGroupCallConnection for the presentation connection"
         )
-    if not stream:
-        return "webrtc"
-    return "rtmp" if rtmp else "stream"
+    raise ValueError(
+        "Telegram join response contains no UpdateGroupCallConnection"
+    )
 
 
 @runtime_checkable
 class TelegramMediaEngine(Protocol):
-    """Required interface for the MTProto signaling adapter's media runtime.
+    """Required interface for a Telegram-compatible media runtime.
 
     A conforming implementation must create real Telegram-compatible join
     parameters, consume server negotiation updates, and only report connected
