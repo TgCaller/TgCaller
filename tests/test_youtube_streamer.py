@@ -207,3 +207,34 @@ async def test_url_fallback_selects_audio_format_not_last_video_format(streamer,
     assert await streamer._get_stream_url(
         "https://youtube.com/watch?v=test"
     ) == "https://media.example/audio-high"
+
+@pytest.mark.asyncio
+async def test_default_pcm_chunk_size_is_one_20ms_stereo_s16le_frame(streamer):
+    # 48,000 samples/s * 0.020 s * 2 channels * 2 bytes/sample.
+    assert streamer.config.chunk_size == 3840
+
+
+@pytest.mark.asyncio
+async def test_ffmpeg_reader_accumulates_short_pipe_reads(streamer):
+    class FragmentedReader:
+        def __init__(self):
+            self.parts = [b"ab", b"cde", b"fghij"]
+            self.remainder = b""
+
+        def read(self, size):
+            if not self.remainder and self.parts:
+                self.remainder = self.parts.pop(0)
+            result, self.remainder = self.remainder[:size], self.remainder[size:]
+            return result
+
+    class FakeProcess:
+        stdout = FragmentedReader()
+
+    streamer.config.chunk_size = 8
+    streamer.ffmpeg_process = FakeProcess()
+
+    chunk = await streamer._read_ffmpeg_chunk()
+
+    assert chunk == b"abcdefgh"
+    assert len(chunk) % 4 == 0
+
