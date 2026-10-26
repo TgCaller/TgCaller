@@ -157,6 +157,35 @@ async def test_creates_real_local_join_payload_and_cleans_up():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "audio_config, message",
+    [
+        (SimpleNamespace(sample_rate=24000, channels=2, codec="opus"), "sample_rate=48000"),
+        (SimpleNamespace(sample_rate=48000, channels=1, codec="opus"), "channels=2"),
+        (SimpleNamespace(sample_rate=48000, channels=2, codec="aac"), "Opus codec only"),
+    ],
+)
+async def test_rejects_audio_formats_the_engine_cannot_encode(audio_config, message):
+    engine = AiortcTelegramMediaEngine(connect_timeout=1)
+
+    with pytest.raises(NotImplementedError, match=message):
+        await engine.create_join_payload(-100125, audio_config=audio_config)
+
+    assert -100125 not in engine._sessions
+
+
+@pytest.mark.asyncio
+async def test_accepts_supported_stereo_48khz_opus_audio_config():
+    from tgcaller.types import AudioConfig
+
+    engine = AiortcTelegramMediaEngine(connect_timeout=1)
+    payload = await engine.create_join_payload(-100126, audio_config=AudioConfig())
+
+    assert payload["ssrc"] != 0
+    await engine.close(-100126)
+
+
+@pytest.mark.asyncio
 async def test_stream_mode_fails_closed_and_closes_prepared_session():
     engine = AiortcTelegramMediaEngine(connect_timeout=1)
     await engine.create_join_payload(chat_id=-100124)
