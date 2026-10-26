@@ -119,3 +119,28 @@ async def test_audio_chunks_are_sent_in_source_order(streamer, monkeypatch):
         (-100123, b"first", "audio"),
         (-100123, b"second", "audio"),
     ]
+
+@pytest.mark.asyncio
+async def test_ffmpeg_stderr_is_not_left_as_an_unread_pipe(streamer, monkeypatch):
+    streamer.stream_url = "https://media.example/audio"
+    captured = {}
+
+    class ExitedProcess:
+        stdout = None
+        returncode = 1
+
+        def poll(self):
+            return self.returncode
+
+    def fake_popen(command, **kwargs):
+        captured.update(kwargs)
+        return ExitedProcess()
+
+    async def no_wait(_seconds):
+        return None
+
+    monkeypatch.setattr(youtube_streamer.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr(youtube_streamer.asyncio, "sleep", no_wait)
+
+    assert await streamer._start_ffmpeg_process() is False
+    assert captured["stderr"] == youtube_streamer.subprocess.DEVNULL
