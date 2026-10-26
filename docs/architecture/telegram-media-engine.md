@@ -2,27 +2,39 @@
 
 ## Status
 
-**Design / implementation gate — not a working media engine yet.**
+**Initial audio-only aiortc implementation added; Telegram interoperability is not yet verified.**
 
-TgCaller currently has a `TelegramMediaEngine` protocol and a Pyrogram MTProto signaling adapter. It does not yet have a concrete implementation that can establish Telegram-compatible media transport. The adapter must continue to fail closed until one exists. Passing unit tests for the adapter is not evidence that audio reaches a Telegram group call.
+The branch now contains `AiortcTelegramMediaEngine` at `tgcaller/mtproto/engine/aiortc_engine.py`. It creates a local audio track, builds a join payload from a real aiortc local offer, translates Telegram's WebRTC transport response into a remote SDP answer, and waits for the ICE/DTLS connection state to become connected. It supports paced stereo 48 kHz signed 16-bit PCM input and explicitly rejects video publishing and Telegram stream/RTMP response modes.
 
-This plan deliberately does not add PyTgCalls or NTgCalls as runtime dependencies and does not treat a generic aiortc peer connection as Telegram-compatible by itself.
+This is a first implementation, not a claim of production readiness. CI unit tests can validate payload construction and SDP handling, but only a live Telegram group-call integration test can establish that Telegram accepts the negotiation and that audio is actually audible. The engine must fail closed when the response shape or transport is unsupported.
 
-## Target boundary
+The implementation does not add PyTgCalls or NTgCalls as runtime dependencies. It uses aiortc as a low-level WebRTC transport and implements the Telegram signaling boundary itself. That alone does not guarantee wire compatibility.
+
+## Official protocol facts
+
+- Telegram's `phone.joinGroupCall` documentation says the local join payload includes a non-zero audio SSRC, ICE `ufrag` and `pwd`, and DTLS fingerprints; publishing video also requires `ssrc-groups`. See [Telegram's join method](https://core.telegram.org/method/phone.joinGroupCall).
+- Telegram documents `UpdateGroupCallConnection.params` as the server response for the local group-call engine. A response with `{"stream": true}` or `{"stream": true, "rtmp": true}` indicates a different playback mode and must not be treated as a WebRTC answer. See [UpdateGroupCallConnection](https://core.telegram.org/constructor/updateGroupCallConnection).
+- Telegram's group-call documentation requires checking whether the server still recognizes a joined SSRC and recreating a connection when it is missing. See [Group calls](https://core.telegram.org/api/group-calls).
+
+These references describe Telegram's signaling contract. They do not replace a real media-transport interoperability test.
+
+## Current supported boundary
+
+- Main group-call audio connection using WebRTC mode.
+- PCM input: 48 kHz, stereo, signed 16-bit little-endian frames up to 120 ms.
+- Local join payload values are extracted from the actual aiortc local SDP, not placeholders.
+- Remote ICE credentials, DTLS fingerprint/setup and ICE candidates are taken from Telegram's response.
+- Stream and RTMP modes are rejected rather than falsely reporting an audio connection.
+- Video publishing and screen sharing remain unsupported by this engine.
+
+## Target architecture
 
 Keep signaling and media transport separate:
 
 - `telegram_backend.py`: resolve the active group call, issue Telegram raw RPCs, pass the join response to the engine, and compensate/clean up if negotiation fails.
-- `media_engine.py`: stable interface only; no fake success or placeholder ICE/DTLS values.
-- Proposed implementation package: `tgcaller/mtproto/engine/`
-  - `session.py`: per-chat lifecycle and state.
-  - `signaling.py`: convert Telegram call updates and connection parameters into the engine's internal representation.
-  - `transport.py`: real ICE/DTLS/RTP transport implementation, with explicit capability checks.
-  - `audio.py`: PCM input, Opus encoding/packetization, timing and outbound audio.
-  - `sources.py`: stream/source lifecycle and cancellation.
-  - `errors.py`: typed negotiation, transport and media errors.
-
-The proposed names are a design target, not existing modules.
+- `media_engine.py`: stable interface and strict parsing/validation helpers.
+- `engine/aiortc_engine.py`: current audio-only implementation, session lifecycle, PCM source, and Telegram-to-SDP negotiation adapter.
+- Future modules may split session, signaling, audio sources, video, and error handling further as the implementation grows.
 
 ## Required session states
 
@@ -34,27 +46,25 @@ Any failure before `CONNECTED` must release local sockets, ICE/DTLS objects, enc
 
 A session is healthy only when the underlying transport reports the negotiated connection is established; local state or a successful RPC alone is insufficient.
 
-## Audio-first implementation gates
+## Remaining acceptance gates
 
-### Gate 1 — Protocol facts and test fixtures
+### Gate 1 — Protocol fixtures
 
-- Capture/document the exact Telegram `phone.joinGroupCall` payload shape and the `updateGroupCallConnection` fields supported by the chosen Telegram layer.
-- Build sanitized fixtures from protocol documentation or controlled test sessions; never commit account credentials, access hashes, private call data or live secrets.
-- Validate audio SSRC, ICE credentials, DTLS fingerprint/setup, negotiated endpoints and returned server parameters.
-- Reject missing or unknown required fields rather than manufacturing defaults.
+- Add sanitized fixtures for real Telegram WebRTC response updates, including supported and unsupported response variants.
+- Validate signed/unsigned SSRC representation, ICE candidates, DTLS setup/fingerprint, and codec negotiation against Telegram behavior.
+- Never commit account credentials, access hashes, private call data or live secrets.
 
-### Gate 2 — Transport proof
+### Gate 2 — Transport interoperability
 
-- Implement or select a transport implementation that can be shown to match Telegram's group-call protocol without adding PyTgCalls/NTgCalls as a runtime dependency.
-- Prove ICE connectivity, DTLS fingerprint verification, RTP/RTCP behavior, audio codec parameters and Telegram's connection-update handling in an isolated integration test.
-- Do not mark this gate complete just because an aiortc offer/answer succeeds against a generic WebRTC peer.
+- Test a real join against a dedicated Telegram test group and confirm ICE/DTLS reaches connected.
+- Confirm that Telegram accepts the local payload and remote SDP answer.
+- Verify that remote RTP arrives and outbound RTP is accepted; a generic aiortc peer test is not sufficient.
 
 ### Gate 3 — Outbound audio
 
-- Accept a documented PCM format and validate sample rate, channels and frame duration.
-- Encode to the negotiated codec and send paced media frames with monotonic timestamps.
-- Handle backpressure, end-of-stream, source replacement, cancellation and transport failure without silently dropping arbitrary bytes.
+- Validate sample rate, channels, PCM frame duration, pacing and queue backpressure.
 - Confirm actual audible output in a dedicated Telegram test group.
+- Test end-of-stream, source replacement, cancellation and transport failure without silently dropping arbitrary bytes.
 
 ### Gate 4 — Lifecycle and reliability
 
@@ -75,7 +85,3 @@ Only after audio-only transport is verified: negotiate video SSRC groups, codec/
 - Audio integration test demonstrates audible output in a real test group.
 - Failed join and cancellation leave no local session or resource leak.
 - CI tests and package build pass, and live verification is reported separately from CI.
-
-## Current blocker
-
-The repository does not yet contain a concrete implementation of the Telegram media protocol. Before writing transport code, the project must establish the exact signaling/media behavior it will implement and verify that the chosen low-level transport can reproduce it. Until then, `PyrogramGroupCallBackend` is only the signaling adapter and cannot stream media on its own.
