@@ -92,3 +92,30 @@ async def test_buffer_chunk_callback_sends_audio_to_caller(streamer):
 
     assert streamer.caller.sent_frames == [(-100123, chunk.data, "audio")]
     assert streamer.stream_stats["chunks_processed"] == 1
+
+@pytest.mark.asyncio
+async def test_audio_chunks_are_sent_in_source_order(streamer, monkeypatch):
+    streamer.current_chat_id = -100123
+
+    async def delayed_send(chat_id, frame_data, frame_type):
+        if frame_data == b"first":
+            await asyncio.sleep(0.02)
+        streamer.caller.sent_frames.append((chat_id, frame_data, frame_type))
+
+    monkeypatch.setattr(streamer.caller, "send_frame", delayed_send)
+    first = youtube_streamer.StreamChunk(
+        data=b"first", timestamp=time.time(), sequence=1, chunk_type="audio"
+    )
+    second = youtube_streamer.StreamChunk(
+        data=b"second", timestamp=time.time(), sequence=2, chunk_type="audio"
+    )
+
+    await asyncio.gather(
+        streamer._send_chunk_to_caller(first),
+        streamer._send_chunk_to_caller(second),
+    )
+
+    assert streamer.caller.sent_frames == [
+        (-100123, b"first", "audio"),
+        (-100123, b"second", "audio"),
+    ]
