@@ -177,6 +177,7 @@ def test_extracts_nested_telegram_webrtc_transport_description():
         (lambda p: p.update({"stream": True}), "stream/RTMP mode"),
         (lambda p: p.pop("transport"), "transport object"),
         (lambda p: p["transport"].pop("candidates"), "candidates list"),
+        (lambda p: p["transport"].update({"candidates": []}), "at least one ICE candidate"),
         (lambda p: p["transport"].update({"ufrag": ""}), "non-empty ufrag"),
         (
             lambda p: p["transport"]["candidates"][0].pop("foundation"),
