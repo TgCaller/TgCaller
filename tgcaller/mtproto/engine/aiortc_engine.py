@@ -11,10 +11,9 @@ ready.
 
 import asyncio
 import re
-import time
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Any, AsyncIterable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.mediastreams import MediaStreamError, MediaStreamTrack
@@ -125,13 +124,15 @@ def _build_remote_answer_sdp(local_offer_sdp: str, transport: Dict[str, Any]) ->
             in_audio = line.startswith("m=audio ")
             if in_audio:
                 saw_audio = True
+        # aiortc may place ICE/DTLS attributes at session level. Remove them
+        # there too so the remote answer never inherits the local credentials.
+        if line.startswith(remove_prefixes):
+            continue
         if not in_audio:
             # Audio-only engine: do not carry any non-audio m-lines into answer.
             if line.startswith("m="):
                 break
             remote_lines.append(line)
-            continue
-        if line.startswith(remove_prefixes):
             continue
         if line in directions:
             if not direction_written:
