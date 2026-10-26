@@ -19,6 +19,12 @@ def test_advanced_package_exports_only_implemented_modules():
     assert "FIFOConverter" not in advanced.__all__
 
 
+def test_advanced_control_api_uses_the_named_control_module():
+    from tgcaller.advanced import CustomAPIHandler
+
+    assert CustomAPIHandler.__module__ == "tgcaller.advanced.control_api"
+
+
 def test_advanced_and_streaming_paths_share_one_youtube_streamer():
     from tgcaller.advanced import YouTubeStreamer as AdvancedStreamer
     from tgcaller.advanced.youtube_dl import YouTubeStreamer as LegacyPathStreamer
