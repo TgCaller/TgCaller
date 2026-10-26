@@ -86,6 +86,87 @@ def classify_group_call_connection_params(params: Any) -> str:
     return "webrtc"
 
 
+def extract_webrtc_transport_description(params: Any) -> Dict[str, Any]:
+    """Validate and return the server's WebRTC transport description.
+
+    Telegram's UpdateGroupCallConnection response wraps remote ICE/DTLS
+    details under a transport object. This differs from the local join payload,
+    which contains top-level ufrag, pwd and fingerprints fields. Stream/RTMP
+    responses must be dispatched to their own playback path.
+    """
+    if classify_group_call_connection_params(params) != "webrtc":
+        raise ValueError(
+            "Telegram connection is in stream/RTMP mode, not WebRTC mode"
+        )
+
+    transport = params.get("transport")
+    if not isinstance(transport, dict):
+        raise ValueError(
+            "Telegram WebRTC response must contain a transport object"
+        )
+
+    for key in ("ufrag", "pwd"):
+        if not isinstance(transport.get(key), str) or not transport[key].strip():
+            raise ValueError(
+                f"Telegram WebRTC transport must contain non-empty {key}"
+            )
+
+    fingerprints = transport.get("fingerprints")
+    if not isinstance(fingerprints, list) or not fingerprints:
+        raise ValueError(
+            "Telegram WebRTC transport must contain at least one fingerprint"
+        )
+    clean_fingerprints = []
+    for index, item in enumerate(fingerprints):
+        if not isinstance(item, dict) or not all(
+            isinstance(item.get(key), str) and item[key].strip()
+            for key in ("hash", "fingerprint", "setup")
+        ):
+            raise ValueError(
+                f"Telegram WebRTC fingerprint at index {index} is invalid"
+            )
+        clean_fingerprints.append(
+            {key: item[key] for key in ("hash", "fingerprint", "setup")}
+        )
+
+    candidates = transport.get("candidates")
+    if not isinstance(candidates, list):
+        raise ValueError(
+            "Telegram WebRTC transport must contain a candidates list"
+        )
+    candidate_fields = (
+        "port", "protocol", "network", "generation", "id", "component",
+        "foundation", "priority", "ip", "type",
+    )
+    optional_candidate_fields = ("tcptype", "rel-addr", "rel-port")
+    clean_candidates = []
+    for index, candidate in enumerate(candidates):
+        if not isinstance(candidate, dict) or not all(
+            isinstance(candidate.get(key), str) and candidate[key].strip()
+            for key in candidate_fields
+        ):
+            raise ValueError(
+                f"Telegram ICE candidate at index {index} is invalid"
+            )
+        clean_candidate = {key: candidate[key] for key in candidate_fields}
+        for key in optional_candidate_fields:
+            value = candidate.get(key)
+            if value is not None:
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError(
+                        f"Telegram ICE candidate field {key} at index {index} is invalid"
+                    )
+                clean_candidate[key] = value
+        clean_candidates.append(clean_candidate)
+
+    return {
+        "ufrag": transport["ufrag"],
+        "pwd": transport["pwd"],
+        "fingerprints": clean_fingerprints,
+        "candidates": clean_candidates,
+    }
+
+
 @runtime_checkable
 class TelegramMediaEngine(Protocol):
     """Required interface for the MTProto signaling adapter's media runtime.
