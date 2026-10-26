@@ -8,8 +8,9 @@ from tgcaller.mtproto.media_engine import extract_group_call_connection_params
 
 
 class UpdateGroupCallConnection:
-    def __init__(self, data):
+    def __init__(self, data, presentation=False):
         self.params = SimpleNamespace(data=data)
+        self.presentation = presentation
 
 
 class UpdateOther:
@@ -31,6 +32,26 @@ def test_extracts_webrtc_connection_params_from_updates_collection():
         "pwd": "secret",
         "fingerprints": [],
     }
+
+
+def test_selects_main_connection_when_presentation_update_is_also_present():
+    updates = [
+        UpdateGroupCallConnection('{"ufrag":"presentation"}', presentation=True),
+        UpdateGroupCallConnection('{"ufrag":"main"}'),
+    ]
+
+    assert extract_group_call_connection_params(updates) == {"ufrag": "main"}
+
+
+def test_selects_presentation_connection_explicitly():
+    updates = [
+        UpdateGroupCallConnection('{"ufrag":"main"}'),
+        UpdateGroupCallConnection('{"ufrag":"presentation"}', presentation=True),
+    ]
+
+    assert extract_group_call_connection_params(
+        updates, presentation=True
+    ) == {"ufrag": "presentation"}
 
 
 @pytest.mark.parametrize(
@@ -58,6 +79,13 @@ def test_rejects_malformed_or_non_object_connection_params(data):
 def test_rejects_updates_without_connection_parameters():
     with pytest.raises(ValueError, match="no UpdateGroupCallConnection"):
         extract_group_call_connection_params(SimpleNamespace(updates=[UpdateOther()]))
+
+
+def test_rejects_missing_requested_presentation_update():
+    updates = [UpdateGroupCallConnection('{"ufrag":"main"}')]
+
+    with pytest.raises(ValueError, match="for the presentation connection"):
+        extract_group_call_connection_params(updates, presentation=True)
 
 
 def test_rejects_connection_update_without_data_json():
