@@ -64,3 +64,12 @@ def test_missing_advanced_symbols_are_not_reported_as_available():
     assert not hasattr(package, "ExternalCapture")
     assert not hasattr(package, "FIFOConverter")
     assert not hasattr(package, "FrameSender")
+
+
+def test_advanced_youtube_streaming_exports_resolve():
+    from tgcaller import AdvancedYouTubeStreamer, PerformanceMonitor
+    from tgcaller.streaming import BufferPriority
+
+    assert AdvancedYouTubeStreamer is not None
+    assert PerformanceMonitor is not None
+    assert BufferPriority.HIGH.value == 3
