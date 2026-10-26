@@ -501,22 +501,23 @@ class YouTubeStreamer:
     
     def _setup_buffer_callbacks(self):
         """Setup FastStreamBuffer callbacks"""
-        # Chunk processing callback
-        def on_chunk_ready(chunk: StreamChunk):
-            """Handle processed chunk"""
-            try:
-                # Send chunk to TgCaller
-                asyncio.create_task(self._send_chunk_to_caller(chunk))
-                
-                # Update statistics
-                self.stream_stats['chunks_processed'] += 1
-                self.stream_stats['avg_chunk_latency'] = (
-                    (self.stream_stats['avg_chunk_latency'] * (self.stream_stats['chunks_processed'] - 1) + 
-                     chunk.age_ms) / self.stream_stats['chunks_processed']
+        # Async callback is awaited by FastStreamBuffer, providing backpressure
+        # and preventing one detached task per audio chunk.
+        async def on_chunk_ready(chunk: StreamChunk):
+            """Deliver a processed chunk before the buffer consumes the next one."""
+            sent = await self._send_chunk_to_caller(chunk)
+            if not sent:
+                self.logger.warning(
+                    "Audio chunk %s was not delivered to TgCaller", chunk.sequence
                 )
-                
-            except Exception as e:
-                self.logger.error(f"Error handling chunk: {e}")
+                return
+
+            self.stream_stats['chunks_processed'] += 1
+            count = self.stream_stats['chunks_processed']
+            self.stream_stats['avg_chunk_latency'] = (
+                (self.stream_stats['avg_chunk_latency'] * (count - 1) + chunk.age_ms)
+                / count
+            )
         
         # State change callback
         def on_state_change(state):
@@ -543,23 +544,28 @@ class YouTubeStreamer:
         self.buffer.add_state_callback(on_state_change)
         self.buffer.add_stats_callback(on_stats_update)
     
-    async def _send_chunk_to_caller(self, chunk: StreamChunk):
-        """Send processed chunk to TgCaller in source order."""
+    async def _send_chunk_to_caller(self, chunk: StreamChunk) -> bool:
+        """Send one chunk and report whether the caller accepted it."""
         try:
             async with self._send_lock:
                 chat_id = self.current_chat_id
                 if chat_id is None or not self.caller.is_connected(chat_id):
-                    return
+                    return False
 
-                # A lock keeps async sends ordered when buffer callbacks arrive
-                # faster than the underlying media transport can consume them.
-                await self.caller.send_frame(
+                # Keep delivery serialized; the buffer awaits this operation so
+                # a slow transport naturally applies backpressure to FFmpeg.
+                result = await self.caller.send_frame(
                     chat_id,
                     chunk.data,
                     chunk.chunk_type
                 )
+                # Older public send_frame implementations return None on success.
+                return result is not False
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             self.logger.error(f"Error sending chunk to caller: {e}")
+            return False
     
     async def _wait_for_process(self):
         """Wait for FFmpeg process to terminate"""
