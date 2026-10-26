@@ -136,7 +136,14 @@ def _build_remote_answer_sdp(local_offer_sdp: str, transport: Dict[str, Any]) ->
             continue
         if line in directions:
             if not direction_written:
-                remote_lines.append("a=sendrecv")
+                # SDP answers must complement the offer's media direction.
+                answer_direction = {
+                    "a=sendrecv": "a=sendrecv",
+                    "a=sendonly": "a=recvonly",
+                    "a=recvonly": "a=sendonly",
+                    "a=inactive": "a=inactive",
+                }[line]
+                remote_lines.append(answer_direction)
                 direction_written = True
             continue
         remote_lines.append(line)
