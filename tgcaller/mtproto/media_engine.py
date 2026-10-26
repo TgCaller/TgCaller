@@ -1,4 +1,4 @@
-""""Typing contract and protocol helpers for Telegram group-call media engines.
+"""Typing contract and protocol helpers for Telegram group-call media engines.
 
 This module deliberately does not provide a fake or generic WebRTC engine.
 Implementations must speak Telegram's group-call media protocol and own the
@@ -62,6 +62,38 @@ def extract_group_call_connection_params(
         "Telegram join response contains no UpdateGroupCallConnection "
         f"for the {kind} connection"
     )
+
+
+def classify_group_call_connection_params(params: Dict[str, Any]) -> str:
+    """Classify Telegram's server response as WebRTC, stream, or RTMP mode.
+
+    Telegram documents stream mode as {"stream": true}; the additional
+    {"rtmp": true} flag identifies RTMP mode. Stream-mode responses describe
+    media-download playback and must not be sent to a WebRTC negotiator.
+
+    Returns:
+        "webrtc", "stream", or "rtmp".
+
+    Raises:
+        ValueError: If params is not an object or contains contradictory or
+            incorrectly typed mode flags.
+    """
+    if not isinstance(params, dict):
+        raise ValueError("Telegram connection params must be a JSON object")
+
+    stream = params.get("stream", False)
+    rtmp = params.get("rtmp", False)
+    if not isinstance(stream, bool):
+        raise ValueError("Telegram connection param 'stream' must be a boolean")
+    if not isinstance(rtmp, bool):
+        raise ValueError("Telegram connection param 'rtmp' must be a boolean")
+    if rtmp and not stream:
+        raise ValueError(
+            "Telegram RTMP mode requires the 'stream' flag to be true"
+        )
+    if not stream:
+        return "webrtc"
+    return "rtmp" if rtmp else "stream"
 
 
 @runtime_checkable
