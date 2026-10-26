@@ -144,3 +144,66 @@ async def test_ffmpeg_stderr_is_not_left_as_an_unread_pipe(streamer, monkeypatch
 
     assert await streamer._start_ffmpeg_process() is False
     assert captured["stderr"] == youtube_streamer.subprocess.DEVNULL
+
+
+@pytest.mark.asyncio
+async def test_video_request_is_rejected_before_url_lookup_or_call_join(streamer, monkeypatch):
+    streamer.config.enable_video = True
+
+    async def unexpected_url_lookup(_url):
+        raise AssertionError("unsupported video request must fail before URL lookup")
+
+    monkeypatch.setattr(streamer, "_get_stream_url", unexpected_url_lookup)
+
+    assert not await streamer.stream_youtube_url(
+        -100123,
+        "https://youtube.com/watch?v=test",
+        video_config=object(),
+    )
+
+
+@pytest.mark.asyncio
+async def test_url_fallback_selects_audio_format_not_last_video_format(streamer, monkeypatch):
+    class FakeYoutubeDL:
+        def __init__(self, _options):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def extract_info(self, _url, download=False):
+            return {
+                "formats": [
+                    {
+                        "url": "https://media.example/video-only",
+                        "acodec": "none",
+                        "vcodec": "avc1",
+                        "tbr": 1200,
+                    },
+                    {
+                        "url": "https://media.example/audio-low",
+                        "acodec": "opus",
+                        "vcodec": "none",
+                        "abr": 64,
+                    },
+                    {
+                        "url": "https://media.example/audio-high",
+                        "acodec": "opus",
+                        "vcodec": "none",
+                        "abr": 128,
+                    },
+                ]
+            }
+
+    monkeypatch.setattr(
+        youtube_streamer,
+        "yt_dlp",
+        type("FakeYtDlp", (), {"YoutubeDL": FakeYoutubeDL}),
+    )
+
+    assert await streamer._get_stream_url(
+        "https://youtube.com/watch?v=test"
+    ) == "https://media.example/audio-high"
