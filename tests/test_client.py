@@ -12,6 +12,7 @@ import pyrogram  # <-- Add this import
 from tgcaller import TgCaller
 from tgcaller.types import AudioConfig, VideoConfig, CallStatus
 from tgcaller.exceptions import CallError
+from tgcaller.mtproto import AiortcTelegramMediaEngine, PyrogramGroupCallBackend
 
 
 class FakeTransport:
@@ -116,8 +117,17 @@ class TestTgCaller:
         await caller.stop()
         assert not caller.is_running
     
+    def test_default_transport_uses_builtin_telegram_audio_engine(self, mock_client):
+        caller = TgCaller(mock_client)
+
+        assert isinstance(caller._connection.backend, PyrogramGroupCallBackend)
+        assert isinstance(
+            caller._connection.backend.media_engine, AiortcTelegramMediaEngine
+        )
+        assert caller._owns_connection_backend is True
+
     @pytest.mark.asyncio
-    async def test_join_call_fails_without_real_transport(self, mock_client):
+    async def test_join_call_fails_when_telegram_call_cannot_be_resolved(self, mock_client):
         caller = TgCaller(mock_client)
         await caller.start()
         with pytest.raises(CallError, match="Could not join Telegram group call"):
