@@ -19,13 +19,20 @@ def test_advanced_package_exports_only_implemented_modules():
     assert "FIFOConverter" not in advanced.__all__
 
 
+def test_advanced_and_streaming_paths_share_one_youtube_streamer():
+    from tgcaller.advanced import YouTubeStreamer as AdvancedStreamer
+    from tgcaller.advanced.youtube_dl import YouTubeStreamer as LegacyPathStreamer
+    from tgcaller.streaming import YouTubeStreamer as StreamingStreamer
+
+    assert AdvancedStreamer is StreamingStreamer
+    assert LegacyPathStreamer is StreamingStreamer
+
+
 def test_documented_advanced_youtube_import_resolves():
-    advanced = importlib.import_module("tgcaller.advanced")
     from tgcaller.advanced import YouTubeStreamer, YouTubeDownloader
 
     assert YouTubeStreamer is not None
     assert YouTubeDownloader is not None
-    assert advanced.YouTubeStreamer is YouTubeStreamer
 
 
 def test_missing_advanced_symbols_are_not_reported_as_available():
