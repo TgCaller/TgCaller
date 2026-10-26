@@ -99,6 +99,15 @@ def test_remote_answer_uses_telegram_transport_and_drops_local_ssrc():
     assert "a=setup:actpass" not in sdp
 
 
+def test_remote_answer_complements_offer_media_direction():
+    local_offer = _local_offer().replace("a=sendrecv", "a=recvonly")
+
+    sdp = _build_remote_answer_sdp(local_offer, _valid_transport())
+
+    assert "a=sendonly" in sdp
+    assert "a=recvonly" not in sdp
+
+
 def test_remote_answer_rejects_unsupported_dtls_setup():
     transport = _valid_transport()
     transport["fingerprints"][0]["setup"] = "actpass"
