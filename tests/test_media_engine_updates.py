@@ -1,10 +1,13 @@
-"""Tests for Telegram group-call connection update parsing."""
+"""Tests for Telegram group-call connection update parsing and mode selection."""
 
 from types import SimpleNamespace
 
 import pytest
 
-from tgcaller.mtproto.media_engine import extract_group_call_connection_params
+from tgcaller.mtproto.media_engine import (
+    classify_group_call_connection_params,
+    extract_group_call_connection_params,
+)
 
 
 class UpdateGroupCallConnection:
@@ -65,6 +68,35 @@ def test_preserves_stream_mode_response_for_engine_dispatch(data, expected):
     update = UpdateGroupCallConnection(data)
 
     assert extract_group_call_connection_params(update) == expected
+
+
+@pytest.mark.parametrize(
+    "params, expected",
+    [
+        ({"ufrag": "u", "pwd": "p"}, "webrtc"),
+        ({"stream": False}, "webrtc"),
+        ({"stream": True}, "stream"),
+        ({"stream": True, "rtmp": False}, "stream"),
+        ({"stream": True, "rtmp": True}, "rtmp"),
+    ],
+)
+def test_classifies_telegram_connection_modes(params, expected):
+    assert classify_group_call_connection_params(params) == expected
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        None,
+        [],
+        {"stream": "true"},
+        {"stream": True, "rtmp": "true"},
+        {"rtmp": True},
+    ],
+)
+def test_rejects_invalid_or_contradictory_connection_modes(params):
+    with pytest.raises(ValueError):
+        classify_group_call_connection_params(params)
 
 
 @pytest.mark.parametrize(
