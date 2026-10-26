@@ -143,6 +143,15 @@ class YouTubeStreamer:
         Returns:
             True if streaming started successfully
         """
+        # Video output is not implemented by this raw-PCM pipeline. Reject it
+        # before resolving a URL or joining a Telegram call so the API cannot
+        # leave a call joined after an unsupported request.
+        if self.config.enable_video or video_config is not None:
+            self.logger.error(
+                "YouTube video streaming is not implemented; audio-only mode is required"
+            )
+            return False
+
         if self.is_streaming:
             self.logger.warning("Already streaming, stopping current stream")
             await self.stop_streaming()
@@ -244,14 +253,44 @@ class YouTubeStreamer:
                     lambda: ydl.extract_info(url, download=False)
                 )
                 
-                # Get stream URL
-                if 'url' in info:
-                    return info['url']
-                elif 'formats' in info and info['formats']:
-                    # Get best format URL
-                    return info['formats'][-1].get('url')
-                
-                return None
+                # A selected direct URL is normally returned for the requested
+                # format. In audio-only mode, reject a video-only direct result.
+                if not isinstance(info, dict):
+                    return None
+
+                direct_url = info.get('url')
+                if direct_url and (
+                    not self.config.enable_audio
+                    or info.get('acodec') not in (None, 'none')
+                ):
+                    return direct_url
+
+                formats = info.get('formats') or []
+                if self.config.enable_audio:
+                    # Do not assume formats[-1] is audio: yt-dlp format order
+                    # is not a contract and may end with a video-only rendition.
+                    formats = [
+                        item for item in formats
+                        if isinstance(item, dict)
+                        and item.get('url')
+                        and item.get('acodec') not in (None, 'none')
+                    ]
+                    # Prefer audio-only formats and then the highest declared
+                    # audio bitrate, with total bitrate as a fallback.
+                    formats.sort(
+                        key=lambda item: (
+                            item.get('vcodec') == 'none',
+                            item.get('abr') or item.get('tbr') or 0,
+                        ),
+                        reverse=True,
+                    )
+                else:
+                    formats = [
+                        item for item in formats
+                        if isinstance(item, dict) and item.get('url')
+                    ]
+
+                return formats[0].get('url') if formats else None
                 
         except Exception as e:
             self.logger.error(f"Error getting stream URL: {e}")
