@@ -1,1 +1,0 @@
-# Stream Metrics - QoS metrics

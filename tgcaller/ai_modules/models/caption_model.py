@@ -1,1 +1,0 @@
-# Caption Model - Caption configs

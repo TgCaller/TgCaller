@@ -1,1 +1,0 @@
-# Event - iCal integration
