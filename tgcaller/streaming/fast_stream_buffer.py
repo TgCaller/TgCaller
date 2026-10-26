@@ -234,36 +234,20 @@ class FastStreamBuffer:
             self.logger.error(f"Error stopping buffer: {e}")
     
     async def _producer_loop(self, source_generator: AsyncGenerator[bytes, None]):
-        """Producer loop - fills buffer with chunks"""
+        """Produce chunks in source order and apply backpressure."""
         try:
-            chunk_tasks = []
-            
             async for raw_data in source_generator:
                 if self.state == BufferState.IDLE:
                     break
-                
-                # Reap completed work before checking capacity. If all worker slots
-                # are occupied, apply backpressure instead of silently discarding media.
-                chunk_tasks = [task for task in chunk_tasks if not task.done()]
-                if len(chunk_tasks) >= self.config.max_concurrent_chunks:
-                    await asyncio.wait(
-                        chunk_tasks,
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-                    chunk_tasks = [task for task in chunk_tasks if not task.done()]
 
-                task = asyncio.create_task(self._process_raw_chunk(raw_data))
-                chunk_tasks.append(task)
+                # Chunk creation and queue insertion are lightweight. Processing
+                # them concurrently can reorder audio frames when a later task
+                # reaches the queue first, so preserve source order here. The
+                # consumer and transport can run concurrently in their own tasks.
+                await self._process_raw_chunk(raw_data)
 
-                # Yield control so completed tasks can be reaped promptly.
-                await asyncio.sleep(0)
-            
-            # Wait for remaining tasks
-            if chunk_tasks:
-                await asyncio.gather(*chunk_tasks, return_exceptions=True)
-                
         except asyncio.CancelledError:
-            pass
+            raise
         except Exception as e:
             self.logger.error(f"Producer loop error: {e}")
             self._set_state(BufferState.ERROR)
