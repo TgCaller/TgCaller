@@ -3,6 +3,7 @@ FastStreamBuffer - Ultra-low-latency streaming with async buffered chunks
 """
 
 import asyncio
+import inspect
 import logging
 import time
 from typing import Optional, Callable, List, Dict, Any, AsyncGenerator
@@ -390,10 +391,15 @@ class FastStreamBuffer:
             if latency_ms > self.config.max_latency_ms:
                 self.logger.warning(f"High latency detected: {latency_ms:.1f}ms")
             
-            # Notify callbacks
+            # Notify callbacks in order. Async callbacks are awaited so media
+            # delivery can apply backpressure instead of spawning unbounded tasks.
             for callback in self.chunk_callbacks:
                 try:
-                    callback(chunk)
+                    result = callback(chunk)
+                    if inspect.isawaitable(result):
+                        await result
+                except asyncio.CancelledError:
+                    raise
                 except Exception as e:
                     self.logger.error(f"Error in chunk callback: {e}")
             
