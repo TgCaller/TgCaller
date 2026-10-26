@@ -41,7 +41,8 @@ class YouTubeStreamConfig:
     """Custom FFmpeg options"""
     
     # Streaming settings
-    chunk_size: int = 8192
+    # 48 kHz stereo signed 16-bit PCM: 20 ms = 48000 * 0.020 * 2 channels * 2 bytes.
+    chunk_size: int = 3840
     """Chunk size for streaming"""
     
     enable_audio: bool = True
@@ -481,20 +482,51 @@ class YouTubeStreamer:
             self.logger.debug("Chunk generator finished")
     
     async def _read_ffmpeg_chunk(self) -> Optional[bytes]:
-        """Read chunk from FFmpeg process"""
+        """Read one aligned PCM chunk from FFmpeg without returning short pipe reads.
+
+        The audio pipeline emits 48 kHz, stereo, signed 16-bit PCM. The default
+        3840-byte chunk is one 20 ms frame. OS pipes may return fewer bytes than
+        requested, so accumulate reads until one frame is ready or EOF is reached.
+        Any final partial chunk is returned only when it ends on a complete PCM
+        sample frame (4 bytes for stereo s16le).
+        """
         try:
-            if not self.ffmpeg_process or not self.ffmpeg_process.stdout:
+            process = self.ffmpeg_process
+            if not process or not process.stdout:
                 return None
-            
-            # Read chunk asynchronously
-            loop = asyncio.get_event_loop()
-            chunk_data = await loop.run_in_executor(
-                None,
-                lambda: self.ffmpeg_process.stdout.read(self.config.chunk_size)
-            )
-            
-            return chunk_data if chunk_data else None
-            
+
+            def read_frame():
+                frame_size = self.config.chunk_size
+                if (
+                    isinstance(frame_size, bool)
+                    or not isinstance(frame_size, int)
+                    or frame_size <= 0
+                    or frame_size % 4 != 0
+                ):
+                    raise ValueError(
+                        "chunk_size must be a positive multiple of 4 for stereo s16le PCM"
+                    )
+
+                chunks = bytearray()
+                while len(chunks) < frame_size:
+                    part = process.stdout.read(frame_size - len(chunks))
+                    if not part:
+                        break
+                    chunks.extend(part)
+
+                if not chunks:
+                    return None
+                # Never pass a broken stereo PCM sample frame downstream.
+                usable_size = len(chunks) - (len(chunks) % 4)
+                if usable_size == 0:
+                    return None
+                return bytes(chunks[:usable_size])
+
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(None, read_frame)
+
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             self.logger.error(f"Error reading FFmpeg chunk: {e}")
             return None
