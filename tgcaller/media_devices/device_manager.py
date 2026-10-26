@@ -1,1 +1,0 @@
-# Device Manager - Hotplug support
