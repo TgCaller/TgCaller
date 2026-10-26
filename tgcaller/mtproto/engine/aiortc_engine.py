@@ -258,6 +258,24 @@ class AiortcTelegramMediaEngine:
     ) -> Dict[str, Any]:
         if video_config is not None:
             raise NotImplementedError("Telegram video publishing is not implemented yet")
+        # This engine currently encodes only stereo 48 kHz Opus. Reject other
+        # advertised AudioConfig formats rather than silently ignoring them.
+        if audio_config is not None:
+            sample_rate = getattr(audio_config, "sample_rate", None)
+            channels = getattr(audio_config, "channels", None)
+            codec = getattr(audio_config, "codec", None)
+            if sample_rate != _SAMPLE_RATE:
+                raise NotImplementedError(
+                    "AiortcTelegramMediaEngine currently requires sample_rate=48000"
+                )
+            if channels != _CHANNELS:
+                raise NotImplementedError(
+                    "AiortcTelegramMediaEngine currently requires channels=2"
+                )
+            if not isinstance(codec, str) or codec.lower() != "opus":
+                raise NotImplementedError(
+                    "AiortcTelegramMediaEngine currently supports the Opus codec only"
+                )
         await self.close(chat_id)
         pc = RTCPeerConnection()
         track = _PCMTrack(queue_size=self.queue_size)
