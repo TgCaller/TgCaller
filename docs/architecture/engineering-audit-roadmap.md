@@ -4,8 +4,8 @@ This is the tracked engineering plan for making TgCaller installable, internally
 
 ## Priority 0 — Installation and packaging
 
-- [ ] Remove platform-incompatible packages from mandatory dependencies when they are only needed by optional features.
-- [ ] Make CPU monitoring work when `psutil` is unavailable; expose a clear optional monitoring extra.
+- [x] Remove platform-incompatible packages from mandatory dependencies when they are only needed by optional features (psutil moved to the optional monitoring extra).
+- [x] Make CPU monitoring work when `psutil` is unavailable; expose a clear optional monitoring extra.
 - [ ] Audit the full dependency graph on supported Python versions and platforms, including Android/Termux. Do not claim Termux support until a clean install is tested there.
 - [ ] Ensure `pyproject.toml`, `requirements.txt`, extras, `setup.py`, and package metadata agree.
 - [ ] Test clean install, `import tgcaller`, public exports, and wheel/sdist contents.
@@ -58,6 +58,7 @@ This is the tracked engineering plan for making TgCaller installable, internally
 
 - The repair branch contains an initial `AiortcTelegramMediaEngine` for audio-only WebRTC, including FFmpeg-to-PCM playback. Its own module documentation says real Telegram interoperability still needs a live integration test.
 - The engine explicitly rejects video publishing and stream/RTMP modes; video, camera, and screen-share must not be described as implemented by this engine yet.
-- `psutil` is a mandatory dependency in package metadata and `requirements.txt`, and `tgcaller/utilities/cpu_monitor.py` imports it unconditionally. Termux's `pip` build of psutil fails with “platform android is not supported”.
+- Termux's `pip` build of psutil failed with “platform android is not supported”. The repair branch now removes psutil from mandatory package dependencies, makes CPU monitoring degrade safely when psutil is absent, and documents psutil as an optional `monitoring` extra.
+- GitHub Actions run [40551027880](https://github.com/TgCaller/TgCaller/actions/runs/40551027880) passed the configured test suite and distribution build after the optional-psutil changes. This is CI-runner evidence only, not an Android installation test.
 - YouTube code has an audio-only raw-PCM path and buffer callbacks that send chunks, but that path still needs targeted regression tests and live playback verification.
-- Current CI success means the configured tests/build passed on the CI runner only; it does not prove Android installation or live Telegram streaming.
+- A clean Termux install and live Telegram call are still unverified.
