@@ -26,10 +26,12 @@ Scope: Build TgCaller as its own Telegram group-call media engine/library. Do no
 - [x] Add unit tests for media-engine payload/SDP helpers, backend validation, buffer callbacks, and YouTube pipeline behavior.
 - [x] Fix async-iterable playback lifecycle: return after the first accepted frame, pump remaining frames in a managed task, and close/cancel the iterator when stopped.
 - [x] Add regression tests for non-blocking async playback, empty sources, and clean cancellation.
+- [x] Add a regression test for cancellation during Telegram join negotiation; it verifies compensating `LeaveGroupCall`, engine cleanup, and cleared local state.
 - [x] Validate Telegram WebRTC fingerprint hash/setup and ICE candidate numeric ranges, protocol, and candidate type before building remote SDP.
 - [x] Add regression tests for malformed/out-of-range ICE candidates and unsupported DTLS fingerprint parameters.
 - [x] Async stream lifecycle CI passed: commit `d0cfe2a88748af6b04d6c0dcc46fd7df15898111`; Tests run #465: https://github.com/TgCaller/TgCaller/actions/runs/40632794605 (test suite and distribution build succeeded).
 - [x] WebRTC transport validation CI passed: commit `1a69b175c80c3b2c2297db0db83112fced7fde58`; Tests run #471: https://github.com/TgCaller/TgCaller/actions/runs/40632931731 (test suite and distribution build succeeded).
+- [x] Join-negotiation cancellation rollback CI passed: commit `b1567da686aa98b097caa9a31affc18b9b889c9b`; Tests run #475: https://github.com/TgCaller/TgCaller/actions/runs/40635383988 (test suite and distribution build succeeded).
 
 ## In progress / not yet verified end-to-end
 
@@ -39,11 +41,11 @@ Scope: Build TgCaller as its own Telegram group-call media engine/library. Do no
 
 ## Next task (do one task at a time)
 
-1. [ ] Review remaining join/leave session lifecycle and cancellation/rollback edge cases; add focused regression tests, run CI, then record the exact commit and result.
+1. [x] Review join/leave session lifecycle cancellation/rollback edge cases; add a regression test for cancellation after Telegram accepts the join; CI passed in run #475.
+2. [ ] Gather sanitized protocol fixtures from a real, authorized Telegram test call (never commit credentials or private call data). Compare the exact server response with the aiortc negotiation parser.
 
 ## Later tasks
 
-2. [ ] Add sanitized protocol fixtures based on a real, authorized Telegram test call (never commit credentials or private call data).
 3. [ ] Run a live integration test in a dedicated Telegram test group: join, negotiate ICE/DTLS, send audio, confirm audible playback, then leave cleanly.
 4. [ ] Fix remaining YouTube/FFmpeg lifecycle and error-reporting issues revealed by integration tests.
 5. [ ] Implement Telegram-compatible video publishing and packetization; until then, video, camera, and screen-sharing output must remain explicitly unsupported.
