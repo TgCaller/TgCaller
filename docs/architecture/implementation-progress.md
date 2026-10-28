@@ -24,7 +24,9 @@ Scope: Build TgCaller as its own Telegram group-call media engine/library. Do no
 - [x] Fix YouTube chunk-generator startup ordering and await chunk delivery through the buffer callback.
 - [x] Preserve PCM chunk order and avoid corrupting media with fake byte-truncation compression.
 - [x] Add unit tests for media-engine payload/SDP helpers, backend validation, buffer callbacks, and YouTube pipeline behavior.
-- [x] Latest observed GitHub Actions Tests run #458 completed successfully: https://github.com/TgCaller/TgCaller/actions/runs/40551019331
+- [x] Fix async-iterable playback lifecycle: return after the first accepted frame, pump remaining frames in a managed task, and close/cancel the iterator when stopped.
+- [x] Add regression tests for non-blocking async playback, empty sources, and clean cancellation.
+- [x] Latest implementation CI passed: commit `d0cfe2a88748af6b04d6c0dcc46fd7df15898111`; Tests run #465: https://github.com/TgCaller/TgCaller/actions/runs/40632794605 (test suite and distribution build succeeded).
 
 ## In progress / not yet verified end-to-end
 
