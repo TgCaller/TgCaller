@@ -947,3 +947,75 @@ async def test_failed_join_rollback_does_not_send_invalid_source_id(monkeypatch)
     assert client.requests[1].kwargs["source"] == 123
     assert engine.closed is True
     assert -100123 not in backend._calls
+
+@pytest.mark.asyncio
+async def test_cancelled_join_negotiation_rolls_back_server_join_and_closes_engine(monkeypatch):
+    import asyncio
+
+    class JoinRequest:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class LeaveRequest:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    class DataJSON:
+        def __init__(self, data):
+            self.data = data
+
+    class InputPeerSelf:
+        pass
+
+    class Engine:
+        closed = False
+
+        async def create_join_payload(self, chat_id, audio_config, video_config):
+            return {
+                "ssrc": 123,
+                "ufrag": "ice-user",
+                "pwd": "ice-password",
+                "fingerprints": [
+                    {"hash": "sha-256", "fingerprint": "AA:BB", "setup": "passive"}
+                ],
+            }
+
+        async def source_id(self, chat_id):
+            return 123
+
+        async def handle_join_updates(self, chat_id, updates):
+            # Telegram has already accepted JoinGroupCall when this runs.
+            raise asyncio.CancelledError()
+
+        async def close(self, chat_id):
+            self.closed = True
+
+    class Client:
+        def __init__(self):
+            self.requests = []
+
+        async def invoke(self, request):
+            self.requests.append(request)
+            return object()
+
+    engine = Engine()
+    client = Client()
+    backend = PyrogramGroupCallBackend(
+        client, resolve_call=lambda chat_id: object(), media_engine=engine
+    )
+
+    async def rpc_types():
+        return JoinRequest, LeaveRequest, object, DataJSON, InputPeerSelf
+
+    monkeypatch.setattr(backend, "_rpc_types", rpc_types)
+
+    with pytest.raises(asyncio.CancelledError):
+        await backend.connect_call(-100123)
+
+    assert len(client.requests) == 2
+    assert isinstance(client.requests[0], JoinRequest)
+    assert isinstance(client.requests[1], LeaveRequest)
+    assert client.requests[1].kwargs["source"] == 123
+    assert engine.closed is True
+    assert -100123 not in backend._calls
+
