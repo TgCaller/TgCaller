@@ -125,9 +125,21 @@ def extract_webrtc_transport_description(params: Any) -> Dict[str, Any]:
             raise ValueError(
                 f"Telegram WebRTC fingerprint at index {index} is invalid"
             )
-        clean_fingerprints.append(
-            {key: item[key] for key in ("hash", "fingerprint", "setup")}
-        )
+        hash_name = item["hash"].lower()
+        setup = item["setup"].lower()
+        if hash_name != "sha-256":
+            raise ValueError(
+                f"Telegram WebRTC fingerprint at index {index} uses unsupported hash {hash_name!r}"
+            )
+        if setup not in ("active", "passive"):
+            raise ValueError(
+                f"Telegram WebRTC fingerprint at index {index} has unsupported setup {setup!r}"
+            )
+        clean_fingerprints.append({
+            "hash": hash_name,
+            "fingerprint": item["fingerprint"],
+            "setup": setup,
+        })
 
     candidates = transport.get("candidates")
     if not isinstance(candidates, list):
@@ -155,7 +167,45 @@ def extract_webrtc_transport_description(params: Any) -> Dict[str, Any]:
             raise ValueError(
                 f"Telegram ICE candidate at index {index} is invalid"
             )
+        # Parse fields that are numeric in ICE SDP now, before malformed
+        # values reach the SDP builder and fail later during aiortc negotiation.
+        numeric_ranges = {
+            "port": (1, 65535),
+            "network": (0, 255),
+            "generation": (0, 2**31 - 1),
+            "component": (1, 256),
+            "priority": (0, 2**32 - 1),
+        }
+        for key, (minimum, maximum) in numeric_ranges.items():
+            value = candidate[key]
+            if not value.isascii() or not value.isdigit():
+                raise ValueError(
+                    f"Telegram ICE candidate at index {index} has invalid {key}"
+                )
+            number = int(value)
+            if not minimum <= number <= maximum:
+                raise ValueError(
+                    f"Telegram ICE candidate at index {index} has out-of-range {key}"
+                )
+
+        protocol = candidate["protocol"].lower()
+        candidate_type = candidate["type"].lower()
+        if protocol not in ("udp", "tcp"):
+            raise ValueError(
+                f"Telegram ICE candidate at index {index} has unsupported protocol {protocol!r}"
+            )
+        if candidate_type not in ("host", "srflx", "prflx", "relay"):
+            raise ValueError(
+                f"Telegram ICE candidate at index {index} has unsupported type {candidate_type!r}"
+            )
+        if protocol == "tcp" and candidate.get("tcptype") not in ("active", "passive", "so"):
+            raise ValueError(
+                f"Telegram TCP ICE candidate at index {index} has invalid tcptype"
+            )
+
         clean_candidate = {key: candidate[key] for key in candidate_fields}
+        clean_candidate["protocol"] = protocol
+        clean_candidate["type"] = candidate_type
         for key in optional_candidate_fields:
             value = candidate.get(key)
             if value is not None:
