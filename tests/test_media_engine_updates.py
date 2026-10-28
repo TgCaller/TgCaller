@@ -183,6 +183,30 @@ def test_extracts_nested_telegram_webrtc_transport_description():
             lambda p: p["transport"]["candidates"][0].pop("foundation"),
             "ICE candidate at index 0 is invalid",
         ),
+        (
+            lambda p: p["transport"]["candidates"][0].update({"port": "65536"}),
+            "out-of-range port",
+        ),
+        (
+            lambda p: p["transport"]["candidates"][0].update({"priority": "not-a-number"}),
+            "invalid priority",
+        ),
+        (
+            lambda p: p["transport"]["candidates"][0].update({"protocol": "sctp"}),
+            "unsupported protocol",
+        ),
+        (
+            lambda p: p["transport"]["candidates"][0].update({"type": "unknown"}),
+            "unsupported type",
+        ),
+        (
+            lambda p: p["transport"]["fingerprints"][0].update({"setup": "actpass"}),
+            "unsupported setup",
+        ),
+        (
+            lambda p: p["transport"]["fingerprints"][0].update({"hash": "md5"}),
+            "unsupported hash",
+        ),
     ],
 )
 def test_rejects_invalid_webrtc_transport_response(mutate, message):
