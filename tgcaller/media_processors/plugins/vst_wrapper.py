@@ -1,1 +1,0 @@
-# VST Wrapper - VST3 support

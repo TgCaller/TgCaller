@@ -142,6 +142,24 @@ class MediaDevices:
                     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                     fps = cap.get(cv2.CAP_PROP_FPS)
                     
+                    # Some camera backends do not expose every property. A
+                    # failed optional metadata query must not hide a detected camera.
+                    metadata = {}
+                    try:
+                        metadata["backend"] = cap.getBackendName()
+                    except Exception:
+                        metadata["backend"] = None
+
+                    for key, property_name in (
+                        ("fourcc", "CAP_PROP_FOURCC"),
+                        ("brightness", "CAP_PROP_BRIGHTNESS"),
+                        ("contrast", "CAP_PROP_CONTRAST"),
+                    ):
+                        try:
+                            metadata[key] = cap.get(getattr(cv2, property_name))
+                        except Exception:
+                            metadata[key] = None
+
                     device = CameraDevice(
                         index=i,
                         name=f"Camera {i}",
@@ -149,12 +167,7 @@ class MediaDevices:
                         height=height if height > 0 else 480,
                         fps=fps if fps > 0 else 30.0,
                         is_default=(i == 0),
-                        metadata={
-                            'backend': cap.getBackendName(),
-                            'fourcc': int(cap.get(cv2.CAP_PROP_FOURCC)),
-                            'brightness': cap.get(cv2.CAP_PROP_BRIGHTNESS),
-                            'contrast': cap.get(cv2.CAP_PROP_CONTRAST)
-                        }
+                        metadata=metadata,
                     )
                     devices.append(device)
                 

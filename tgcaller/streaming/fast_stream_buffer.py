@@ -3,6 +3,7 @@ FastStreamBuffer - Ultra-low-latency streaming with async buffered chunks
 """
 
 import asyncio
+import inspect
 import logging
 import time
 from typing import Optional, Callable, List, Dict, Any, AsyncGenerator
@@ -10,7 +11,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 import threading
 from collections import deque
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -234,33 +234,20 @@ class FastStreamBuffer:
             self.logger.error(f"Error stopping buffer: {e}")
     
     async def _producer_loop(self, source_generator: AsyncGenerator[bytes, None]):
-        """Producer loop - fills buffer with chunks"""
+        """Produce chunks in source order and apply backpressure."""
         try:
-            chunk_tasks = []
-            
             async for raw_data in source_generator:
                 if self.state == BufferState.IDLE:
                     break
-                
-                # Create chunk processing task
-                if len(chunk_tasks) < self.config.max_concurrent_chunks:
-                    task = asyncio.create_task(
-                        self._process_raw_chunk(raw_data)
-                    )
-                    chunk_tasks.append(task)
-                
-                # Clean completed tasks
-                chunk_tasks = [t for t in chunk_tasks if not t.done()]
-                
-                # Yield control
-                await asyncio.sleep(0)
-            
-            # Wait for remaining tasks
-            if chunk_tasks:
-                await asyncio.gather(*chunk_tasks, return_exceptions=True)
-                
+
+                # Chunk creation and queue insertion are lightweight. Processing
+                # them concurrently can reorder audio frames when a later task
+                # reaches the queue first, so preserve source order here. The
+                # consumer and transport can run concurrently in their own tasks.
+                await self._process_raw_chunk(raw_data)
+
         except asyncio.CancelledError:
-            pass
+            raise
         except Exception as e:
             self.logger.error(f"Producer loop error: {e}")
             self._set_state(BufferState.ERROR)
@@ -315,7 +302,21 @@ class FastStreamBuffer:
     async def _consumer_loop(self):
         """Consumer loop - processes buffered chunks"""
         try:
-            while self.state != BufferState.IDLE:
+            while self.state not in (BufferState.IDLE, BufferState.ERROR):
+                # Prime the buffer before consuming the first chunk. Without
+                # this gate, the consumer drains each chunk as soon as it is
+                # produced, so min_buffer_size never provides startup jitter
+                # protection. A short finite source must still be drained.
+                if self.state == BufferState.FILLING:
+                    with self._get_lock():
+                        buffer_ready = len(self.buffer) >= self.config.min_buffer_size
+                    producer_finished = (
+                        self.producer_task is not None and self.producer_task.done()
+                    )
+                    if not buffer_ready and not producer_finished:
+                        await asyncio.sleep(0.001)
+                        continue
+
                 chunk = await self._get_next_chunk()
                 
                 if chunk:
@@ -342,11 +343,10 @@ class FastStreamBuffer:
                     self.stats['underruns'] += 1
                 return None
             
-            # Get chunk based on priority
-            if self.config.prioritize_recent:
-                chunk = self.buffer.pop()  # Get newest
-            else:
-                chunk = self.buffer.popleft()  # Get oldest
+            # Preserve media sequence order: always consume the oldest chunk first.
+            # Recent-chunk preference is handled by dropping stale chunks on overflow,
+            # not by reversing playback order.
+            chunk = self.buffer.popleft()
             
             # Update state based on remaining buffer
             remaining = len(self.buffer)
@@ -375,10 +375,15 @@ class FastStreamBuffer:
             if latency_ms > self.config.max_latency_ms:
                 self.logger.warning(f"High latency detected: {latency_ms:.1f}ms")
             
-            # Notify callbacks
+            # Notify callbacks in order. Async callbacks are awaited so media
+            # delivery can apply backpressure instead of spawning unbounded tasks.
             for callback in self.chunk_callbacks:
                 try:
-                    callback(chunk)
+                    result = callback(chunk)
+                    if inspect.isawaitable(result):
+                        await result
+                except asyncio.CancelledError:
+                    raise
                 except Exception as e:
                     self.logger.error(f"Error in chunk callback: {e}")
             
@@ -551,12 +556,10 @@ class QualityController:
         try:
             quality_config = self.quality_levels[self.current_quality]
             
-            # Apply compression if needed
-            if quality_config['compression'] > 0:
-                chunk.data = await self._compress_chunk_data(
-                    chunk.data, 
-                    quality_config['compression']
-                )
+            # Do not truncate or rewrite encoded media bytes to simulate compression.
+            # Arbitrary byte slicing corrupts PCM samples and encoded audio/video
+            # frames. This controller currently signals a target quality only;
+            # a real codec/encoder must perform any bitrate adaptation.
             
             # Update metadata
             chunk.metadata['quality_level'] = self.current_quality
@@ -569,19 +572,14 @@ class QualityController:
             return chunk
     
     async def _compress_chunk_data(self, data: bytes, compression_level: float) -> bytes:
-        """Apply compression to chunk data"""
-        try:
-            # Simple compression simulation
-            # In real implementation, this would use actual audio/video compression
-            compression_ratio = 1.0 - compression_level
-            target_size = int(len(data) * compression_ratio)
-            
-            if target_size < len(data):
-                # Simulate compression by truncating (not ideal, but for demo)
-                return data[:target_size]
-            
-            return data
-            
-        except Exception as e:
-            self.logger.error(f"Error compressing chunk data: {e}")
-            return data
+        """Deprecated safe fallback: never corrupt media by truncating bytes.
+
+        This method remains for compatibility with callers, but byte-level
+        truncation is not compression and can corrupt audio samples or video
+        frames. Real compression must be performed by a codec/encoder.
+        """
+        if not isinstance(data, bytes):
+            raise TypeError("data must be bytes")
+        if not 0.0 <= compression_level <= 1.0:
+            raise ValueError("compression_level must be between 0 and 1")
+        return data

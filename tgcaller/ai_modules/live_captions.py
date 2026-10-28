@@ -1,1 +1,0 @@
-# Live Captions - Real-time transcription

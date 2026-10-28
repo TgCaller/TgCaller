@@ -157,21 +157,15 @@ class ConnectionManager:
             return False
     
     async def _attempt_connection(self, chat_id: int, audio_config, video_config) -> bool:
-        """Attempt to establish connection"""
+        """Ask the configured transport to establish a real call connection."""
+        connection = getattr(self.caller, "_connection", None)
+        if connection is None:
+            self.logger.error("No Telegram call transport is configured")
+            return False
         try:
-            # Simulate connection attempt
-            await asyncio.sleep(1.0)  # Connection delay
-            
-            # In real implementation, this would:
-            # 1. Initialize WebRTC connection
-            # 2. Exchange signaling data
-            # 3. Establish media streams
-            # 4. Verify connection quality
-            
-            return True  # Simulate success
-            
+            return bool(await connection.connect_call(chat_id, audio_config, video_config))
         except Exception as e:
-            self.logger.error(f"Connection attempt failed: {e}")
+            self.logger.error(f"Connection attempt failed for chat {chat_id}: {e}")
             return False
     
     async def _wait_for_connection(self, chat_id: int, timeout: float = 10.0) -> bool:
@@ -212,31 +206,23 @@ class ConnectionManager:
                 await asyncio.sleep(5.0)
     
     async def _check_connection_health(self, chat_id: int) -> bool:
-        """Check if connection is healthy"""
+        """Check health reported by the configured transport."""
+        connection = getattr(self.caller, "_connection", None)
+        if connection is None:
+            return False
         try:
-            # In real implementation, this would:
-            # 1. Check WebRTC connection state
-            # 2. Verify media flow
-            # 3. Check latency/packet loss
-            # 4. Validate signaling channel
-            
-            return True  # Simulate healthy connection
-            
+            return bool(await connection.is_healthy(chat_id))
         except Exception as e:
             self.logger.error(f"Health check failed for chat {chat_id}: {e}")
             return False
     
     async def _cleanup_connection(self, chat_id: int):
-        """Cleanup connection resources"""
+        """Release resources owned by the configured call transport."""
+        connection = getattr(self.caller, "_connection", None)
+        if connection is None:
+            return
         try:
-            # In real implementation, this would:
-            # 1. Close WebRTC connections
-            # 2. Stop media streams
-            # 3. Release resources
-            # 4. Clear signaling state
-            
-            pass
-            
+            await connection.disconnect_call(chat_id)
         except Exception as e:
             self.logger.error(f"Error cleaning up connection {chat_id}: {e}")
     

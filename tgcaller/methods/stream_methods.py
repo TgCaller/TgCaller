@@ -3,6 +3,7 @@ Stream Management Methods
 """
 
 import asyncio
+import math
 from typing import Union, Optional
 from pathlib import Path
 
@@ -50,21 +51,24 @@ class StreamMethods:
             # Validate media
             await self._validate_media(stream)
             
-            # Update call session
+            # Delegate playback to the configured media transport. Do not simulate it.
+            started = await self._connection.play_stream(chat_id, stream)
+            if not started:
+                raise StreamError(
+                    "The configured call transport could not start media playback."
+                )
+
             call_session = self._active_calls[chat_id]
             call_session['current_stream'] = stream
             call_session['status'] = CallStatus.PLAYING
-            
-            # Start playback simulation
-            asyncio.create_task(self._simulate_playback(chat_id, stream))
-            
+
             # Emit event
             update = CallUpdate(
                 chat_id=chat_id,
                 status=CallStatus.PLAYING,
                 message=f"Playing: {stream.source}"
             )
-            await self._emit_event('stream_started', update)
+            await self._emit_event('stream_start', update)
             
             self._logger.info(f"Started playing {stream.source} in chat {chat_id}")
             return True
@@ -82,9 +86,13 @@ class StreamMethods:
         if 'current_stream' not in call_session:
             return False
         
+        stopped = await self._connection.stop_stream(chat_id)
+        if not stopped:
+            return False
+
         call_session['status'] = CallStatus.CONNECTED
         call_session.pop('current_stream', None)
-        
+
         update = CallUpdate(
             chat_id=chat_id,
             status=CallStatus.CONNECTED,
@@ -100,8 +108,12 @@ class StreamMethods:
             return False
         
         call_session = self._active_calls[chat_id]
+        if call_session.get('muted', False):
+            return False
+        if not await self._connection.mute(chat_id):
+            return False
         call_session['muted'] = True
-        
+
         self._logger.info(f"Muted microphone in chat {chat_id}")
         return True
     
@@ -111,8 +123,12 @@ class StreamMethods:
             return False
         
         call_session = self._active_calls[chat_id]
+        if not call_session.get('muted', False):
+            return False
+        if not await self._connection.unmute(chat_id):
+            return False
         call_session['muted'] = False
-        
+
         self._logger.info(f"Unmuted microphone in chat {chat_id}")
         return True
     
@@ -128,9 +144,14 @@ class StreamMethods:
         
         try:
             call_session = self._active_calls[chat_id]
+            if 'recording' in call_session:
+                return False
+            config = audio_config or AudioConfig()
+            if not await self._connection.start_recording(chat_id, output_path, config):
+                return False
             call_session['recording'] = {
                 'output_path': output_path,
-                'audio_config': audio_config or AudioConfig(),
+                'audio_config': config,
                 'started_at': asyncio.get_event_loop().time()
             }
             
@@ -151,6 +172,8 @@ class StreamMethods:
         if 'recording' not in call_session:
             return False
         
+        if not await self._connection.stop_recording(chat_id):
+            return False
         recording_info = call_session.pop('recording')
         duration = asyncio.get_event_loop().time() - recording_info['started_at']
         
@@ -168,28 +191,19 @@ class StreamMethods:
             return False
         
         try:
-            # This would send raw frame data to the call
-            # Implementation depends on actual streaming protocol
-            call_session = self._active_calls[chat_id]
-            
-            if 'frames_sent' not in call_session:
-                call_session['frames_sent'] = 0
-            
-            call_session['frames_sent'] += 1
-            
-            return True
+            if not isinstance(frame_data, bytes):
+                raise TypeError("frame_data must be bytes")
+            if frame_type not in {"audio", "video"}:
+                raise ValueError("frame_type must be 'audio' or 'video'")
+            return await self._connection.send_frame(chat_id, frame_data, frame_type)
             
         except Exception as e:
             self._logger.error(f"Failed to send frame: {e}")
             return False
     
     async def get_time(self, chat_id: int) -> Optional[float]:
-        """Get current stream time position"""
-        if chat_id not in self._active_calls:
-            return None
-        
-        call_session = self._active_calls[chat_id]
-        return call_session.get('position', 0.0)
+        """Get the current playback position reported by the transport."""
+        return await self.get_position(chat_id)
     async def pause(self, chat_id: int) -> bool:
         """Pause current stream"""
         if chat_id not in self._active_calls:
@@ -199,7 +213,13 @@ class StreamMethods:
         
         if 'current_stream' not in call_session:
             return False
-        
+        if call_session.get('status') != CallStatus.PLAYING:
+            return False
+
+        # Do not report a pause unless the real transport confirms it.
+        if not await self._connection.pause_stream(chat_id):
+            return False
+
         call_session['status'] = CallStatus.PAUSED
         
         update = CallUpdate(
@@ -223,7 +243,11 @@ class StreamMethods:
         
         if call_session.get('status') != CallStatus.PAUSED:
             return False
-        
+
+        # Keep the local state unchanged if the transport cannot resume.
+        if not await self._connection.resume_stream(chat_id):
+            return False
+
         call_session['status'] = CallStatus.PLAYING
         
         update = CallUpdate(
@@ -236,16 +260,23 @@ class StreamMethods:
         return True
     
     async def set_volume(self, chat_id: int, volume: float) -> bool:
-        """Set volume level (0.0 to 1.0)"""
-        if not 0.0 <= volume <= 1.0:
-            raise ValueError("Volume must be between 0.0 and 1.0")
+        """Set volume level (0.0 to 1.0)."""
+        if (
+            isinstance(volume, bool)
+            or not isinstance(volume, (int, float))
+            or not 0.0 <= volume <= 1.0
+            or (isinstance(volume, float) and not math.isfinite(volume))
+        ):
+            raise ValueError("Volume must be a finite number between 0.0 and 1.0")
         
         if chat_id not in self._active_calls:
             return False
         
         call_session = self._active_calls[chat_id]
+        if not await self._connection.set_volume(chat_id, volume):
+            return False
         call_session['volume'] = volume
-        
+
         self._logger.info(f"Set volume to {volume} in chat {chat_id}")
         return True
     
@@ -255,18 +286,26 @@ class StreamMethods:
             return False
         
         call_session = self._active_calls[chat_id]
-        
         if 'current_stream' not in call_session:
             return False
-        
-        call_session['position'] = position
-        self._logger.info(f"Seeked to {position}s in chat {chat_id}")
+        if isinstance(position, bool) or not isinstance(position, (int, float)):
+            raise ValueError("Position must be a finite, non-negative number of seconds")
+        try:
+            normalized_position = float(position)
+        except (OverflowError, ValueError):
+            raise ValueError(
+                "Position must be a finite, non-negative number of seconds"
+            ) from None
+        if not math.isfinite(normalized_position) or normalized_position < 0:
+            raise ValueError("Position must be a finite, non-negative number of seconds")
+        if not await self._connection.seek(chat_id, normalized_position):
+            return False
+
+        self._logger.info(f"Seeked to {normalized_position}s in chat {chat_id}")
         return True
     
     async def get_position(self, chat_id: int) -> Optional[float]:
-        """Get current stream position"""
+        """Get current stream position, or None if the transport cannot report it."""
         if chat_id not in self._active_calls:
             return None
-        
-        call_session = self._active_calls[chat_id]
-        return call_session.get('position', 0.0)
+        return await self._connection.get_position(chat_id)

@@ -1,1 +1,0 @@
-# Base Effect - Abstract class

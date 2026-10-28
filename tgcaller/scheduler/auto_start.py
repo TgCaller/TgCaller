@@ -1,1 +1,0 @@
-# Auto Start - Timed triggers

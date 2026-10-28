@@ -1,37 +1,48 @@
 """
-TgCaller Advanced Features
+TgCaller Advanced Features.
+
+Exports are loaded lazily so importing the core package does not require every
+optional media dependency to be installed.
 """
 
-from .bridged_calls import BridgedCallManager
-from .capture_mic import MicrophoneCapture
-from .custom_api import CustomAPIHandler
-from .custom_filters import AudioFilters, VideoFilters
-from .external_capture import ExternalCapture
-from .fifo_conversion import FIFOConverter
-from .frame_sending import FrameSender
-from .multiple_clients import MultiClientManager
-from .p2p_calls import P2PCallManager
-from .raw_streaming import RawStreamer
-from .screen_sharing import ScreenShare
-from .transcription import WhisperTranscription
-from .youtube_dl import YouTubeDownloader
-from .youtube_streaming import AdvancedYouTubeStreamer, PerformanceMonitor
+from importlib import import_module
 
-__all__ = [
-    "BridgedCallManager",
-    "MicrophoneCapture", 
-    "CustomAPIHandler",
-    "AudioFilters",
-    "VideoFilters",
-    "ExternalCapture",
-    "FIFOConverter",
-    "FrameSender",
-    "MultiClientManager",
-    "P2PCallManager",
-    "RawStreamer",
-    "ScreenShare",
-    "WhisperTranscription",
-    "YouTubeDownloader",
-    "AdvancedYouTubeStreamer",
-    "PerformanceMonitor",
-]
+_EXPORTS = {
+    "BridgedCallManager": ".bridged_calls",
+    "MicrophoneCapture": ".capture_mic",
+    "CustomAPIHandler": ".control_api",
+    "AudioFilters": ".custom_filters",
+    "VideoFilters": ".custom_filters",
+    "ScreenShare": ".screen_sharing",
+    "WhisperTranscription": ".transcription",
+    "YouTubeDownloader": ".youtube_dl",
+    # Keep the documented legacy API available while the streaming
+    # implementation is consolidated behind one canonical public interface.
+    "YouTubeStreamer": "..streaming.youtube_streamer",
+    "AdvancedYouTubeStreamer": ".youtube_streaming",
+    "PerformanceMonitor": ".youtube_streaming",
+}
+
+__all__ = list(_EXPORTS)
+
+
+def __getattr__(name: str):
+    """Load an implemented advanced feature only when it is requested."""
+    module_name = _EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    module = import_module(module_name, __name__)
+    try:
+        value = getattr(module, name)
+    except AttributeError as exc:
+        raise AttributeError(
+            f"advanced feature {name!r} is not available in this installation"
+        ) from exc
+
+    globals()[name] = value
+    return value
+
+
+def __dir__():
+    return sorted(set(globals()) | set(__all__))

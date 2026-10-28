@@ -4,7 +4,6 @@ Stream Processor - Advanced stream processing and format conversion
 
 import asyncio
 import logging
-import subprocess
 import tempfile
 from typing import Optional, Dict, Any, List, AsyncGenerator
 from dataclasses import dataclass
@@ -97,7 +96,7 @@ class StreamProcessor:
         
         # Processing state
         self.is_processing = False
-        self.ffmpeg_process: Optional[subprocess.Popen] = None
+        self.ffmpeg_process: Optional[asyncio.subprocess.Process] = None
         self.temp_files: List[Path] = []
         
         # Statistics
@@ -147,34 +146,52 @@ class StreamProcessor:
             await self._cleanup_processor()
     
     async def _start_ffmpeg_processor(self, output_format: str) -> bool:
-        """Start FFmpeg processor"""
+        """Validate FFmpeg configuration before processing input chunks.
+
+        Each chunk is processed in its own FFmpeg invocation so output is
+        complete for that input chunk instead of being read at arbitrary
+        boundaries from a long-running stdout pipe.
+        """
         try:
-            cmd = self._build_processing_command(output_format)
-            
-            self.ffmpeg_process = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                bufsize=0
-            )
-            
-            # Verify process started
-            await asyncio.sleep(0.1)
-            if self.ffmpeg_process.poll() is not None:
-                stderr = self.ffmpeg_process.stderr.read().decode()
-                self.logger.error(f"FFmpeg processor failed to start: {stderr}")
-                return False
-            
-            self.logger.info("FFmpeg processor started")
+            self._build_processing_command(output_format)
+            self._output_format = output_format
+            self.logger.info("FFmpeg chunk processor configured")
             return True
-            
         except Exception as e:
-            self.logger.error(f"Error starting FFmpeg processor: {e}")
+            self.logger.error("Error configuring FFmpeg processor: %s", e)
             return False
     
     def _build_processing_command(self, output_format: str) -> List[str]:
-        """Build FFmpeg processing command"""
+        """Build an audio-only FFmpeg command for supported output formats.
+
+        This processor accepts raw signed 16-bit PCM audio. Video formats such
+        as H.264 are not valid outputs for this audio-only input pipeline.
+        """
+        if output_format not in {"raw", "opus", "aac"}:
+            raise ValueError(
+                f"Unsupported audio output format: {output_format!r}. "
+                "Choose 'raw', 'opus', or 'aac'."
+            )
+
+        # Validate values that become FFmpeg command-line arguments. Fail early
+        # with a clear Python error rather than an opaque subprocess failure.
+        for field in ("audio_sample_rate", "audio_channels", "audio_bitrate"):
+            value = getattr(self.config, field, None)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"{field} must be a positive integer")
+        if (
+            isinstance(self.config.thread_count, bool)
+            or not isinstance(self.config.thread_count, int)
+            or self.config.thread_count < 0
+        ):
+            raise ValueError("thread_count must be a non-negative integer")
+        if (
+            isinstance(self.config.buffer_size, bool)
+            or not isinstance(self.config.buffer_size, int)
+            or self.config.buffer_size <= 0
+        ):
+            raise ValueError("buffer_size must be a positive integer")
+
         cmd = ['ffmpeg']
         
         # Input settings
@@ -185,9 +202,8 @@ class StreamProcessor:
             '-i', 'pipe:0'
         ])
         
-        # Hardware acceleration
-        if self.config.use_hardware_acceleration:
-            cmd.extend(['-hwaccel', 'auto'])
+        # This pipeline processes audio-only PCM. Video hardware acceleration
+        # does not accelerate this input and must not be advertised as active.
         
         # Thread settings
         if self.config.thread_count > 0:
@@ -199,6 +215,9 @@ class StreamProcessor:
             if audio_filters:
                 cmd.extend(['-af', audio_filters])
         
+        # Explicitly map only the decoded PCM audio stream.
+        cmd.extend(["-map", "0:a:0", "-vn", "-sn", "-dn"])
+
         # Output format specific settings
         if output_format == "opus":
             cmd.extend([
@@ -247,85 +266,130 @@ class StreamProcessor:
         return ','.join(filters) if filters else ''
     
     async def _process_single_chunk(self, chunk: StreamChunk) -> Optional[StreamChunk]:
-        """Process a single chunk"""
+        """Process one complete chunk and return its complete FFmpeg output."""
+        start_time = asyncio.get_running_loop().time()
+        process = None
         try:
-            start_time = asyncio.get_event_loop().time()
-            
-            if not self.ffmpeg_process or not self.ffmpeg_process.stdin:
-                return None
-            
-            # Write input data
-            await self._write_to_ffmpeg(chunk.data)
-            
-            # Read processed data
-            processed_data = await self._read_from_ffmpeg()
-            
-            if processed_data:
-                # Calculate processing time
-                processing_time = (asyncio.get_event_loop().time() - start_time) * 1000
-                
-                # Update statistics
+            output_format = getattr(self, "_output_format", None)
+            if output_format is None:
+                raise RuntimeError("FFmpeg processor has not been configured")
+
+            # s16le PCM must contain complete sample frames. One frame contains
+            # one 16-bit sample for each configured audio channel.
+            sample_frame_bytes = self.config.audio_channels * 2
+            if len(chunk.data) % sample_frame_bytes:
+                raise ValueError(
+                    "PCM chunk length must be a multiple of "
+                    f"audio_channels * 2 ({sample_frame_bytes} bytes); "
+                    f"received {len(chunk.data)} bytes"
+                )
+
+            # Raw PCM already matches this processor's input/output contract.
+            # When filters are disabled, avoid spawning FFmpeg for every chunk.
+            if output_format == "raw" and not self.config.enable_filters:
+                processing_time = (asyncio.get_running_loop().time() - start_time) * 1000
                 self._update_processing_stats(len(chunk.data), processing_time)
-                
-                # Create processed chunk
-                processed_chunk = StreamChunk(
-                    data=processed_data,
+                return StreamChunk(
+                    data=chunk.data,
                     timestamp=chunk.timestamp,
                     sequence=chunk.sequence,
                     chunk_type=chunk.chunk_type,
                     duration_ms=chunk.duration_ms,
                     metadata={
                         **chunk.metadata,
-                        'processed': True,
-                        'processing_time_ms': processing_time,
-                        'original_size': len(chunk.data),
-                        'processed_size': len(processed_data)
-                    }
+                        "processed": True,
+                        "processing_time_ms": processing_time,
+                        "original_size": len(chunk.data),
+                        "processed_size": len(chunk.data),
+                        "output_format": output_format,
+                        "processing_path": "raw_passthrough",
+                    },
                 )
-                
-                return processed_chunk
-            
-            return None
-            
+
+            command = self._build_processing_command(output_format)
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(input=chunk.data),
+                    timeout=15.0,
+                )
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+                raise RuntimeError("FFmpeg timed out while processing a chunk")
+
+            if process.returncode != 0:
+                detail = stderr.decode("utf-8", errors="replace")[-2000:]
+                raise RuntimeError(
+                    f"FFmpeg exited with code {process.returncode}: {detail}"
+                )
+            if not stdout:
+                raise RuntimeError("FFmpeg produced no output for the input chunk")
+
+            processing_time = (asyncio.get_running_loop().time() - start_time) * 1000
+            self._update_processing_stats(len(chunk.data), processing_time)
+            return StreamChunk(
+                data=stdout,
+                timestamp=chunk.timestamp,
+                sequence=chunk.sequence,
+                chunk_type=chunk.chunk_type,
+                duration_ms=chunk.duration_ms,
+                metadata={
+                    **chunk.metadata,
+                    "processed": True,
+                    "processing_time_ms": processing_time,
+                    "original_size": len(chunk.data),
+                    "processed_size": len(stdout),
+                    "output_format": output_format,
+                    # Opus is emitted as an independent Ogg container per chunk;
+                    # AAC is emitted as an ADTS frame stream. Consumers must not
+                    # treat these byte strings as raw PCM or blindly join Ogg chunks.
+                    "container_format": {
+                        "raw": "s16le",
+                        "opus": "ogg",
+                        "aac": "adts",
+                    }[output_format],
+                    "chunk_containerized": output_format != "raw",
+                    "must_not_concatenate": output_format == "opus",
+                },
+            )
+        except asyncio.CancelledError:
+            # A cancelled consumer must not leave an FFmpeg child running.
+            if process is not None and process.returncode is None:
+                process.kill()
+                await process.wait()
+            raise
         except Exception as e:
-            self.logger.error(f"Error processing chunk {chunk.sequence}: {e}")
-            self.processing_stats['errors'] += 1
+            self.logger.error("Error processing chunk %s: %s", chunk.sequence, e)
+            self.processing_stats["errors"] += 1
             return None
     
     async def _write_to_ffmpeg(self, data: bytes):
-        """Write data to FFmpeg stdin"""
-        try:
-            if self.ffmpeg_process and self.ffmpeg_process.stdin:
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(
-                    None,
-                    lambda: self.ffmpeg_process.stdin.write(data)
-                )
-                await loop.run_in_executor(
-                    None,
-                    self.ffmpeg_process.stdin.flush
-                )
-                
-        except Exception as e:
-            self.logger.error(f"Error writing to FFmpeg: {e}")
-    
-    async def _read_from_ffmpeg(self) -> Optional[bytes]:
-        """Read processed data from FFmpeg stdout"""
-        try:
-            if not self.ffmpeg_process or not self.ffmpeg_process.stdout:
-                return None
-            
-            loop = asyncio.get_event_loop()
-            data = await loop.run_in_executor(
-                None,
-                lambda: self.ffmpeg_process.stdout.read(self.config.buffer_size)
+        """Write PCM bytes to FFmpeg without blocking the event loop."""
+        process = self.ffmpeg_process
+        if not process or not process.stdin:
+            raise RuntimeError("FFmpeg stdin is not available")
+        if process.returncode is not None:
+            raise RuntimeError(
+                f"FFmpeg exited with return code {process.returncode}"
             )
-            
-            return data if data else None
-            
-        except Exception as e:
-            self.logger.error(f"Error reading from FFmpeg: {e}")
+
+        process.stdin.write(data)
+        await process.stdin.drain()
+
+    async def _read_from_ffmpeg(self) -> Optional[bytes]:
+        """Read available output bytes asynchronously from FFmpeg stdout."""
+        process = self.ffmpeg_process
+        if not process or not process.stdout:
             return None
+
+        data = await process.stdout.read(max(1, self.config.buffer_size))
+        return data or None
     
     def _update_processing_stats(self, bytes_processed: int, processing_time_ms: float):
         """Update processing statistics"""
@@ -344,21 +408,17 @@ class StreamProcessor:
         try:
             self.is_processing = False
             
-            # Close FFmpeg process
-            if self.ffmpeg_process:
-                if self.ffmpeg_process.stdin:
-                    self.ffmpeg_process.stdin.close()
-                
-                self.ffmpeg_process.terminate()
-                
-                try:
-                    await asyncio.wait_for(
-                        asyncio.create_task(self._wait_for_ffmpeg()),
-                        timeout=5.0
-                    )
-                except asyncio.TimeoutError:
-                    self.ffmpeg_process.kill()
-                
+            # Chunk processing uses short-lived subprocesses; normally there
+            # is no persistent FFmpeg process to stop here.
+            process = self.ffmpeg_process
+            if process:
+                if process.returncode is None:
+                    process.terminate()
+                    try:
+                        await asyncio.wait_for(process.wait(), timeout=2.0)
+                    except asyncio.TimeoutError:
+                        process.kill()
+                        await process.wait()
                 self.ffmpeg_process = None
             
             # Cleanup temporary files
@@ -375,10 +435,10 @@ class StreamProcessor:
             self.logger.error(f"Error during processor cleanup: {e}")
     
     async def _wait_for_ffmpeg(self):
-        """Wait for FFmpeg process to terminate"""
-        if self.ffmpeg_process:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self.ffmpeg_process.wait)
+        """Wait for the asynchronous FFmpeg subprocess to terminate."""
+        process = self.ffmpeg_process
+        if process:
+            await process.wait()
     
     async def analyze_stream_format(self, sample_data: bytes) -> Dict[str, Any]:
         """Analyze stream format using FFprobe"""
@@ -447,7 +507,7 @@ class StreamProcessor:
     @property
     def is_active(self) -> bool:
         """Check if processor is active"""
-        return self.is_processing and self.ffmpeg_process is not None
+        return self.is_processing
     
     @property
     def processing_efficiency(self) -> float:

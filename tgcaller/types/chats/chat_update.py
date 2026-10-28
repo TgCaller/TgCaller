@@ -1,1 +1,0 @@
-# Chat Update Type

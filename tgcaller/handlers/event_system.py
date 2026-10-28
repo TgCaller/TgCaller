@@ -53,7 +53,10 @@ class StatusFilter(BaseFilter):
         self.status = status
     
     async def check(self, update: Any, client: Any) -> bool:
-        return hasattr(update, 'status') and str(update.status) == self.status
+        if not hasattr(update, "status"):
+            return False
+        actual_status = getattr(update.status, "value", update.status)
+        return str(actual_status).lower() == str(self.status).lower()
 
 
 class AndFilter(BaseFilter):

@@ -5,7 +5,8 @@ YouTube Streamer with FastStreamBuffer integration
 import asyncio
 import logging
 import subprocess
-from typing import Optional, AsyncGenerator, Dict, Any
+import time
+from typing import Optional, AsyncGenerator, Dict, Any, List
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -40,13 +41,14 @@ class YouTubeStreamConfig:
     """Custom FFmpeg options"""
     
     # Streaming settings
-    chunk_size: int = 8192
+    # 48 kHz stereo signed 16-bit PCM: 20 ms = 48000 * 0.020 * 2 channels * 2 bytes.
+    chunk_size: int = 3840
     """Chunk size for streaming"""
     
     enable_audio: bool = True
     """Enable audio streaming"""
     
-    enable_video: bool = True
+    enable_video: bool = False
     """Enable video streaming"""
     
     # Performance settings
@@ -86,7 +88,9 @@ class YouTubeStreamer:
     - Real-time latency optimization
     """
     
-    def __init__(self, caller, config: Optional[YouTubeStreamConfig] = None):
+    def __init__(
+        self, caller, config: Optional[YouTubeStreamConfig] = None, downloader=None
+    ):
         """
         Initialize YouTube streamer
         
@@ -97,8 +101,15 @@ class YouTubeStreamer:
         if yt_dlp is None:
             raise ImportError("yt-dlp is required for YouTube streaming")
         
+        # Preserve the historical advanced.YouTubeStreamer(caller, downloader)
+        # call shape while keeping this module as the single streaming engine.
+        if config is not None and not isinstance(config, YouTubeStreamConfig):
+            if downloader is not None:
+                raise TypeError("pass a stream config or downloader, not both positionally")
+            downloader, config = config, None
         self.caller = caller
         self.config = config or YouTubeStreamConfig()
+        self.downloader = downloader
         self.logger = logger
         
         # Streaming components
@@ -109,6 +120,9 @@ class YouTubeStreamer:
         # State management
         self.is_streaming = False
         self.current_chat_id: Optional[int] = None
+        # Serialize frame delivery so concurrent callback tasks cannot reorder
+        # consecutive PCM chunks when the transport is slower than the producer.
+        self._send_lock = asyncio.Lock()
         
         # Statistics
         self.stream_stats = {
@@ -139,6 +153,15 @@ class YouTubeStreamer:
         Returns:
             True if streaming started successfully
         """
+        # Video output is not implemented by this raw-PCM pipeline. Reject it
+        # before resolving a URL or joining a Telegram call so the API cannot
+        # leave a call joined after an unsupported request.
+        if self.config.enable_video or video_config is not None:
+            self.logger.error(
+                "YouTube video streaming is not implemented; audio-only mode is required"
+            )
+            return False
+
         if self.is_streaming:
             self.logger.warning("Already streaming, stopping current stream")
             await self.stop_streaming()
@@ -161,13 +184,16 @@ class YouTubeStreamer:
             # Setup buffer callbacks
             self._setup_buffer_callbacks()
             
-            # Start streaming pipeline
+            # Mark the stream active before starting the producer. The chunk
+            # generator checks this flag on its first iteration.
+            self.is_streaming = True
             success = await self._start_streaming_pipeline()
             
             if success:
-                self.is_streaming = True
                 self.stream_stats['start_time'] = time.time()
-                self.logger.info(f"Started YouTube streaming to chat {chat_id}")
+                self.logger.info(f"Started YouTube audio streaming to chat {chat_id}")
+            else:
+                await self.stop_streaming()
             
             return success
             
@@ -176,6 +202,57 @@ class YouTubeStreamer:
             await self.stop_streaming()
             return False
     
+    async def play_youtube_url(
+        self, chat_id: int, url: str, quality: str = "best[height<=720]"
+    ) -> bool:
+        """Backward-compatible name for the canonical buffered audio pipeline."""
+        self.config.audio_quality = quality
+        return await self.stream_youtube_url(chat_id, url)
+
+    def _get_downloader(self):
+        """Load the optional download helper only when a download API is used."""
+        if self.downloader is None:
+            from ..advanced.youtube_dl import YouTubeDownloader
+            self.downloader = YouTubeDownloader()
+        return self.downloader
+
+    async def download_and_play(
+        self,
+        chat_id: int,
+        url: str,
+        quality: str = "best[height<=720]",
+        audio_only: bool = False,
+    ) -> bool:
+        """Download media and hand the resulting file to TgCaller's play API."""
+        try:
+            file_path = await self._get_downloader().download_video(
+                url, quality=quality, audio_only=audio_only
+            )
+            if not file_path:
+                return False
+            return bool(await self.caller.play(chat_id, file_path))
+        except Exception as exc:
+            self.logger.error("Error downloading and playing YouTube media: %s", exc)
+            return False
+
+    async def search_and_play(
+        self, chat_id: int, query: str, index: int = 0
+    ) -> bool:
+        """Search YouTube and stream the selected result through the same pipeline."""
+        try:
+            if isinstance(index, bool) or not isinstance(index, int) or index < 0:
+                return False
+            results = await self._get_downloader().search_videos(query, max_results=5)
+            if not results or index >= len(results):
+                return False
+            url = results[index].get("url")
+            if not url:
+                return False
+            return await self.play_youtube_url(chat_id, url)
+        except Exception as exc:
+            self.logger.error("Error searching and playing YouTube media: %s", exc)
+            return False
+
     async def stop_streaming(self):
         """Stop YouTube streaming"""
         try:
@@ -186,17 +263,25 @@ class YouTubeStreamer:
                 await self.buffer.stop_buffering()
                 self.buffer = None
             
-            # Stop FFmpeg process
-            if self.ffmpeg_process:
-                self.ffmpeg_process.terminate()
-                try:
-                    await asyncio.wait_for(
-                        asyncio.create_task(self._wait_for_process()), 
-                        timeout=5.0
-                    )
-                except asyncio.TimeoutError:
-                    self.ffmpeg_process.kill()
-                
+            # Stop FFmpeg process and always reap it before dropping the handle.
+            process = self.ffmpeg_process
+            if process:
+                if process.poll() is None:
+                    process.terminate()
+                    try:
+                        await asyncio.wait_for(
+                            asyncio.get_running_loop().run_in_executor(
+                                None, process.wait
+                            ),
+                            timeout=5.0,
+                        )
+                    except asyncio.TimeoutError:
+                        process.kill()
+                        await asyncio.get_running_loop().run_in_executor(
+                            None, process.wait
+                        )
+                if process.stdout and not process.stdout.closed:
+                    process.stdout.close()
                 self.ffmpeg_process = None
             
             # Reset state
@@ -229,14 +314,44 @@ class YouTubeStreamer:
                     lambda: ydl.extract_info(url, download=False)
                 )
                 
-                # Get stream URL
-                if 'url' in info:
-                    return info['url']
-                elif 'formats' in info and info['formats']:
-                    # Get best format URL
-                    return info['formats'][-1].get('url')
-                
-                return None
+                # A selected direct URL is normally returned for the requested
+                # format. In audio-only mode, reject a video-only direct result.
+                if not isinstance(info, dict):
+                    return None
+
+                direct_url = info.get('url')
+                if direct_url and (
+                    not self.config.enable_audio
+                    or info.get('acodec') not in (None, 'none')
+                ):
+                    return direct_url
+
+                formats = info.get('formats') or []
+                if self.config.enable_audio:
+                    # Do not assume formats[-1] is audio: yt-dlp format order
+                    # is not a contract and may end with a video-only rendition.
+                    formats = [
+                        item for item in formats
+                        if isinstance(item, dict)
+                        and item.get('url')
+                        and item.get('acodec') not in (None, 'none')
+                    ]
+                    # Prefer audio-only formats and then the highest declared
+                    # audio bitrate, with total bitrate as a fallback.
+                    formats.sort(
+                        key=lambda item: (
+                            item.get('vcodec') == 'none',
+                            item.get('abr') or item.get('tbr') or 0,
+                        ),
+                        reverse=True,
+                    )
+                else:
+                    formats = [
+                        item for item in formats
+                        if isinstance(item, dict) and item.get('url')
+                    ]
+
+                return formats[0].get('url') if formats else None
                 
         except Exception as e:
             self.logger.error(f"Error getting stream URL: {e}")
@@ -271,15 +386,19 @@ class YouTubeStreamer:
             self.ffmpeg_process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                # Never leave FFmpeg's stderr pipe unread: a full pipe can
+                # stall FFmpeg and silently freeze audio delivery.
+                stderr=subprocess.DEVNULL,
                 bufsize=0
             )
             
             # Verify process started
             await asyncio.sleep(0.1)
             if self.ffmpeg_process.poll() is not None:
-                stderr = self.ffmpeg_process.stderr.read().decode()
-                self.logger.error(f"FFmpeg failed to start: {stderr}")
+                self.logger.error(
+                    "FFmpeg exited during startup with return code %s",
+                    self.ffmpeg_process.returncode,
+                )
                 return False
             
             self.logger.info("FFmpeg process started successfully")
@@ -290,7 +409,19 @@ class YouTubeStreamer:
             return False
     
     def _build_ffmpeg_command(self) -> List[str]:
-        """Build FFmpeg command for streaming"""
+        """Build an audio-only FFmpeg command for the current raw-PCM pipeline.
+
+        Video is deliberately rejected until a real video packetization and
+        Telegram media-engine path exists; raw video cannot share an s16le pipe.
+        """
+        if self.config.enable_video:
+            raise NotImplementedError(
+                "YouTube video output is not implemented yet; set enable_video=False "
+                "for the supported raw-PCM audio pipeline."
+            )
+        if not self.config.enable_audio:
+            raise ValueError("At least audio output must be enabled")
+
         cmd = ['ffmpeg']
         
         # Input options
@@ -301,9 +432,8 @@ class YouTubeStreamer:
         # Input source
         cmd.extend(['-i', self.stream_url])
         
-        # Hardware acceleration
-        if self.config.use_hardware_acceleration:
-            cmd.extend(['-hwaccel', 'auto'])
+        # Keep output predictable: this pipeline transports raw PCM audio only.
+        # Hardware acceleration is not applicable to this audio-only output.
         
         # Audio settings
         if self.config.enable_audio:
@@ -315,14 +445,8 @@ class YouTubeStreamer:
         else:
             cmd.extend(['-an'])
         
-        # Video settings
-        if self.config.enable_video:
-            cmd.extend([
-                '-vcodec', 'rawvideo',
-                '-pix_fmt', 'yuv420p'
-            ])
-        else:
-            cmd.extend(['-vn'])
+        # Explicitly disable video; raw PCM stdout cannot carry video frames.
+        cmd.extend(['-vn'])
         
         # Output options
         options = self.config.ffmpeg_options.get('options', '')
@@ -358,42 +482,74 @@ class YouTubeStreamer:
             self.logger.debug("Chunk generator finished")
     
     async def _read_ffmpeg_chunk(self) -> Optional[bytes]:
-        """Read chunk from FFmpeg process"""
+        """Read one aligned PCM chunk from FFmpeg without returning short pipe reads.
+
+        The audio pipeline emits 48 kHz, stereo, signed 16-bit PCM. The default
+        3840-byte chunk is one 20 ms frame. OS pipes may return fewer bytes than
+        requested, so accumulate reads until one frame is ready or EOF is reached.
+        Any final partial chunk is returned only when it ends on a complete PCM
+        sample frame (4 bytes for stereo s16le).
+        """
         try:
-            if not self.ffmpeg_process or not self.ffmpeg_process.stdout:
+            process = self.ffmpeg_process
+            if not process or not process.stdout:
                 return None
-            
-            # Read chunk asynchronously
-            loop = asyncio.get_event_loop()
-            chunk_data = await loop.run_in_executor(
-                None,
-                lambda: self.ffmpeg_process.stdout.read(self.config.chunk_size)
-            )
-            
-            return chunk_data if chunk_data else None
-            
+
+            def read_frame():
+                frame_size = self.config.chunk_size
+                if (
+                    isinstance(frame_size, bool)
+                    or not isinstance(frame_size, int)
+                    or frame_size <= 0
+                    or frame_size % 4 != 0
+                ):
+                    raise ValueError(
+                        "chunk_size must be a positive multiple of 4 for stereo s16le PCM"
+                    )
+
+                chunks = bytearray()
+                while len(chunks) < frame_size:
+                    part = process.stdout.read(frame_size - len(chunks))
+                    if not part:
+                        break
+                    chunks.extend(part)
+
+                if not chunks:
+                    return None
+                # Never pass a broken stereo PCM sample frame downstream.
+                usable_size = len(chunks) - (len(chunks) % 4)
+                if usable_size == 0:
+                    return None
+                return bytes(chunks[:usable_size])
+
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(None, read_frame)
+
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             self.logger.error(f"Error reading FFmpeg chunk: {e}")
             return None
     
     def _setup_buffer_callbacks(self):
         """Setup FastStreamBuffer callbacks"""
-        # Chunk processing callback
-        def on_chunk_ready(chunk: StreamChunk):
-            """Handle processed chunk"""
-            try:
-                # Send chunk to TgCaller
-                asyncio.create_task(self._send_chunk_to_caller(chunk))
-                
-                # Update statistics
-                self.stream_stats['chunks_processed'] += 1
-                self.stream_stats['avg_chunk_latency'] = (
-                    (self.stream_stats['avg_chunk_latency'] * (self.stream_stats['chunks_processed'] - 1) + 
-                     chunk.age_ms) / self.stream_stats['chunks_processed']
+        # Async callback is awaited by FastStreamBuffer, providing backpressure
+        # and preventing one detached task per audio chunk.
+        async def on_chunk_ready(chunk: StreamChunk):
+            """Deliver a processed chunk before the buffer consumes the next one."""
+            sent = await self._send_chunk_to_caller(chunk)
+            if not sent:
+                self.logger.warning(
+                    "Audio chunk %s was not delivered to TgCaller", chunk.sequence
                 )
-                
-            except Exception as e:
-                self.logger.error(f"Error handling chunk: {e}")
+                return
+
+            self.stream_stats['chunks_processed'] += 1
+            count = self.stream_stats['chunks_processed']
+            self.stream_stats['avg_chunk_latency'] = (
+                (self.stream_stats['avg_chunk_latency'] * (count - 1) + chunk.age_ms)
+                / count
+            )
         
         # State change callback
         def on_state_change(state):
@@ -420,22 +576,28 @@ class YouTubeStreamer:
         self.buffer.add_state_callback(on_state_change)
         self.buffer.add_stats_callback(on_stats_update)
     
-    async def _send_chunk_to_caller(self, chunk: StreamChunk):
-        """Send processed chunk to TgCaller"""
+    async def _send_chunk_to_caller(self, chunk: StreamChunk) -> bool:
+        """Send one chunk and report whether the caller accepted it."""
         try:
-            if not self.current_chat_id or not self.caller.is_connected(self.current_chat_id):
-                return
-            
-            # Convert chunk to format expected by TgCaller
-            # This would integrate with TgCaller's streaming system
-            await self.caller.send_frame(
-                self.current_chat_id,
-                chunk.data,
-                chunk.chunk_type
-            )
-            
+            async with self._send_lock:
+                chat_id = self.current_chat_id
+                if chat_id is None or not self.caller.is_connected(chat_id):
+                    return False
+
+                # Keep delivery serialized; the buffer awaits this operation so
+                # a slow transport naturally applies backpressure to FFmpeg.
+                result = await self.caller.send_frame(
+                    chat_id,
+                    chunk.data,
+                    chunk.chunk_type
+                )
+                # Older public send_frame implementations return None on success.
+                return result is not False
+        except asyncio.CancelledError:
+            raise
         except Exception as e:
             self.logger.error(f"Error sending chunk to caller: {e}")
+            return False
     
     async def _wait_for_process(self):
         """Wait for FFmpeg process to terminate"""

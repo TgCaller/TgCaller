@@ -53,71 +53,85 @@ from .devices import MediaDevices, DeviceInfo, InputDevice, SpeakerDevice, Camer
 from .handlers.event_system import Filters, BaseFilter, and_filter, or_filter
 from .utilities import CpuMonitor, PingMonitor, CallHolder, PeerResolver
 from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
-from . import streaming
+# Optional features are resolved lazily so importing the core API remains lightweight.
+__all_advanced__ = [
+    "BridgedCallManager",
+    "MicrophoneCapture",
+    "CustomAPIHandler",
+    "AudioFilters",
+    "VideoFilters",
+    "ScreenShare",
+    "WhisperTranscription",
+    "YouTubeDownloader",
+    "AdvancedYouTubeStreamer",
+    "PerformanceMonitor",
+]
 
-# Advanced features (optional imports)
-try:
-    from . import advanced
-    __all_advanced__ = [
-        "BridgedCallManager",
-        "MicrophoneCapture",
-        "CustomAPIHandler", 
-        "AudioFilters",
-        "VideoFilters",
-        "ScreenShare",
-        "WhisperTranscription",
-        "YouTubeDownloader",
-        "AdvancedYouTubeStreamer",
-    ]
-except ImportError:
-    advanced = None
-    __all_advanced__ = []
+
+def __getattr__(name: str):
+    from importlib import import_module
+
+    if name == "streaming":
+        module = import_module(".streaming", __name__)
+        globals()[name] = module
+        return module
+    if name == "advanced":
+        module = import_module(".advanced", __name__)
+        globals()[name] = module
+        return module
+    if name in __all_advanced__:
+        module = import_module(".advanced", __name__)
+        value = getattr(module, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Main client
     "TgCaller",
-    
+
     # Configuration types
     "AudioConfig",
-    "VideoConfig", 
+    "VideoConfig",
     "MediaStream",
-    
+
     # Update types
     "CallUpdate",
     "CallStatus",
     "StreamType",
-    
+
     # Participant types
     "GroupCallParticipant",
     "UpdatedGroupCallParticipant",
     "ParticipantAction",
     "VideoInfo",
-    
+
     # Quality types
     "AudioQuality",
-    "VideoQuality", 
+    "VideoQuality",
     "QualityConfig",
-    
+
     # Frame types
     "Frame",
     "FrameInfo",
     "StreamFrames",
-    
+
     # Device types
     "Device",
     "DeviceType",
     "Direction",
     "ExternalMedia",
-    
+
     # Recording types
     "RecordStream",
     "RecordingFormat",
     "RecordingStatus",
-    
+
     # Stream event types
     "StreamEnded",
     "StreamEndReason",
-    
+
     # Exceptions
     "TgCallerError",
     "ConnectionError",
@@ -125,38 +139,38 @@ __all__ = [
     "CallError",
     "StreamError",
     "ConfigurationError",
-    
+
     # API System
     "CustomAPIServer",
     "on_custom_update",
-    
+
     # Device System
     "MediaDevices",
     "DeviceInfo",
     "InputDevice",
-    "SpeakerDevice", 
+    "SpeakerDevice",
     "CameraDevice",
     "ScreenDevice",
-    
+
     # Event System
     "Filters",
     "BaseFilter",
     "and_filter",
     "or_filter",
-    
+
     # Utilities
     "CpuMonitor",
     "PingMonitor",
-    "CallHolder", 
+    "CallHolder",
     "PeerResolver",
-    
+
     # Internal Systems
     "ConnectionManager",
     "CacheManager",
     "StreamHandler",
     "CallHandler",
     "RetryManager",
-    
+
     # Advanced features
     "advanced",
     "streaming",

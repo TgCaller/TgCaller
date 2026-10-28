@@ -16,6 +16,7 @@ from .methods import CallMethods, StreamMethods
 from .api import CustomAPIServer, on_custom_update
 from .devices import MediaDevices
 from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
+from .mtproto import Connection
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,8 @@ class TgCaller:
     def __init__(
         self,
         client: Client,
-        log_level: int = logging.WARNING
+        log_level: int = logging.WARNING,
+        connection_backend: Optional[Any] = None,
     ):
         """
         Initialize TgCaller
@@ -59,12 +61,32 @@ class TgCaller:
             raise TypeError("client must be a Pyrogram Client instance")
             
         self._client = client
+        # TgCaller uses its own Telegram signaling adapter and audio media engine
+        # by default. Custom transports remain injectable for applications/tests.
+        if connection_backend is None:
+            from .mtproto import (
+                AiortcTelegramMediaEngine,
+                PyrogramGroupCallBackend,
+                resolve_active_group_call,
+            )
+
+            media_engine = AiortcTelegramMediaEngine()
+            connection_backend = PyrogramGroupCallBackend(
+                client=client,
+                resolve_call=lambda chat_id: resolve_active_group_call(client, chat_id),
+                media_engine=media_engine,
+            )
+            self._owns_connection_backend = True
+        else:
+            self._owns_connection_backend = False
+        self._connection = Connection(client, backend=connection_backend)
         self._active_calls: Dict[int, Any] = {}
         self._event_handlers: Dict[str, List[Callable]] = {
             'stream_end': [],
             'stream_start': [],
             'stream_paused': [],
             'stream_resumed': [],
+            'stream_stopped': [],
             'call_joined': [],
             'call_left': [],
             'kicked': [],
@@ -129,6 +151,9 @@ class TgCaller:
             if not self._client.is_connected:
                 await self._client.start()
             
+            # Start background maintenance tasks after an event loop is available
+            await self._cache_manager.start()
+
             # Setup event handlers
             await self._event_handler.setup()
             
@@ -140,32 +165,42 @@ class TgCaller:
             raise ConnectionError(f"Failed to start TgCaller: {e}")
     
     async def stop(self) -> None:
-        """
-        Stop TgCaller service and cleanup resources
-        """
+        """Stop TgCaller and attempt every cleanup step, even if one fails."""
         if not self._is_connected:
             self._logger.warning("TgCaller is not running")
             return
-            
+
+        errors = []
         try:
-            # Leave all active calls
+            # Try to leave every active call; leave_call handles per-call errors.
             for chat_id in list(self._active_calls.keys()):
-                await self.leave_call(chat_id)
-            
-            # Cleanup internal managers
-            await self._connection_manager.cleanup_all()
-            await self._cache_manager.cleanup()
-            await self._stream_handler.cleanup_all()
-            await self._call_handler.cleanup_all()
-            
-            # Cleanup
-            await self._event_handler.cleanup()
+                try:
+                    if not await self.leave_call(chat_id):
+                        errors.append(f"could not cleanly leave call {chat_id}")
+                except Exception as exc:
+                    errors.append(f"leave call {chat_id}: {exc}")
+
+            # A failure in one manager must not prevent the others from stopping.
+            cleanup_steps = (
+                ("connection manager", self._connection_manager.cleanup_all),
+                ("cache manager", self._cache_manager.cleanup),
+                ("stream handler", self._stream_handler.cleanup_all),
+                ("call handler", self._call_handler.cleanup_all),
+                ("event handler", self._event_handler.cleanup),
+            )
+            for name, cleanup in cleanup_steps:
+                try:
+                    await cleanup()
+                except Exception as exc:
+                    errors.append(f"{name}: {exc}")
+        finally:
+            # The service must not remain marked as running after shutdown starts.
             self._is_connected = False
-            
+
+        if errors:
+            self._logger.error("TgCaller stopped with cleanup errors: %s", "; ".join(errors))
+        else:
             self._logger.info("TgCaller stopped successfully")
-            
-        except Exception as e:
-            self._logger.error(f"Error stopping TgCaller: {e}")
     
     def on_stream_end(self, func: Callable = None):
         """
@@ -193,6 +228,13 @@ class TgCaller:
             return f
         return decorator(func) if func else decorator
     
+    def on_stream_stopped(self, func: Callable = None):
+        """Decorator for stream stopped events"""
+        def decorator(f):
+            self._add_handler('stream_stopped', f)
+            return f
+        return decorator(func) if func else decorator
+    
     def on_kicked(self, func: Callable = None):
         """Decorator for kicked events"""
         def decorator(f):
@@ -203,7 +245,7 @@ class TgCaller:
     def on_left(self, func: Callable = None):
         """Decorator for left events"""
         def decorator(f):
-            self._add_handler('left', f)
+            self._add_handler('call_left', f)
             return f
         return decorator(func) if func else decorator
     
@@ -333,43 +375,6 @@ class TgCaller:
                 raise MediaError(f"File not found: {stream.source}")
         elif not stream.is_url:
             raise MediaError(f"Invalid media source: {stream.source}")
-    
-    async def _simulate_playback(self, chat_id: int, stream: MediaStream):
-        """Simulate media playback"""
-        try:
-            duration = stream.duration or 10.0
-            
-            for i in range(int(duration)):
-                if chat_id not in self._active_calls:
-                    break
-                
-                call_session = self._active_calls[chat_id]
-                
-                if call_session.get('status') != CallStatus.PLAYING:
-                    break
-                
-                call_session['position'] = i + 1
-                await asyncio.sleep(1)
-            
-            # Stream ended
-            if chat_id in self._active_calls:
-                call_session = self._active_calls[chat_id]
-                
-                if stream.repeat:
-                    await self.play(chat_id, stream)
-                else:
-                    call_session['status'] = CallStatus.CONNECTED
-                    call_session.pop('current_stream', None)
-                    
-                    update = CallUpdate(
-                        chat_id=chat_id,
-                        status=CallStatus.CONNECTED,
-                        message="Stream ended"
-                    )
-                    await self._emit_event('stream_end', update)
-                    
-        except Exception as e:
-            self._logger.error(f"Playback error in chat {chat_id}: {e}")
     
     @property
     def client(self) -> Client:

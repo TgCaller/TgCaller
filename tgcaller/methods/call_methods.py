@@ -36,40 +36,50 @@ class CallMethods:
             return True  # Already in call
         
         try:
-            # Set default parameters
             if audio_config is None:
                 audio_config = AudioConfig()
-            
-            # Create call session
+
             call_session = {
                 'chat_id': chat_id,
                 'audio_config': audio_config,
                 'video_config': video_config,
-                'status': CallStatus.CONNECTING
+                'status': CallStatus.CONNECTING,
             }
-            
             self._active_calls[chat_id] = call_session
-            
-            # Simulate connection
-            await asyncio.sleep(0.5)
-            
-            # Update status
+
+            # ConnectionManager delegates to the configured real transport.
+            # A missing or failed backend must never be reported as a joined call.
+            connected = await self._connection_manager.connect_call(
+                chat_id, audio_config, video_config
+            )
+            if not connected:
+                self._active_calls.pop(chat_id, None)
+                raise CallError(
+                    "Could not join Telegram group call: no working call transport "
+                    "is configured or the transport connection failed."
+                )
+
             call_session['status'] = CallStatus.CONNECTED
-            
-            # Emit event
             update = CallUpdate(
                 chat_id=chat_id,
                 status=CallStatus.CONNECTED,
-                message="Successfully joined call"
+                message="Successfully joined call",
             )
             await self._emit_event('call_joined', update)
-            
             self._logger.info(f"Joined call in chat {chat_id}")
             return True
-            
-        except Exception as e:
+
+        except BaseException as e:
+            # Cancellation can occur while the transport is negotiating. Remove
+            # the provisional local session, but preserve task cancellation.
             self._active_calls.pop(chat_id, None)
-            raise CallError(f"Failed to join call: {e}")
+            if isinstance(e, asyncio.CancelledError):
+                raise
+            if isinstance(e, CallError):
+                raise
+            if isinstance(e, Exception):
+                raise CallError(f"Failed to join call: {e}") from e
+            raise
     
     async def leave_call(self, chat_id: int) -> bool:
         """Leave a call"""
@@ -78,10 +88,13 @@ class CallMethods:
         
         try:
             call_session = self._active_calls[chat_id]
+            disconnected = await self._connection_manager.disconnect_call(chat_id)
+            if not disconnected:
+                return False
             call_session['status'] = CallStatus.ENDED
-            
+
             del self._active_calls[chat_id]
-            
+
             update = CallUpdate(
                 chat_id=chat_id,
                 status=CallStatus.ENDED,
@@ -106,21 +119,7 @@ class CallMethods:
             return []
         
         try:
-            # Simulate getting participants
-            # In real implementation, this would query the actual call
-            call_session = self._active_calls[chat_id]
-            
-            # Return mock participants for now
-            participants = [
-                {
-                    'user_id': 123456789,
-                    'muted': False,
-                    'video_enabled': True,
-                    'screen_sharing': False
-                }
-            ]
-            
-            return participants
+            return await self._connection.get_participants(chat_id)
             
         except Exception as e:
             self._logger.error(f"Error getting participants for chat {chat_id}: {e}")

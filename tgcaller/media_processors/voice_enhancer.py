@@ -1,1 +1,0 @@
-# Voice Enhancer - Noise removal

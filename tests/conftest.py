@@ -4,7 +4,7 @@ Pytest Configuration
 
 import pytest
 import asyncio
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 
 @pytest.fixture(scope="session")
@@ -20,6 +20,6 @@ def mock_pyrogram_client():
     """Mock Pyrogram client"""
     client = Mock()
     client.is_connected = False
-    client.start = Mock(return_value=asyncio.coroutine(lambda: None)())
-    client.stop = Mock(return_value=asyncio.coroutine(lambda: None)())
+    client.start = AsyncMock(return_value=None)
+    client.stop = AsyncMock(return_value=None)
     return client

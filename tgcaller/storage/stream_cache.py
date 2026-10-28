@@ -1,1 +1,0 @@
-# Stream Cache - Memory cache

@@ -1,1 +1,0 @@
-# Thumbnail Generator - Thumbnail feature

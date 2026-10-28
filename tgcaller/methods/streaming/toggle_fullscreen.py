@@ -1,1 +1,0 @@
-# Toggle Fullscreen Method

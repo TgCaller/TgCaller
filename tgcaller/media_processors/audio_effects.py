@@ -1,1 +1,0 @@
-# Audio Effects - EQ/compression

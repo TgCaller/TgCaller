@@ -1,1 +1,0 @@
-# Screen Capture - Moved from utilities

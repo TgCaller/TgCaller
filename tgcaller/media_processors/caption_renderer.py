@@ -1,1 +1,0 @@
-# Caption Renderer - Burn-in captions
