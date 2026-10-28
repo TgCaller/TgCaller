@@ -149,3 +149,44 @@ async def test_stop_stream_cancels_source_task_and_reaps_ffmpeg(monkeypatch):
     assert process.terminated is True
     assert process.returncode is not None
     assert -100123 not in engine._stream_tasks
+
+
+@pytest.mark.asyncio
+async def test_async_iterable_playback_returns_after_first_frame_and_stops_cleanly():
+    engine, track = connected_engine()
+    gate = asyncio.Event()
+    generator_closed = asyncio.Event()
+
+    async def source():
+        try:
+            yield b"first"
+            await gate.wait()
+            yield b"second"
+        finally:
+            generator_closed.set()
+
+    assert await engine.play_stream(-100123, source()) is True
+    task = engine._stream_tasks[-100123]
+    await asyncio.sleep(0)
+
+    # play_stream must not wait for an unbounded/infinite source to finish.
+    assert task.done() is False
+    assert track.frames == [b"first"]
+
+    assert await engine.stop_stream(-100123) is True
+    assert task.done() is True
+    assert generator_closed.is_set()
+    assert -100123 not in engine._stream_tasks
+
+
+@pytest.mark.asyncio
+async def test_async_iterable_playback_returns_false_for_empty_source():
+    engine, track = connected_engine()
+
+    async def empty_source():
+        if False:
+            yield b"never"
+
+    assert await engine.play_stream(-100123, empty_source()) is False
+    assert track.frames == []
+    assert -100123 not in engine._stream_tasks
