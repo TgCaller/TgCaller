@@ -463,15 +463,62 @@ class AiortcTelegramMediaEngine:
             if self._stream_tasks.get(chat_id) is current:
                 self._stream_tasks.pop(chat_id, None)
 
+    async def _close_async_iterator(self, iterator: Any) -> None:
+        """Close an async media source when it finishes or is stopped."""
+        close = getattr(iterator, "aclose", None)
+        if close is not None:
+            try:
+                await close()
+            except Exception:
+                pass
+
+    async def _pump_async_iterable(self, chat_id: int, iterator: Any) -> None:
+        """Deliver the remainder of an async source in a managed background task."""
+        try:
+            async for chunk in iterator:
+                await self.send_frame(chat_id, chunk, "audio")
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error(
+                "Async media playback failed for chat %s: %s", chat_id, exc
+            )
+        finally:
+            await self._close_async_iterator(iterator)
+            current = asyncio.current_task()
+            if self._stream_tasks.get(chat_id) is current:
+                self._stream_tasks.pop(chat_id, None)
+
     async def play_stream(self, chat_id: int, stream: Any) -> bool:
         if isinstance(stream, bytes):
             return await self.send_frame(chat_id, stream, "audio")
         if hasattr(stream, "__aiter__") and not hasattr(stream, "source"):
-            sent_any = False
-            async for chunk in stream:
-                await self.send_frame(chat_id, chunk, "audio")
-                sent_any = True
-            return sent_any
+            session = self._sessions.get(chat_id)
+            if session is None or session.pc.connectionState != "connected":
+                raise ConnectionError(
+                    f"No connected Telegram media session for chat {chat_id}"
+                )
+
+            # A new source replaces any existing source. Pull and enqueue one
+            # frame before returning so immediate source failures are reported
+            # to the caller; stream the remaining frames in a managed task.
+            await self.stop_stream(chat_id)
+            iterator = stream.__aiter__()
+            try:
+                first_chunk = await iterator.__anext__()
+            except StopAsyncIteration:
+                await self._close_async_iterator(iterator)
+                return False
+            try:
+                await self.send_frame(chat_id, first_chunk, "audio")
+            except BaseException:
+                await self._close_async_iterator(iterator)
+                raise
+
+            task = asyncio.create_task(self._pump_async_iterable(chat_id, iterator))
+            self._stream_tasks[chat_id] = task
+            return True
 
         session = self._sessions.get(chat_id)
         if session is None or session.pc.connectionState != "connected":
