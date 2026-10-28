@@ -26,7 +26,10 @@ Scope: Build TgCaller as its own Telegram group-call media engine/library. Do no
 - [x] Add unit tests for media-engine payload/SDP helpers, backend validation, buffer callbacks, and YouTube pipeline behavior.
 - [x] Fix async-iterable playback lifecycle: return after the first accepted frame, pump remaining frames in a managed task, and close/cancel the iterator when stopped.
 - [x] Add regression tests for non-blocking async playback, empty sources, and clean cancellation.
-- [x] Latest implementation CI passed: commit `d0cfe2a88748af6b04d6c0dcc46fd7df15898111`; Tests run #465: https://github.com/TgCaller/TgCaller/actions/runs/40632794605 (test suite and distribution build succeeded).
+- [x] Validate Telegram WebRTC fingerprint hash/setup and ICE candidate numeric ranges, protocol, and candidate type before building remote SDP.
+- [x] Add regression tests for malformed/out-of-range ICE candidates and unsupported DTLS fingerprint parameters.
+- [x] Async stream lifecycle CI passed: commit `d0cfe2a88748af6b04d6c0dcc46fd7df15898111`; Tests run #465: https://github.com/TgCaller/TgCaller/actions/runs/40632794605 (test suite and distribution build succeeded).
+- [x] WebRTC transport validation CI passed: commit `1a69b175c80c3b2c2297db0db83112fced7fde58`; Tests run #471: https://github.com/TgCaller/TgCaller/actions/runs/40632931731 (test suite and distribution build succeeded).
 
 ## In progress / not yet verified end-to-end
 
@@ -36,7 +39,7 @@ Scope: Build TgCaller as its own Telegram group-call media engine/library. Do no
 
 ## Next task (do one task at a time)
 
-1. [ ] Review and harden the audio engine's negotiation/session lifecycle against the documented Telegram response contract. Add focused regression tests for any defects found, run CI, then update this checklist with the exact commit and result.
+1. [ ] Review remaining join/leave session lifecycle and cancellation/rollback edge cases; add focused regression tests, run CI, then record the exact commit and result.
 
 ## Later tasks
 
