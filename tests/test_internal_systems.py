@@ -108,6 +108,11 @@ class TestStreamHandler:
     @pytest.fixture
     def mock_caller(self):
         caller = Mock()
+        caller.play = AsyncMock(return_value=True)
+        caller.stop_stream = AsyncMock(return_value=True)
+        caller.pause = AsyncMock(return_value=True)
+        caller.resume = AsyncMock(return_value=True)
+        caller.seek = AsyncMock(return_value=True)
         caller._emit_event = AsyncMock()
         caller._logger = Mock()
         return caller
