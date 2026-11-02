@@ -4,8 +4,10 @@ Microphone Capture - Real-time microphone input
 
 import asyncio
 import logging
-import numpy as np
-from typing import Optional, Callable
+from typing import Optional, Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
 try:
     import pyaudio
 except ImportError:
@@ -157,6 +159,7 @@ class MicrophoneStreamer:
         self.chat_id = chat_id
         self.mic_capture = None
         self.is_streaming = False
+        self._loop = None
     
     async def start_streaming(
         self, 
@@ -165,12 +168,18 @@ class MicrophoneStreamer:
     ) -> bool:
         """Start streaming microphone to call"""
         try:
+            config = audio_config or AudioConfig()
+            if config.sample_rate != 48000 or config.channels != 2 or config.codec.lower() != "opus":
+                raise ValueError(
+                    "Microphone streaming currently requires 48 kHz stereo Opus audio"
+                )
+            self._loop = asyncio.get_running_loop()
             # Join call if not already joined
             if not self.caller.is_connected(self.chat_id):
                 await self.caller.join_call(self.chat_id, audio_config=audio_config)
             
             # Setup microphone capture
-            self.mic_capture = MicrophoneCapture(audio_config)
+            self.mic_capture = MicrophoneCapture(config)
             self.mic_capture.add_callback(self._stream_audio)
             
             # Start capture
