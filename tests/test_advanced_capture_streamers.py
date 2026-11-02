@@ -27,7 +27,7 @@ async def test_microphone_streamer_forwards_pcm_to_caller_loop():
     streamer.is_streaming = True
 
     streamer._stream_audio(_FakeAudioArray())
-    await asyncio.sleep(0)
+    await asyncio.sleep(0.01)
 
     caller.send_frame.assert_awaited_once_with(-100123, b"\x00\x00\x00\x00", "audio")
 
