@@ -123,11 +123,11 @@ class MicrophoneCapture:
                 except Exception as e:
                     self.logger.error(f"Error in audio callback: {e}")
             
-            return (in_data, pyaudio.paContinue)
+            return (None, pyaudio.paContinue)
             
         except Exception as e:
             self.logger.error(f"Error in audio callback: {e}")
-            return (in_data, pyaudio.paAbort)
+            return (None, pyaudio.paAbort)
     
     def list_devices(self) -> list:
         """List available audio devices"""
