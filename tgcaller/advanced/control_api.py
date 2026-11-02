@@ -161,7 +161,7 @@ class CustomAPIHandler:
             data = await request.json()
             chat_id = data.get('chat_id')
             
-            success = await self.caller.stop(chat_id)
+            success = await self.caller.stop_stream(chat_id)
             return web.json_response({'success': success})
             
         except Exception as e:
