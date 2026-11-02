@@ -2,6 +2,8 @@
 Screen Sharing - Capture and stream screen
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 from typing import Optional, Tuple
@@ -180,13 +182,6 @@ class ScreenShareStreamer:
         except Exception as e:
             logger.error(f"Error stopping screen streaming: {e}")
     
-    def _stream_frame(self, frame: np.ndarray):
-        """Stream frame to call"""
-        if self.is_streaming:
-            # This would send frame to the call
-            # Implementation depends on actual streaming protocol
-            pass
-
 
 class WindowCapture:
     """Capture specific application window"""
