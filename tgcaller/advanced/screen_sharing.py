@@ -165,27 +165,7 @@ class ScreenShareStreamer:
             "ScreenShareStreamer is capture-only for now: TgCaller media transport "
             "currently supports audio RTP, not video publishing."
         )
-        try:
-            # Join call if not already joined
-            if not self.caller.is_connected(self.chat_id):
-                await self.caller.join_call(self.chat_id, video_config=video_config)
-            
-            # Setup screen sharing
-            self.screen_share = ScreenShare(video_config)
-            self.screen_share.add_callback(self._stream_frame)
-            
-            # Start sharing
-            success = await self.screen_share.start_sharing(monitor_index, region)
-            if success:
-                self.is_streaming = True
-                logger.info(f"Started screen sharing to chat {self.chat_id}")
-            
-            return success
-            
-        except Exception as e:
-            logger.error(f"Failed to start screen streaming: {e}")
-            return False
-    
+
     async def stop_streaming(self):
         """Stop screen streaming"""
         try:
