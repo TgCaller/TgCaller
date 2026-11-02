@@ -186,6 +186,7 @@ class TgCaller:
                 ("cache manager", self._cache_manager.cleanup),
                 ("stream handler", self._stream_handler.cleanup_all),
                 ("call handler", self._call_handler.cleanup_all),
+                ("custom API server", self.stop_custom_api),
                 ("event handler", self._event_handler.cleanup),
             )
             for name, cleanup in cleanup_steps:
