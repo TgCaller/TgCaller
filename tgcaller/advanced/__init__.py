@@ -10,10 +10,12 @@ from importlib import import_module
 _EXPORTS = {
     "BridgedCallManager": ".bridged_calls",
     "MicrophoneCapture": ".capture_mic",
+    "MicrophoneStreamer": ".capture_mic",
     "CustomAPIHandler": ".control_api",
     "AudioFilters": ".custom_filters",
     "VideoFilters": ".custom_filters",
     "ScreenShare": ".screen_sharing",
+    "ScreenShareStreamer": ".screen_sharing",
     "WhisperTranscription": ".transcription",
     "YouTubeDownloader": ".youtube_dl",
     # Keep the documented legacy API available while the streaming
