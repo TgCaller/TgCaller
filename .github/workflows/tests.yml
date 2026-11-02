@@ -2,11 +2,12 @@ name: Tests
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, fix/tgcaller-repository-repair]
   push:
     branches:
       - main
       - fix/tgcaller-repository-repair
+      - audit/repository-layout-cleanup
       - repair/tgcaller-foundational
 
 permissions:
