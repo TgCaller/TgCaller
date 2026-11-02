@@ -73,3 +73,10 @@ def test_advanced_youtube_streaming_exports_resolve():
     assert AdvancedYouTubeStreamer is not None
     assert PerformanceMonitor is not None
     assert BufferPriority.HIGH.value == 3
+
+
+def test_readme_microphone_and_screen_streamer_imports_resolve():
+    from tgcaller.advanced import MicrophoneStreamer, ScreenShareStreamer
+
+    assert MicrophoneStreamer.__module__ == "tgcaller.advanced.capture_mic"
+    assert ScreenShareStreamer.__module__ == "tgcaller.advanced.screen_sharing"
