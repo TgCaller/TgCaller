@@ -4,7 +4,6 @@ Screen Sharing - Capture and stream screen
 
 import asyncio
 import logging
-import numpy as np
 from typing import Optional, Tuple
 try:
     import cv2
@@ -117,6 +116,7 @@ class ScreenShare:
         
         while self.is_sharing:
             try:
+                import numpy as np
                 # Capture screen
                 screenshot = self.sct.grab(self.monitor)
                 
@@ -160,7 +160,11 @@ class ScreenShareStreamer:
         monitor_index: int = 1,
         region: Optional[Tuple[int, int, int, int]] = None
     ) -> bool:
-        """Start streaming screen to call"""
+        """Reject video publishing until the media engine supports video RTP."""
+        raise NotImplementedError(
+            "ScreenShareStreamer is capture-only for now: TgCaller media transport "
+            "currently supports audio RTP, not video publishing."
+        )
         try:
             # Join call if not already joined
             if not self.caller.is_connected(self.chat_id):
@@ -238,6 +242,7 @@ class WindowCapture:
         """Capture specific window"""
         try:
             import pygetwindow as gw
+            import numpy as np
             
             windows = gw.getWindowsWithTitle(window_title)
             if not windows:
