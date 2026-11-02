@@ -19,8 +19,8 @@ class CallHandler:
     def __init__(self, caller):
         self.caller = caller
         self.call_participants: Dict[int, Dict[int, GroupCallParticipant]] = {}
-        self.muted_by_admin: Set[int] = {}
-        self.presentation_mode: Set[int] = {}
+        self.muted_by_admin: Set[int] = set()
+        self.presentation_mode: Set[int] = set()
         self.logger = logger
         
         # Call monitoring
