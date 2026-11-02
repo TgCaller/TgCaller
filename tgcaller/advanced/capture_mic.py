@@ -2,6 +2,8 @@
 Microphone Capture - Real-time microphone input
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 from typing import Optional, Callable, TYPE_CHECKING
@@ -106,6 +108,7 @@ class MicrophoneCapture:
     def _audio_callback(self, in_data, frame_count, time_info, status):
         """Audio stream callback"""
         try:
+            import numpy as np
             # Convert to numpy array
             audio_data = np.frombuffer(in_data, dtype=np.int16)
             
@@ -209,8 +212,29 @@ class MicrophoneStreamer:
             logger.error(f"Error stopping microphone streaming: {e}")
     
     def _stream_audio(self, audio_data: np.ndarray):
-        """Stream audio data to call"""
-        if self.is_streaming:
-            # This would send audio_data to the call
-            # Implementation depends on actual streaming protocol
-            pass
+        """Forward captured PCM to the caller loop without blocking PyAudio."""
+        if not self.is_streaming or self._loop is None or self._loop.is_closed():
+            return
+        try:
+            pcm_data = audio_data.astype("int16", copy=False).tobytes()
+            future = asyncio.run_coroutine_threadsafe(
+                self.caller.send_frame(self.chat_id, pcm_data, "audio"),
+                self._loop,
+            )
+
+            def report_result(done):
+                try:
+                    if not done.result():
+                        logger.warning(
+                            "TgCaller rejected microphone audio for chat %s", self.chat_id
+                        )
+                except Exception as exc:
+                    logger.error(
+                        "Microphone transport failed for chat %s: %s", self.chat_id, exc
+                    )
+
+            future.add_done_callback(report_result)
+        except Exception as exc:
+            logger.error(
+                "Could not enqueue microphone audio for chat %s: %s", self.chat_id, exc
+            )
