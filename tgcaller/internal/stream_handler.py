@@ -151,6 +151,12 @@ class StreamHandler:
         return self.streams[chat_id]['state'] == StreamState.PLAYING
     
     async def cleanup_all(self):
-        """Cleanup all streams"""
+        """Release stream bookkeeping after call transports have been shut down."""
         for chat_id in list(self.streams.keys()):
-            await self.stop_stream(chat_id)
+            try:
+                await self.stop_stream(chat_id)
+            except Exception as exc:
+                self.logger.error("Stream cleanup failed for chat %s: %s", chat_id, exc)
+        self.streams.clear()
+        self.stream_stats.clear()
+        self.frame_processors.clear()
