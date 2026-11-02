@@ -97,8 +97,11 @@ class CallHandler:
             else:
                 self.call_participants[chat_id][user_id] = participant
             
-            # Handle admin mute status
-            if participant.muted_by_admin:
+            # Track whether any cached participant is admin-muted.
+            if any(
+                item.muted_by_admin
+                for item in self.call_participants[chat_id].values()
+            ):
                 self.muted_by_admin.add(chat_id)
             else:
                 self.muted_by_admin.discard(chat_id)
@@ -156,33 +159,73 @@ class CallHandler:
                 await asyncio.sleep(self.monitor_interval)
     
     async def _check_call_health(self, chat_id: int):
-        """Check call health and connection status"""
+        """Check the real WebRTC media transport and report a lost connection."""
+        if chat_id not in self.caller._active_calls:
+            return
         try:
-            # In real implementation, this would:
-            # 1. Check WebRTC connection status
-            # 2. Verify media flow
-            # 3. Monitor latency and packet loss
-            # 4. Check signaling channel health
-            
-            pass
-            
-        except Exception as e:
-            self.logger.error(f"Call health check failed for chat {chat_id}: {e}")
-    
+            healthy = await self.caller._connection.is_healthy(chat_id)
+            if healthy:
+                return
+            session = self.caller._active_calls[chat_id]
+            if session.get("status") != CallStatus.ERROR:
+                session["status"] = CallStatus.ERROR
+                error = CallError(
+                    f"Telegram media transport for chat {chat_id} is not connected"
+                )
+                await self.caller._emit_event("error", error)
+        except Exception as exc:
+            self.logger.error("Call health check failed for chat %s: %s", chat_id, exc)
+
     async def _update_participants(self, chat_id: int):
-        """Update participant list"""
+        """Reconcile Telegram's current participant list with the local cache."""
+        if chat_id not in self.caller._active_calls:
+            return
         try:
-            # In real implementation, this would:
-            # 1. Query current participants from Telegram
-            # 2. Compare with cached participants
-            # 3. Emit events for changes
-            # 4. Update video/audio sources
-            
-            pass
-            
-        except Exception as e:
-            self.logger.error(f"Failed to update participants for chat {chat_id}: {e}")
-    
+            raw_participants = await self.caller.get_participants(chat_id)
+            current = {}
+            for raw in raw_participants or []:
+                peer = getattr(raw, "peer", None)
+                user_id = getattr(raw, "user_id", None)
+                if user_id is None:
+                    user_id = getattr(peer, "user_id", None)
+                if isinstance(user_id, bool) or not isinstance(user_id, int):
+                    continue
+
+                video = getattr(raw, "video", None)
+                presentation = getattr(raw, "presentation", None)
+                participant = GroupCallParticipant(
+                    user_id=user_id,
+                    muted=bool(getattr(raw, "muted", False)),
+                    muted_by_admin=bool(getattr(raw, "muted_by_admin", False)),
+                    video_camera=video is not None,
+                    screen_sharing=presentation is not None,
+                    joined_at=getattr(raw, "date", None),
+                    metadata={"source": getattr(raw, "source", None)},
+                )
+                current[user_id] = participant
+
+            previous = self.call_participants.get(chat_id, {})
+            for user_id, participant in current.items():
+                action = (
+                    ParticipantAction.JOINED
+                    if user_id not in previous
+                    else ParticipantAction.UPDATED
+                    if previous[user_id] != participant
+                    else None
+                )
+                if action is not None:
+                    await self.handle_participant_update(chat_id, participant, action)
+
+            for user_id, participant in list(previous.items()):
+                if user_id not in current:
+                    await self.handle_participant_update(
+                        chat_id, participant, ParticipantAction.LEFT
+                    )
+        except Exception as exc:
+            self.logger.error(
+                "Failed to update participants for chat %s: %s", chat_id, exc
+            )
+
     def get_participants(self, chat_id: int) -> Dict[int, GroupCallParticipant]:
         """Get current call participants"""
         return self.call_participants.get(chat_id, {})
