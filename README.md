@@ -181,15 +181,12 @@ mic_streamer = MicrophoneStreamer(caller, chat_id)
 await mic_streamer.start_streaming()
 ```
 
-### ** Screen Sharing**
-Share your screen in video calls:
+### **Screen Capture (local only)**
 
-```python
-from tgcaller.advanced import ScreenShareStreamer
-
-screen_streamer = ScreenShareStreamer(caller, chat_id)
-await screen_streamer.start_streaming(monitor_index=1)
-```
+The ScreenShare capture class can capture frames for application callbacks.
+Publishing those frames into a Telegram call is not supported by the current
+audio-only media transport; ScreenShareStreamer.start_streaming() raises
+NotImplementedError rather than claiming that a screen share started.
 
 ### ** YouTube Integration**
 Stream YouTube videos directly:
