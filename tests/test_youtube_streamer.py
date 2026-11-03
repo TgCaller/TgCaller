@@ -265,3 +265,95 @@ async def test_chunk_generator_drains_buffered_stdout_after_ffmpeg_exits(streame
     ]
 
     assert chunks == [b"12345678"]
+
+
+
+class LifecycleCaller(FakeCaller):
+    def __init__(self):
+        super().__init__()
+        self._active_calls = {-100123: {"status": youtube_streamer.CallStatus.CONNECTED}}
+        self.events = []
+
+    async def _emit_event(self, event_name, *args):
+        self.events.append((event_name, args))
+
+
+class FinishedBuffer:
+    def __init__(self):
+        self.consumer_task = None
+        self.stopped = False
+
+    async def stop_buffering(self):
+        self.stopped = True
+
+
+class FinishedProcess:
+    def __init__(self):
+        self.returncode = 0
+        self.stdout = type("Stdout", (), {"closed": False, "close": lambda self: None})()
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self):
+        return self.returncode
+
+
+@pytest.mark.asyncio
+async def test_natural_buffered_youtube_completion_cleans_state_and_emits_stream_end(monkeypatch):
+    monkeypatch.setattr(youtube_streamer, "yt_dlp", object())
+    caller = LifecycleCaller()
+    streamer = youtube_streamer.YouTubeStreamer(caller)
+    stream = youtube_streamer.MediaStream(source="https://youtube.com/watch?v=test")
+    caller._active_calls[-100123]["current_stream"] = stream
+    caller._active_calls[-100123]["status"] = youtube_streamer.CallStatus.PLAYING
+
+    async def already_finished():
+        return None
+
+    consumer = asyncio.create_task(already_finished())
+    await consumer
+    buffer = FinishedBuffer()
+    buffer.consumer_task = consumer
+    streamer.buffer = buffer
+    streamer.ffmpeg_process = FinishedProcess()
+    streamer.current_chat_id = -100123
+    streamer.is_streaming = True
+    streamer._managed_stream = stream
+    streamer._lifecycle_started = True
+
+    await streamer._watch_stream_completion(-100123, buffer)
+
+    assert streamer.is_streaming is False
+    assert streamer.buffer is None
+    assert streamer.ffmpeg_process is None
+    assert streamer.current_chat_id is None
+    assert buffer.stopped is True
+    assert "current_stream" not in caller._active_calls[-100123]
+    assert caller._active_calls[-100123]["status"] is youtube_streamer.CallStatus.CONNECTED
+    assert [event for event, _ in caller.events] == ["stream_end"]
+
+
+@pytest.mark.asyncio
+async def test_manual_buffered_youtube_stop_emits_stream_stopped_only(monkeypatch):
+    monkeypatch.setattr(youtube_streamer, "yt_dlp", object())
+    caller = LifecycleCaller()
+    streamer = youtube_streamer.YouTubeStreamer(caller)
+    stream = youtube_streamer.MediaStream(source="https://youtube.com/watch?v=test")
+    caller._active_calls[-100123]["current_stream"] = stream
+    caller._active_calls[-100123]["status"] = youtube_streamer.CallStatus.PLAYING
+    buffer = FinishedBuffer()
+    streamer.buffer = buffer
+    streamer.current_chat_id = -100123
+    streamer.is_streaming = True
+    streamer._managed_stream = stream
+    streamer._lifecycle_started = True
+
+    await streamer.stop_streaming()
+
+    assert streamer.is_streaming is False
+    assert streamer.buffer is None
+    assert streamer.current_chat_id is None
+    assert buffer.stopped is True
+    assert "current_stream" not in caller._active_calls[-100123]
+    assert [event for event, _ in caller.events] == ["stream_stopped"]
