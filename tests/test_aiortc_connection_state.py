@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from tgcaller.exceptions import ConnectionError
 from tgcaller.mtproto.engine.aiortc_engine import (
     AiortcTelegramMediaEngine,
     _Session,
@@ -90,3 +91,59 @@ async def test_wait_for_connection_state_rejects_invalid_states_and_timeout():
 def test_missing_session_is_reported_as_closed():
     engine = AiortcTelegramMediaEngine()
     assert engine.get_connection_state(999) == "closed"
+
+
+class _RecordingTrack:
+    def __init__(self):
+        self.frames = []
+
+    async def push(self, frame):
+        self.frames.append(frame)
+
+
+@pytest.mark.asyncio
+async def test_send_frame_waits_through_transient_disconnect_without_queueing_stale_audio():
+    engine = AiortcTelegramMediaEngine()
+    session = _session("disconnected")
+    session.track = _RecordingTrack()
+    engine._sessions[100] = session
+
+    send_task = asyncio.create_task(engine.send_frame(100, b"fresh-frame", "audio"))
+    await asyncio.sleep(0)
+    assert session.track.frames == []
+
+    session.pc.connectionState = "connected"
+    session.state_changed_event.set()
+
+    assert await asyncio.wait_for(send_task, timeout=1) is True
+    assert session.track.frames == [b"fresh-frame"]
+
+
+@pytest.mark.asyncio
+async def test_send_frame_aborts_when_transient_disconnect_becomes_failed():
+    engine = AiortcTelegramMediaEngine()
+    session = _session("disconnected")
+    session.track = _RecordingTrack()
+    engine._sessions[100] = session
+
+    send_task = asyncio.create_task(engine.send_frame(100, b"must-not-send", "audio"))
+    await asyncio.sleep(0)
+    session.pc.connectionState = "failed"
+    session.state_changed_event.set()
+
+    with pytest.raises(ConnectionError, match="state=failed"):
+        await asyncio.wait_for(send_task, timeout=1)
+    assert session.track.frames == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state", ["failed", "closed"])
+async def test_send_frame_fails_closed_for_terminal_transport_states(state):
+    engine = AiortcTelegramMediaEngine()
+    session = _session(state)
+    session.track = _RecordingTrack()
+    engine._sessions[100] = session
+
+    with pytest.raises(ConnectionError, match=f"state={state}"):
+        await engine.send_frame(100, b"must-not-send", "audio")
+    assert session.track.frames == []
