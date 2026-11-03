@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 from typing import Optional, Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -163,6 +164,8 @@ class MicrophoneStreamer:
         self.mic_capture = None
         self.is_streaming = False
         self._loop = None
+        self._pending_send = None
+        self._pending_send_lock = threading.Lock()
     
     async def start_streaming(
         self, 
@@ -201,6 +204,11 @@ class MicrophoneStreamer:
         """Stop microphone streaming"""
         try:
             self.is_streaming = False
+            with self._pending_send_lock:
+                pending_send = self._pending_send
+                self._pending_send = None
+            if pending_send is not None:
+                pending_send.cancel()
             
             if self.mic_capture:
                 await self.mic_capture.stop_capture()
@@ -217,12 +225,22 @@ class MicrophoneStreamer:
             return
         try:
             pcm_data = audio_data.astype("int16", copy=False).tobytes()
-            future = asyncio.run_coroutine_threadsafe(
-                self.caller.send_frame(self.chat_id, pcm_data, "audio"),
-                self._loop,
-            )
+            # Keep at most one send coroutine in flight. A real-time microphone
+            # must drop a stale frame under backpressure instead of building an
+            # unbounded queue of delayed audio in the event loop.
+            with self._pending_send_lock:
+                if self._pending_send is not None and not self._pending_send.done():
+                    return
+                future = asyncio.run_coroutine_threadsafe(
+                    self.caller.send_frame(self.chat_id, pcm_data, "audio"),
+                    self._loop,
+                )
+                self._pending_send = future
 
             def report_result(done):
+                with self._pending_send_lock:
+                    if self._pending_send is done:
+                        self._pending_send = None
                 try:
                     if not done.result():
                         logger.warning(
