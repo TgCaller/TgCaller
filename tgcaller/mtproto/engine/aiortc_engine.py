@@ -508,6 +508,12 @@ class AiortcTelegramMediaEngine:
         return session.source_id
 
     async def close(self, chat_id: int) -> None:
+        """Close a chat's media session after any in-flight source operation."""
+        async with self._stream_lock(chat_id):
+            await self._close_unlocked(chat_id)
+
+    async def _close_unlocked(self, chat_id: int) -> None:
+        """Close a chat's media session while its stream lock is held."""
         await self._stop_stream_unlocked(chat_id)
         session = self._sessions.pop(chat_id, None)
         if session is None:
