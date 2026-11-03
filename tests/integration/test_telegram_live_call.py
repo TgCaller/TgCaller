@@ -54,7 +54,7 @@ async def test_real_telegram_group_call_join_rtp_and_server_membership():
         assert await backend.is_healthy(chat_id) is True
 
         # Send paced 20 ms stereo s16le silence and require actual outbound RTP.
-        silence = b"\\x00" * 3840
+        silence = bytes(3840)
         deadline = asyncio.get_running_loop().time() + 10.0
         bytes_sent = 0
         while asyncio.get_running_loop().time() < deadline and bytes_sent == 0:
