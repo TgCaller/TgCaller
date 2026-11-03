@@ -4,6 +4,7 @@ This adapter requires a separately implemented Telegram-compatible media engine.
 It does not generate fake WebRTC parameters and cannot work with a generic
 aiortc peer connection unless that engine implements Telegram group-call negotiation.
 """
+import asyncio
 import inspect
 import json
 from typing import Any, Callable, Dict
@@ -98,6 +99,16 @@ class PyrogramGroupCallBackend:
         self.resolve_call = resolve_call
         self.media_engine = media_engine
         self._calls: Dict[int, Any] = {}
+        # Serialize join/leave transitions per chat. Telegram accepts only one
+        # active source per participant, so concurrent joins must not race.
+        self._call_locks: Dict[int, asyncio.Lock] = {}
+
+    def _call_lock(self, chat_id):
+        lock = self._call_locks.get(chat_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._call_locks[chat_id] = lock
+        return lock
 
     async def _rpc_types(self):
         try:
@@ -110,6 +121,12 @@ class PyrogramGroupCallBackend:
         return JoinGroupCall, LeaveGroupCall, GetGroupCall, DataJSON, InputPeerSelf
 
     async def connect_call(self, chat_id, audio_config=None, video_config=None):
+        async with self._call_lock(chat_id):
+            return await self._connect_call_unlocked(
+                chat_id, audio_config=audio_config, video_config=video_config
+            )
+
+    async def _connect_call_unlocked(self, chat_id, audio_config=None, video_config=None):
         if chat_id in self._calls:
             if await self.is_healthy(chat_id):
                 return True
@@ -202,6 +219,10 @@ class PyrogramGroupCallBackend:
             raise
 
     async def disconnect_call(self, chat_id):
+        async with self._call_lock(chat_id):
+            return await self._disconnect_call_unlocked(chat_id)
+
+    async def _disconnect_call_unlocked(self, chat_id):
         call = self._calls.get(chat_id)
         if call is None:
             # Local call state can be missing after a partial failure while the
