@@ -561,7 +561,7 @@ async def test_local_aiortc_peer_receives_encoded_pcm_over_opus_rtp():
             if stat.type == "inbound-rtp" and stat.kind == "audio"
         ]
         assert sent and sent[0].bytesSent > 0
-        assert received and received[0].bytesReceived > 0
+        # aiortc exposes packet counts (not bytesReceived) for inbound RTP stats.\n        assert received and received[0].packetsReceived > 0
     finally:
         await remote.close()
         await engine.close(chat_id)
