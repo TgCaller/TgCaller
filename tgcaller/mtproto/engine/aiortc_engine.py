@@ -635,9 +635,16 @@ class AiortcTelegramMediaEngine:
         return session.source_id
 
     async def close(self, chat_id: int) -> None:
-        """Close a chat's media session after any in-flight source operation."""
+        """Close a chat's media session and await transport-loss cleanup."""
         async with self._stream_lock(chat_id):
             await self._close_unlocked(chat_id)
+
+        # A connection-state callback may have scheduled stream cleanup just
+        # before close acquired the lock. Let that task observe the closed
+        # session and finish before close() returns. Never await ourselves.
+        cleanup_task = self._stream_cleanup_tasks.get(chat_id)
+        if cleanup_task is not None and cleanup_task is not asyncio.current_task():
+            await asyncio.gather(cleanup_task, return_exceptions=True)
 
     async def _close_unlocked(self, chat_id: int) -> None:
         """Close a chat's media session while its stream lock is held."""
