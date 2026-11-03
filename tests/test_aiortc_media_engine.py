@@ -730,6 +730,82 @@ async def test_bounded_audio_queue_drops_oldest_frame_when_consumer_is_slow():
     session.audio_receive_queue.task_done()
 
 
+@pytest.mark.asyncio
+async def test_multiple_remote_audio_tracks_share_dispatcher_without_frame_loss():
+    engine = AiortcTelegramMediaEngine(audio_receive_queue_size=8)
+    frames_a = [object(), object()]
+    frames_b = [object(), object()]
+    received = []
+
+    async def callback(chat_id, frame):
+        received.append((chat_id, frame))
+
+    engine.on_audio_frame = callback
+    session = SimpleNamespace(
+        audio_receive_stats={
+            "frames_received": 0,
+            "frames_delivered": 0,
+            "callback_errors": 0,
+            "callback_timeouts": 0,
+            "frames_dropped": 0,
+        },
+        audio_receive_queue=asyncio.Queue(maxsize=8),
+    )
+    engine._sessions[904] = session
+    dispatcher = asyncio.create_task(engine._dispatch_remote_audio(904, session))
+    await asyncio.gather(
+        engine._consume_remote_audio(904, _FiniteAudioTrack(frames_a)),
+        engine._consume_remote_audio(904, _FiniteAudioTrack(frames_b)),
+    )
+    await asyncio.wait_for(session.audio_receive_queue.join(), timeout=1)
+    dispatcher.cancel()
+    await asyncio.gather(dispatcher, return_exceptions=True)
+
+    assert len(received) == 4
+    assert {id(frame) for _, frame in received} == {
+        id(frame) for frame in frames_a + frames_b
+    }
+    assert session.audio_receive_stats["frames_received"] == 4
+    assert session.audio_receive_stats["frames_delivered"] == 4
+
+
+class _WaitingAudioTrack:
+    kind = "audio"
+
+    def __init__(self):
+        self.waiting = asyncio.Event()
+
+    async def recv(self):
+        self.waiting.set()
+        await asyncio.Event().wait()
+
+
+@pytest.mark.asyncio
+async def test_close_cancels_all_remote_audio_tasks_and_clears_queue():
+    engine = AiortcTelegramMediaEngine()
+    chat_id = 905
+    await engine.create_join_payload(chat_id)
+    session = engine._sessions[chat_id]
+    session.audio_receive_queue.put_nowait(object())
+
+    tracks = [_WaitingAudioTrack(), _WaitingAudioTrack()]
+    tasks = [
+        asyncio.create_task(engine._consume_remote_audio(chat_id, track))
+        for track in tracks
+    ]
+    dispatcher = asyncio.create_task(
+        engine._dispatch_remote_audio(chat_id, session)
+    )
+    session.remote_audio_tasks.extend([*tasks, dispatcher])
+    await asyncio.gather(*(track.waiting.wait() for track in tracks))
+
+    await asyncio.wait_for(engine.close(chat_id), timeout=2)
+
+    assert all(task.done() for task in [*tasks, dispatcher])
+    assert session.audio_receive_queue.empty()
+    assert session.state == "closed"
+
+
 def test_audio_receive_stats_return_zeroes_for_missing_session():
     engine = AiortcTelegramMediaEngine()
     assert engine.get_audio_receive_stats(902) == {
