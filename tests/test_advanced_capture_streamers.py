@@ -33,6 +33,38 @@ async def test_microphone_streamer_forwards_pcm_to_caller_loop():
 
 
 @pytest.mark.asyncio
+async def test_microphone_streamer_bounds_in_flight_audio_sends():
+    caller = Mock()
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def slow_send(*_args):
+        started.set()
+        await release.wait()
+        return True
+
+    caller.send_frame = AsyncMock(side_effect=slow_send)
+    streamer = MicrophoneStreamer(caller, -100123)
+    streamer._loop = asyncio.get_running_loop()
+    streamer.is_streaming = True
+
+    streamer._stream_audio(_FakeAudioArray())
+    await asyncio.wait_for(started.wait(), timeout=1.0)
+    streamer._stream_audio(_FakeAudioArray())
+    await asyncio.sleep(0.01)
+
+    assert caller.send_frame.await_count == 1
+
+    release.set()
+    await asyncio.sleep(0.01)
+    streamer._stream_audio(_FakeAudioArray())
+    await asyncio.sleep(0.01)
+
+    assert caller.send_frame.await_count == 2
+    await streamer.stop_streaming()
+
+
+@pytest.mark.asyncio
 async def test_screen_share_streamer_fails_closed_until_video_transport_exists():
     streamer = ScreenShareStreamer(Mock(), -100123)
 
