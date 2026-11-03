@@ -815,3 +815,26 @@ def test_audio_receive_stats_return_zeroes_for_missing_session():
         "callback_timeouts": 0,
         "frames_dropped": 0,
     }
+
+
+@pytest.mark.asyncio
+async def test_stop_stream_returns_false_when_session_has_no_active_stream():
+    engine = AiortcTelegramMediaEngine()
+    await engine.create_join_payload(906)
+
+    assert await engine.stop_stream(906) is False
+
+    await engine.close(906)
+
+
+@pytest.mark.asyncio
+async def test_stop_stream_returns_true_when_managed_source_is_active():
+    engine = AiortcTelegramMediaEngine()
+    session = SimpleNamespace(track=_LifecycleTrack())
+    engine._sessions[907] = session
+    task = asyncio.create_task(asyncio.Event().wait())
+    engine._stream_tasks[907] = task
+
+    assert await engine.stop_stream(907) is True
+    assert task.done()
+    assert 907 not in engine._stream_tasks
