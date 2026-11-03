@@ -170,8 +170,9 @@ class TgCaller:
         """Stop TgCaller and attempt every cleanup step, even if one fails."""
         if not self._is_connected:
             self._logger.warning("TgCaller is not running")
-            # The HTTP API can be started independently of the call service.
+            # API servers and plugins can be initialized before start().
             await self.stop_custom_api()
+            await self._plugin_manager.cleanup()
             return
 
         errors = []
