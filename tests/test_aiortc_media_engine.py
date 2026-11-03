@@ -488,3 +488,71 @@ async def test_real_ffmpeg_file_source_decodes_into_engine_pcm(tmp_path):
     assert len(decoded) >= 48_000 * 2 * 2 // 4
     assert any(decoded)
 
+
+
+@pytest.mark.asyncio
+async def test_local_aiortc_peer_receives_encoded_pcm_over_opus_rtp():
+    """Exercise the engine PCM track through real aiortc/Opus/RTP loopback."""
+    from aiortc import RTCPeerConnection, RTCSessionDescription
+
+    engine = AiortcTelegramMediaEngine(connect_timeout=5)
+    chat_id = 992
+    payload = await engine.create_join_payload(chat_id)
+    session = engine._sessions[chat_id]
+    remote = RTCPeerConnection()
+    received_tracks = asyncio.Queue()
+
+    @remote.on("track")
+    def on_track(track):
+        if track.kind == "audio":
+            received_tracks.put_nowait(track)
+
+    try:
+        offer = RTCSessionDescription(sdp=session.local_offer_sdp, type="offer")
+        await remote.setRemoteDescription(offer)
+        answer = await remote.createAnswer()
+        await remote.setLocalDescription(answer)
+        await session.pc.setRemoteDescription(
+            RTCSessionDescription(
+                sdp=remote.localDescription.sdp,
+                type=remote.localDescription.type,
+            )
+        )
+
+        await asyncio.wait_for(
+            asyncio.gather(
+                engine.wait_for_connection_state(chat_id, "connected", timeout=5),
+                _wait_for_peer_connected(remote, timeout=5),
+            ),
+            timeout=6,
+        )
+        inbound = await asyncio.wait_for(received_tracks.get(), timeout=2)
+
+        # Non-silent samples prove that the encoded RTP payload carries source
+        # audio, rather than merely establishing ICE/DTLS successfully.
+        pcm = b"".join(
+            int(8_000 * math.sin(2 * math.pi * 440 * index / 48_000)).to_bytes(
+                2, "little", signed=True
+            ) * 2
+            for index in range(960)
+        )
+        await engine.send_frame(chat_id, pcm, "audio")
+        decoded = await asyncio.wait_for(inbound.recv(), timeout=3)
+        assert decoded.samples > 0
+        assert decoded.sample_rate == 48_000
+        assert any(bytes(plane) for plane in decoded.planes)
+        assert payload["ssrc"] == session.source_id
+    finally:
+        await remote.close()
+        await engine.close(chat_id)
+
+
+async def _wait_for_peer_connected(peer, timeout):
+    async def wait():
+        while peer.connectionState != "connected":
+            if peer.connectionState in {"failed", "closed"}:
+                raise AssertionError(
+                    f"Local RTP loopback peer entered {peer.connectionState}"
+                )
+            await asyncio.sleep(0.01)
+    await asyncio.wait_for(wait(), timeout=timeout)
