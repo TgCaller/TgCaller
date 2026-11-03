@@ -469,6 +469,15 @@ class TgCaller:
         """Get Pyrogram client instance"""
         return self._client
     
+    def get_audio_receive_stats(self, chat_id: int) -> Dict[str, int]:
+        """Return a snapshot of local incoming-audio receive counters.
+
+        These counters describe local decoded frames and callback dispatch;
+        they are not a Telegram server-side delivery or quality guarantee.
+        Custom transports may return an empty mapping when unsupported.
+        """
+        return self._connection.get_audio_receive_stats(chat_id)
+
     def get_active_calls(self) -> List[int]:
         """
         Get list of active call chat IDs
