@@ -1077,3 +1077,79 @@ async def test_unhealthy_connection_does_not_duplicate_join_when_telegram_still_
     assert isinstance(client.requests[0], CheckGroupCall)
     assert client.requests[0].kwargs == {"call": backend._calls[-100123], "sources": [123]}
     assert -100123 in backend._calls
+
+@pytest.mark.asyncio
+async def test_concurrent_connect_call_requests_are_serialized():
+    import asyncio
+
+    backend = PyrogramGroupCallBackend(
+        object(), lambda chat_id: None, media_engine=object()
+    )
+    first_entered = asyncio.Event()
+    release_first = asyncio.Event()
+    active = 0
+    max_active = 0
+    calls = 0
+
+    async def connect_unlocked(chat_id, audio_config=None, video_config=None):
+        nonlocal active, max_active, calls
+        calls += 1
+        active += 1
+        max_active = max(max_active, active)
+        if calls == 1:
+            first_entered.set()
+            await release_first.wait()
+        active -= 1
+        return True
+
+    backend._connect_call_unlocked = connect_unlocked
+    first = asyncio.create_task(backend.connect_call(-100123))
+    await asyncio.wait_for(first_entered.wait(), timeout=1)
+    second = asyncio.create_task(backend.connect_call(-100123))
+    await asyncio.sleep(0)
+
+    assert calls == 1
+    release_first.set()
+    assert await asyncio.wait_for(first, timeout=1) is True
+    assert await asyncio.wait_for(second, timeout=1) is True
+    assert calls == 2
+    assert max_active == 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_disconnect_call_requests_are_serialized():
+    import asyncio
+
+    backend = PyrogramGroupCallBackend(
+        object(), lambda chat_id: None, media_engine=object()
+    )
+    first_entered = asyncio.Event()
+    release_first = asyncio.Event()
+    active = 0
+    max_active = 0
+    calls = 0
+
+    async def disconnect_unlocked(chat_id):
+        nonlocal active, max_active, calls
+        calls += 1
+        active += 1
+        max_active = max(max_active, active)
+        if calls == 1:
+            first_entered.set()
+            await release_first.wait()
+        active -= 1
+        return True
+
+    backend._disconnect_call_unlocked = disconnect_unlocked
+    first = asyncio.create_task(backend.disconnect_call(-100123))
+    await asyncio.wait_for(first_entered.wait(), timeout=1)
+    second = asyncio.create_task(backend.disconnect_call(-100123))
+    await asyncio.sleep(0)
+
+    assert calls == 1
+    release_first.set()
+    assert await asyncio.wait_for(first, timeout=1) is True
+    assert await asyncio.wait_for(second, timeout=1) is True
+    assert calls == 2
+    assert max_active == 1
+
