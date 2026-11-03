@@ -565,17 +565,36 @@ class AiortcTelegramMediaEngine:
             raise ConnectionError("FFmpeg produced a partial stereo PCM sample frame")
         return bytes(data)
 
+    @staticmethod
+    def _close_process_stdout(process: Any) -> None:
+        """Close the subprocess stdout pipe transport after its producer stops.
+
+        asyncio.subprocess.Process has no public stdout-close method. Its
+        subprocess transport owns the pipe transport; closing that descriptor
+        releases the reader even when playback was cancelled before EOF.
+        """
+        transport = getattr(process, "_transport", None)
+        get_pipe_transport = getattr(transport, "get_pipe_transport", None)
+        if get_pipe_transport is None:
+            return
+        pipe_transport = get_pipe_transport(1)
+        if pipe_transport is not None:
+            pipe_transport.close()
+
     async def _stop_process(self, process: Any) -> None:
-        """Terminate and reap an FFmpeg subprocess without leaking it."""
-        if process.returncode is None:
-            process.terminate()
-            try:
-                await asyncio.wait_for(process.wait(), timeout=3.0)
-            except asyncio.TimeoutError:
-                process.kill()
+        """Terminate, reap, and release an FFmpeg subprocess stdout pipe."""
+        try:
+            if process.returncode is None:
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=3.0)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+            else:
                 await process.wait()
-        else:
-            await process.wait()
+        finally:
+            self._close_process_stdout(process)
 
     async def _pump_ffmpeg_process(self, chat_id: int, process: Any) -> None:
         """Feed FFmpeg PCM output into the paced audio track until EOF."""
