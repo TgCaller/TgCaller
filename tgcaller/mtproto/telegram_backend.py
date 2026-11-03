@@ -299,6 +299,14 @@ class PyrogramGroupCallBackend:
             pass
         return False
 
+    def get_audio_receive_stats(self, chat_id):
+        """Return local decoded-audio dispatch counters for a call."""
+        getter = getattr(self.media_engine, "get_audio_receive_stats", None)
+        if not callable(getter):
+            return {}
+        result = getter(chat_id)
+        return dict(result) if isinstance(result, dict) else {}
+
     async def get_participants(self, chat_id):
         call = self._calls.get(chat_id)
         if call is None:
