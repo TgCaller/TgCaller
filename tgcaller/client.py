@@ -72,6 +72,7 @@ class TgCaller:
             )
 
             media_engine = AiortcTelegramMediaEngine()
+            media_engine.on_stream_end = self._handle_media_stream_end
             connection_backend = PyrogramGroupCallBackend(
                 client=client,
                 resolve_call=lambda chat_id: resolve_active_group_call(client, chat_id),
@@ -119,6 +120,29 @@ class TgCaller:
         # Connection state
         self._is_connected = False
         
+    async def _handle_media_stream_end(
+        self, chat_id: int, error: Optional[Exception] = None
+    ) -> None:
+        """Reconcile client state when the media engine finishes a stream."""
+        # Let StreamMethods.play() finish storing current_stream after the
+        # transport's background task is scheduled, including very short files.
+        await asyncio.sleep(0)
+        call_session = self._active_calls.get(chat_id)
+        if call_session is None or "current_stream" not in call_session:
+            return
+
+        call_session["status"] = CallStatus.CONNECTED
+        call_session.pop("current_stream", None)
+        message = "Stream ended" if error is None else f"Stream failed: {error}"
+        update = CallUpdate(
+            chat_id=chat_id,
+            status=CallStatus.CONNECTED,
+            message=message,
+        )
+        if error is not None:
+            await self._emit_event("error", error)
+        await self._emit_event("stream_end", update)
+
     def _setup_methods(self):
         """Setup method mixins"""
         # Add call methods
