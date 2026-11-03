@@ -10,6 +10,7 @@ ready.
 """
 
 import asyncio
+import inspect
 import math
 import re
 from dataclasses import dataclass
@@ -256,6 +257,22 @@ class AiortcTelegramMediaEngine:
         self._sessions: Dict[int, _Session] = {}
         self._stream_tasks: Dict[int, asyncio.Task] = {}
         self._stream_processes: Dict[int, Any] = {}
+        # Optional callback installed by TgCaller to reconcile public stream state.
+        self.on_stream_end = None
+
+    async def _notify_stream_end(self, chat_id: int, error: Optional[Exception] = None) -> None:
+        callback = self.on_stream_end
+        if callback is None:
+            return
+        try:
+            result = callback(chat_id, error)
+            if inspect.isawaitable(result):
+                await result
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Stream completion callback failed for chat %s", chat_id
+            )
 
     async def create_join_payload(
         self, chat_id: int, audio_config: Any = None, video_config: Any = None
@@ -436,6 +453,8 @@ class AiortcTelegramMediaEngine:
 
     async def _pump_ffmpeg_process(self, chat_id: int, process: Any) -> None:
         """Feed FFmpeg PCM output into the paced audio track until EOF."""
+        completed = False
+        failure = None
         try:
             while True:
                 chunk = await self._read_pcm_chunk(process)
@@ -445,10 +464,12 @@ class AiortcTelegramMediaEngine:
             return_code = await process.wait()
             if return_code != 0:
                 raise ConnectionError(f"FFmpeg audio process exited with status {return_code}")
+            completed = True
         except asyncio.CancelledError:
             raise
         except Exception as exc:
             # Playback already started; report late decode/transport errors clearly.
+            failure = exc
             import logging
             logging.getLogger(__name__).error("FFmpeg playback failed for chat %s: %s", chat_id, exc)
         finally:
@@ -462,6 +483,8 @@ class AiortcTelegramMediaEngine:
             current = asyncio.current_task()
             if self._stream_tasks.get(chat_id) is current:
                 self._stream_tasks.pop(chat_id, None)
+            if completed or failure is not None:
+                await self._notify_stream_end(chat_id, failure)
 
     async def _close_async_iterator(self, iterator: Any) -> None:
         """Close an async media source when it finishes or is stopped."""
@@ -474,12 +497,16 @@ class AiortcTelegramMediaEngine:
 
     async def _pump_async_iterable(self, chat_id: int, iterator: Any) -> None:
         """Deliver the remainder of an async source in a managed background task."""
+        completed = False
+        failure = None
         try:
             async for chunk in iterator:
                 await self.send_frame(chat_id, chunk, "audio")
+            completed = True
         except asyncio.CancelledError:
             raise
         except Exception as exc:
+            failure = exc
             import logging
             logging.getLogger(__name__).error(
                 "Async media playback failed for chat %s: %s", chat_id, exc
@@ -489,6 +516,8 @@ class AiortcTelegramMediaEngine:
             current = asyncio.current_task()
             if self._stream_tasks.get(chat_id) is current:
                 self._stream_tasks.pop(chat_id, None)
+            if completed or failure is not None:
+                await self._notify_stream_end(chat_id, failure)
 
     async def play_stream(self, chat_id: int, stream: Any) -> bool:
         if isinstance(stream, bytes):
