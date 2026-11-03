@@ -205,7 +205,7 @@ async def test_stream_mode_fails_closed_and_closes_prepared_session():
 @pytest.mark.asyncio
 async def test_pcm_track_queue_full_fails_after_configured_timeout():
     track = _PCMTrack(queue_size=1, push_timeout=0.01)
-    frame = b"\\x00" * 3840
+    frame = bytes(3840)
 
     await track.push(frame)
     with pytest.raises(ConnectionError, match="queue remained full"):
@@ -218,7 +218,7 @@ async def test_pcm_track_queue_full_fails_after_configured_timeout():
 @pytest.mark.asyncio
 async def test_pcm_track_blocked_push_can_be_cancelled_without_adding_a_frame():
     track = _PCMTrack(queue_size=1, push_timeout=1.0)
-    frame = b"\\x00" * 3840
+    frame = bytes(3840)
 
     await track.push(frame)
     pending = asyncio.create_task(track.push(frame))
