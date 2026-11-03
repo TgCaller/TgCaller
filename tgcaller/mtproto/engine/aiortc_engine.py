@@ -254,6 +254,12 @@ class _Session:
     connected_event: asyncio.Event
     state_changed_event: asyncio.Event
     remote_audio_tasks: List[asyncio.Task] = field(default_factory=list)
+    audio_receive_stats: Dict[str, int] = field(default_factory=lambda: {
+        "frames_received": 0,
+        "frames_delivered": 0,
+        "callback_errors": 0,
+        "callback_timeouts": 0,
+    })
     state: str = "preparing"
 
 
@@ -302,6 +308,9 @@ class AiortcTelegramMediaEngine:
         try:
             while True:
                 frame = await track.recv()
+                session = self._sessions.get(chat_id)
+                if session is not None:
+                    session.audio_receive_stats["frames_received"] += 1
                 callback = self.on_audio_frame
                 if callback is not None:
                     try:
@@ -311,6 +320,8 @@ class AiortcTelegramMediaEngine:
                                 result, timeout=self.audio_callback_timeout
                             )
                     except asyncio.TimeoutError:
+                        if session is not None:
+                            session.audio_receive_stats["callback_timeouts"] += 1
                         import logging
                         logging.getLogger(__name__).warning(
                             "Remote audio callback timed out for chat %s after %.3fs",
@@ -318,12 +329,21 @@ class AiortcTelegramMediaEngine:
                             self.audio_callback_timeout,
                         )
                     except Exception:
+                        if session is not None:
+                            session.audio_receive_stats["callback_errors"] += 1
                         # A consumer callback is application code. Its failure
                         # must not terminate the WebRTC track receive loop.
                         import logging
                         logging.getLogger(__name__).exception(
                             "Remote audio callback failed for chat %s", chat_id
                         )
+                    else:
+                        if session is not None:
+                            session.audio_receive_stats["frames_delivered"] += 1
+                elif session is not None:
+                    # No application callback is installed; received frames
+                    # are intentionally not counted as delivered.
+                    pass
         except MediaStreamError:
             return
         except asyncio.CancelledError:
@@ -521,6 +541,18 @@ class AiortcTelegramMediaEngine:
         if session is None:
             return "closed"
         return session.pc.connectionState
+
+    def get_audio_receive_stats(self, chat_id: int) -> Dict[str, int]:
+        """Return a snapshot of incoming decoded-audio callback counters."""
+        session = self._sessions.get(chat_id)
+        if session is None:
+            return {
+                "frames_received": 0,
+                "frames_delivered": 0,
+                "callback_errors": 0,
+                "callback_timeouts": 0,
+            }
+        return dict(session.audio_receive_stats)
 
     async def wait_for_connection_state(
         self, chat_id: int, states, timeout: Optional[float] = None
