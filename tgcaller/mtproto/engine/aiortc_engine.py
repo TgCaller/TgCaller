@@ -623,6 +623,10 @@ class AiortcTelegramMediaEngine:
                     await self._stop_process(process)
                 except Exception:
                     pass
+            else:
+                # Natural EOF has already reaped the child, but explicitly
+                # release the pipe transport as well.
+                self._close_process_stdout(process)
             if self._stream_processes.get(chat_id) is process:
                 self._stream_processes.pop(chat_id, None)
             current = asyncio.current_task()
