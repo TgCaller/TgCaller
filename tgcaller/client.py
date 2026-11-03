@@ -73,6 +73,7 @@ class TgCaller:
 
             media_engine = AiortcTelegramMediaEngine()
             media_engine.on_stream_end = self._handle_media_stream_end
+            media_engine.on_audio_frame = self._handle_media_audio_frame
             connection_backend = PyrogramGroupCallBackend(
                 client=client,
                 resolve_call=lambda chat_id: resolve_active_group_call(client, chat_id),
@@ -93,6 +94,7 @@ class TgCaller:
             'call_left': [],
             'kicked': [],
             'error': [],
+            'audio_frame': [],
         }
         
         # Setup logging
@@ -120,6 +122,10 @@ class TgCaller:
         # Connection state
         self._is_connected = False
         
+    async def _handle_media_audio_frame(self, chat_id: int, frame: Any) -> None:
+        """Forward decoded incoming call audio to registered application handlers."""
+        await self._emit_event('audio_frame', chat_id, frame)
+
     async def _handle_media_stream_end(
         self, chat_id: int, error: Optional[Exception] = None
     ) -> None:
@@ -252,6 +258,13 @@ class TgCaller:
             return f
         return decorator(func) if func else decorator
     
+    def on_audio_frame(self, func: Callable = None):
+        """Decorator for decoded incoming audio frames: (client, chat_id, frame)."""
+        def decorator(f):
+            self._add_handler('audio_frame', f)
+            return f
+        return decorator(func) if func else decorator
+
     def on_stream_start(self, func: Callable = None):
         """Decorator for stream start events"""
         def decorator(f):
