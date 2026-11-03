@@ -136,77 +136,62 @@ class WhisperTranscription:
             self.logger.error("Error adding audio data: %s", exc)
 
     async def _transcription_loop(self):
-        """Main transcription loop"""
+        """Transcribe rolling windows of externally supplied decoded audio."""
+        import numpy as np
         while self.is_transcribing:
             try:
-                if len(self.audio_buffer) < self.sample_rate:  # At least 1 second
-                    await asyncio.sleep(0.5)
+                if len(self.audio_buffer) < self.sample_rate:
+                    await asyncio.sleep(0.25)
                     continue
-                
-                # Get audio chunk
-                audio_chunk = np.array(self.audio_buffer[-int(self.buffer_duration * self.sample_rate):])
-                
-                # Normalize audio
-                if np.max(np.abs(audio_chunk)) > 0:
-                    audio_chunk = audio_chunk / np.max(np.abs(audio_chunk))
-                
-                # Transcribe in thread
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(
-                    None,
-                    self._transcribe_chunk,
-                    audio_chunk
+                audio_chunk = np.asarray(
+                    self.audio_buffer[-int(self.buffer_duration * self.sample_rate):],
+                    dtype=np.float32,
                 )
-                
-                if result and result['text'].strip():
-                    # Call callbacks
-                    for callback in self.callbacks:
+                peak = float(np.max(np.abs(audio_chunk))) if audio_chunk.size else 0.0
+                if peak > 0:
+                    audio_chunk = audio_chunk / peak
+                loop = asyncio.get_running_loop()
+                result = await loop.run_in_executor(None, self._transcribe_chunk, audio_chunk)
+                if result and result["text"].strip():
+                    for callback in list(self.callbacks):
                         try:
-                            callback(result)
-                        except Exception as e:
-                            self.logger.error(f"Error in transcription callback: {e}")
-                
-                await asyncio.sleep(1.0)  # Transcribe every second
-                
-            except Exception as e:
-                self.logger.error(f"Error in transcription loop: {e}")
+                            callback_result = callback(result)
+                            if inspect.isawaitable(callback_result):
+                                await callback_result
+                        except Exception as exc:
+                            self.logger.error("Error in transcription callback: %s", exc)
                 await asyncio.sleep(1.0)
-    
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                self.logger.error("Error in transcription loop: %s", exc)
+                await asyncio.sleep(1.0)
+
     def _transcribe_chunk(self, audio_chunk: np.ndarray) -> Optional[Dict[str, Any]]:
-        """Transcribe audio chunk"""
+        """Transcribe one normalized 16 kHz mono audio chunk."""
         try:
-            # Create temporary file
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+            import numpy as np
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
                 temp_path = temp_file.name
-            
-            # Save audio to temporary file
             import soundfile as sf
-            sf.write(temp_path, audio_chunk, self.sample_rate)
-            
+            sf.write(temp_path, np.asarray(audio_chunk, dtype=np.float32), self.sample_rate)
             try:
-                # Transcribe
                 result = self.model.transcribe(
-                    temp_path,
-                    language=self.language,
-                    fp16=False
+                    temp_path, language=self.language, fp16=False
                 )
-                
                 return {
-                    'text': result['text'],
-                    'language': result['language'],
-                    'segments': result.get('segments', []),
-                    'confidence': self._calculate_confidence(result)
+                    "text": result["text"],
+                    "language": result["language"],
+                    "segments": result.get("segments", []),
+                    "confidence": self._calculate_confidence(result),
                 }
-                
             finally:
-                # Clean up temporary file
                 if os.path.exists(temp_path):
                     os.unlink(temp_path)
-                    
-        except Exception as e:
-            self.logger.error(f"Error transcribing chunk: {e}")
+        except Exception as exc:
+            self.logger.error("Error transcribing chunk: %s", exc)
             return None
-    
+
     def _calculate_confidence(self, result: Dict[str, Any]) -> float:
         """Calculate average confidence from segments"""
         try:
@@ -306,10 +291,12 @@ class TranscriptionManager:
             self.logger.error(f"Error stopping transcription for chat {chat_id}: {e}")
             return False
     
-    def add_audio_for_transcription(self, chat_id: int, audio_data: np.ndarray):
-        """Add audio data for transcription"""
+    def add_audio_for_transcription(
+        self, chat_id: int, audio_data: np.ndarray, sample_rate: int = 16000
+    ):
+        """Feed decoded audio into an active call transcriber."""
         if chat_id in self.transcribers:
-            self.transcribers[chat_id].add_audio_data(audio_data)
+            self.transcribers[chat_id].add_audio_data(audio_data, sample_rate)
     
     def _handle_transcription(self, chat_id: int, result: Dict[str, Any]):
         """Handle transcription result"""
