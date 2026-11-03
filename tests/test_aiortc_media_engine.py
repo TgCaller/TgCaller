@@ -543,6 +543,25 @@ async def test_local_aiortc_peer_receives_encoded_pcm_over_opus_rtp():
         assert decoded.sample_rate == 48_000
         assert any(bytes(plane) for plane in decoded.planes)
         assert payload["ssrc"] == session.source_id
+
+        # Confirm that both ends accounted for actual RTP media bytes. This
+        # catches a connection that reaches ICE/DTLS but never sends audio.
+        sender = next(
+            sender for sender in session.pc.getSenders()
+            if sender.track is session.track
+        )
+        outbound_stats = await sender.getStats()
+        inbound_stats = await inbound.getStats()
+        sent = [
+            stat for stat in outbound_stats.values()
+            if stat.type == "outbound-rtp" and stat.kind == "audio"
+        ]
+        received = [
+            stat for stat in inbound_stats.values()
+            if stat.type == "inbound-rtp" and stat.kind == "audio"
+        ]
+        assert sent and sent[0].bytesSent > 0
+        assert received and received[0].bytesReceived > 0
     finally:
         await remote.close()
         await engine.close(chat_id)
