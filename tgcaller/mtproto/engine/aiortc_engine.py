@@ -13,7 +13,7 @@ import asyncio
 import inspect
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from typing import Any, Dict, List, Optional
 from pathlib import Path
@@ -253,7 +253,7 @@ class _Session:
     local_offer_sdp: str
     connected_event: asyncio.Event
     state_changed_event: asyncio.Event
-    remote_audio_tasks: List[asyncio.Task]
+    remote_audio_tasks: List[asyncio.Task] = field(default_factory=list)
     state: str = "preparing"
 
 
