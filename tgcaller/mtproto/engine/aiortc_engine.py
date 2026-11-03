@@ -270,6 +270,7 @@ class AiortcTelegramMediaEngine:
         connect_timeout: float = 20.0,
         queue_size: int = 10,
         queue_put_timeout: float = 1.0,
+        audio_callback_timeout: float = 0.25,
     ):
         if connect_timeout <= 0:
             raise ValueError("connect_timeout must be positive")
@@ -277,9 +278,12 @@ class AiortcTelegramMediaEngine:
             raise ValueError("queue_size must be at least 1")
         if queue_put_timeout <= 0:
             raise ValueError("queue_put_timeout must be positive")
+        if audio_callback_timeout <= 0:
+            raise ValueError("audio_callback_timeout must be positive")
         self.connect_timeout = float(connect_timeout)
         self.queue_size = int(queue_size)
         self.queue_put_timeout = float(queue_put_timeout)
+        self.audio_callback_timeout = float(audio_callback_timeout)
         self._sessions: Dict[int, _Session] = {}
         self._stream_tasks: Dict[int, asyncio.Task] = {}
         self._stream_processes: Dict[int, Any] = {}
@@ -300,9 +304,26 @@ class AiortcTelegramMediaEngine:
                 frame = await track.recv()
                 callback = self.on_audio_frame
                 if callback is not None:
-                    result = callback(chat_id, frame)
-                    if inspect.isawaitable(result):
-                        await result
+                    try:
+                        result = callback(chat_id, frame)
+                        if inspect.isawaitable(result):
+                            await asyncio.wait_for(
+                                result, timeout=self.audio_callback_timeout
+                            )
+                    except asyncio.TimeoutError:
+                        import logging
+                        logging.getLogger(__name__).warning(
+                            "Remote audio callback timed out for chat %s after %.3fs",
+                            chat_id,
+                            self.audio_callback_timeout,
+                        )
+                    except Exception:
+                        # A consumer callback is application code. Its failure
+                        # must not terminate the WebRTC track receive loop.
+                        import logging
+                        logging.getLogger(__name__).exception(
+                            "Remote audio callback failed for chat %s", chat_id
+                        )
         except MediaStreamError:
             return
         except asyncio.CancelledError:
