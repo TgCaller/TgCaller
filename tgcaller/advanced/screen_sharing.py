@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import inspect
 from typing import Optional, Tuple
 try:
     import cv2
@@ -32,6 +33,7 @@ class ScreenShare:
         self.callbacks = []
         self.logger = logger
         self.monitor = None
+        self._capture_task: Optional[asyncio.Task] = None
     
     def add_callback(self, callback):
         """Add callback for screen frames"""
@@ -97,7 +99,7 @@ class ScreenShare:
             self.is_sharing = True
             
             # Start capture loop
-            asyncio.create_task(self._capture_loop())
+            self._capture_task = asyncio.create_task(self._capture_loop())
             
             self.logger.info(f"Screen sharing started on monitor {monitor_index}")
             return True
@@ -107,10 +109,17 @@ class ScreenShare:
             return False
     
     async def stop_sharing(self):
-        """Stop screen sharing"""
+        """Stop and await the local screen-capture worker."""
         self.is_sharing = False
+        task = self._capture_task
+        self._capture_task = None
+        if task is not None and task is not asyncio.current_task() and not task.done():
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
         self.logger.info("Screen sharing stopped")
-    
+
     async def _capture_loop(self):
         """Main capture loop"""
         fps = self.video_config.fps
@@ -134,14 +143,18 @@ class ScreenShare:
                     frame = cv2.resize(frame, target_size)
                 
                 # Call callbacks
-                for callback in self.callbacks:
+                for callback in list(self.callbacks):
                     try:
-                        callback(frame)
+                        result = callback(frame)
+                        if inspect.isawaitable(result):
+                            await result
                     except Exception as e:
                         self.logger.error(f"Error in screen share callback: {e}")
                 
                 await asyncio.sleep(frame_delay)
                 
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
                 self.logger.error(f"Error in screen capture: {e}")
                 await asyncio.sleep(1)
