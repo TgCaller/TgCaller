@@ -216,14 +216,22 @@ youtube = YouTubeStreamer(caller)
 await youtube.play_youtube_url(chat_id, "https://youtube.com/watch?v=...")
 ```
 
-### ** Speech Transcription**
-Real-time speech-to-text with Whisper:
+### **Speech Transcription (audio input required)**
+
+Whisper transcription runs on decoded audio supplied by your application. Starting
+the worker does not automatically tap a Telegram call: your media receive pipeline
+must pass mono/stereo PCM samples to `add_audio_data(samples, sample_rate=48000)`.
+The call-to-transcriber audio tap is not integrated yet.
 
 ```python
 from tgcaller.advanced import WhisperTranscription
 
 transcriber = WhisperTranscription("base")
 await transcriber.start_transcription()
+# Feed decoded PCM from your own receive pipeline:
+# transcriber.add_audio_data(pcm_samples, sample_rate=48000)
+# ...
+await transcriber.stop_transcription()
 ```
 
 ### ** Audio/Video Filters**
