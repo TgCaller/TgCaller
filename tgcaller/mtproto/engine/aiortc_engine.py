@@ -253,6 +253,7 @@ class _Session:
     local_offer_sdp: str
     connected_event: asyncio.Event
     state_changed_event: asyncio.Event
+    remote_audio_tasks: List[asyncio.Task]
     state: str = "preparing"
 
 
@@ -287,6 +288,30 @@ class AiortcTelegramMediaEngine:
         self._stream_locks: Dict[int, asyncio.Lock] = {}
         # Optional callback installed by TgCaller to reconcile public stream state.
         self.on_stream_end = None
+        # Optional sync/async callback: (chat_id, decoded aiortc AudioFrame).
+        self.on_audio_frame = None
+
+    async def _consume_remote_audio(
+        self, chat_id: int, track: MediaStreamTrack
+    ) -> None:
+        """Drain decoded remote audio and forward frames to the application."""
+        try:
+            while True:
+                frame = await track.recv()
+                callback = self.on_audio_frame
+                if callback is not None:
+                    result = callback(chat_id, frame)
+                    if inspect.isawaitable(result):
+                        await result
+        except MediaStreamError:
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Remote audio receive failed for chat %s", chat_id
+            )
 
     async def _notify_stream_end(self, chat_id: int, error: Optional[Exception] = None) -> None:
         callback = self.on_stream_end
@@ -392,6 +417,18 @@ class AiortcTelegramMediaEngine:
                 if session is not None:
                     self._schedule_stream_abort(chat_id, session, state)
 
+        @pc.on("track")
+        def on_remote_track(remote_track: MediaStreamTrack) -> None:
+            if remote_track.kind != "audio":
+                return
+            session = self._sessions.get(chat_id)
+            if session is None:
+                return
+            task = asyncio.create_task(
+                self._consume_remote_audio(chat_id, remote_track)
+            )
+            session.remote_audio_tasks.append(task)
+
         try:
             offer = await pc.createOffer()
             await pc.setLocalDescription(offer)
@@ -408,6 +445,7 @@ class AiortcTelegramMediaEngine:
                 local_offer_sdp=local_sdp,
                 connected_event=connected_event,
                 state_changed_event=state_changed_event,
+                remote_audio_tasks=[],
             )
             return {
                 "ssrc": source_id,
@@ -519,6 +557,11 @@ class AiortcTelegramMediaEngine:
         if session is None:
             return
         session.state = "closing"
+        for task in session.remote_audio_tasks:
+            task.cancel()
+        if session.remote_audio_tasks:
+            await asyncio.gather(*session.remote_audio_tasks, return_exceptions=True)
+        session.remote_audio_tasks.clear()
         session.track.stop()
         session.track.clear()
         try:
