@@ -495,13 +495,17 @@ async def test_local_aiortc_peer_receives_encoded_pcm_over_opus_rtp():
     """Exercise the engine PCM track through real aiortc/Opus/RTP loopback."""
     import math
     from aiortc import RTCPeerConnection, RTCSessionDescription
+    from aiortc.contrib.media import AudioStreamTrack
 
     engine = AiortcTelegramMediaEngine(connect_timeout=5)
     chat_id = 992
     payload = await engine.create_join_payload(chat_id)
     session = engine._sessions[chat_id]
     remote = RTCPeerConnection()
+    remote.addTrack(AudioStreamTrack())
     received_tracks = asyncio.Queue()
+    received_remote_frames = asyncio.Queue()
+    engine.on_audio_frame = lambda cid, frame: received_remote_frames.put_nowait((cid, frame))
 
     @remote.on("track")
     def on_track(track):
@@ -528,6 +532,11 @@ async def test_local_aiortc_peer_receives_encoded_pcm_over_opus_rtp():
             timeout=6,
         )
         inbound = await asyncio.wait_for(received_tracks.get(), timeout=2)
+        incoming_chat_id, incoming_frame = await asyncio.wait_for(
+            received_remote_frames.get(), timeout=3
+        )
+        assert incoming_chat_id == chat_id
+        assert incoming_frame.samples > 0
 
         # Non-silent samples prove that the encoded RTP payload carries source
         # audio, rather than merely establishing ICE/DTLS successfully.
