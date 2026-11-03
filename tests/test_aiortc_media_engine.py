@@ -605,6 +605,26 @@ class _FiniteAudioTrack:
         return frame
 
 
+async def _run_remote_audio_test(engine, chat_id, frames):
+    session = SimpleNamespace(
+        audio_receive_stats={
+            "frames_received": 0,
+            "frames_delivered": 0,
+            "callback_errors": 0,
+            "callback_timeouts": 0,
+            "frames_dropped": 0,
+        },
+        audio_receive_queue=asyncio.Queue(maxsize=engine.audio_receive_queue_size),
+    )
+    engine._sessions[chat_id] = session
+    dispatcher = asyncio.create_task(engine._dispatch_remote_audio(chat_id, session))
+    await engine._consume_remote_audio(chat_id, _FiniteAudioTrack(frames))
+    await session.audio_receive_queue.join()
+    dispatcher.cancel()
+    await asyncio.gather(dispatcher, return_exceptions=True)
+    return session
+
+
 @pytest.mark.asyncio
 async def test_remote_audio_callback_error_does_not_stop_receiving(caplog):
     engine = AiortcTelegramMediaEngine()
@@ -620,7 +640,7 @@ async def test_remote_audio_callback_error_does_not_stop_receiving(caplog):
         received.append((chat_id, frame))
 
     engine.on_audio_frame = callback
-    await engine._consume_remote_audio(123, _FiniteAudioTrack(frames))
+    await _run_remote_audio_test(engine, 123, frames)
 
     assert received == [(123, frames[1])]
     assert "Remote audio callback failed" in caplog.text
@@ -641,8 +661,7 @@ async def test_remote_audio_callback_timeout_does_not_stop_receiving():
         received.append((chat_id, frame))
 
     engine.on_audio_frame = callback
-    await engine._consume_remote_audio(456, _FiniteAudioTrack(frames))
-
+    await _run_remote_audio_test(engine, 456, frames)
     assert received == [(456, frames[1])]
 
 
@@ -651,16 +670,14 @@ def test_audio_callback_timeout_must_be_positive():
         AiortcTelegramMediaEngine(audio_callback_timeout=0)
 
 
+def test_audio_receive_queue_size_must_be_positive():
+    with pytest.raises(ValueError, match="audio_receive_queue_size"):
+        AiortcTelegramMediaEngine(audio_receive_queue_size=0)
+
+
 @pytest.mark.asyncio
 async def test_audio_receive_stats_track_delivery_errors_and_timeouts():
     engine = AiortcTelegramMediaEngine(audio_callback_timeout=0.01)
-    session = SimpleNamespace(audio_receive_stats={
-        "frames_received": 0,
-        "frames_delivered": 0,
-        "callback_errors": 0,
-        "callback_timeouts": 0,
-    })
-    engine._sessions[901] = session
     frames = [object(), object(), object()]
     calls = 0
 
@@ -673,17 +690,44 @@ async def test_audio_receive_stats_track_delivery_errors_and_timeouts():
             await asyncio.sleep(1)
 
     engine.on_audio_frame = callback
-    await engine._consume_remote_audio(901, _FiniteAudioTrack(frames))
+    session = await _run_remote_audio_test(engine, 901, frames)
 
     assert engine.get_audio_receive_stats(901) == {
         "frames_received": 3,
         "frames_delivered": 1,
         "callback_errors": 1,
         "callback_timeouts": 1,
+        "frames_dropped": 0,
     }
     snapshot = engine.get_audio_receive_stats(901)
     snapshot["frames_received"] = 999
     assert engine.get_audio_receive_stats(901)["frames_received"] == 3
+
+
+@pytest.mark.asyncio
+async def test_bounded_audio_queue_drops_oldest_frame_when_consumer_is_slow():
+    engine = AiortcTelegramMediaEngine(audio_receive_queue_size=2)
+    frames = [object(), object(), object(), object()]
+    session = SimpleNamespace(
+        audio_receive_stats={
+            "frames_received": 0,
+            "frames_delivered": 0,
+            "callback_errors": 0,
+            "callback_timeouts": 0,
+            "frames_dropped": 0,
+        },
+        audio_receive_queue=asyncio.Queue(maxsize=2),
+    )
+    engine._sessions[903] = session
+    await engine._consume_remote_audio(903, _FiniteAudioTrack(frames))
+
+    assert session.audio_receive_stats["frames_received"] == 4
+    assert session.audio_receive_stats["frames_dropped"] == 2
+    assert session.audio_receive_queue.qsize() == 2
+    assert session.audio_receive_queue.get_nowait() is frames[2]
+    session.audio_receive_queue.task_done()
+    assert session.audio_receive_queue.get_nowait() is frames[3]
+    session.audio_receive_queue.task_done()
 
 
 def test_audio_receive_stats_return_zeroes_for_missing_session():
@@ -693,4 +737,5 @@ def test_audio_receive_stats_return_zeroes_for_missing_session():
         "frames_delivered": 0,
         "callback_errors": 0,
         "callback_timeouts": 0,
+        "frames_dropped": 0,
     }
