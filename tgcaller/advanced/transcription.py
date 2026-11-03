@@ -77,59 +77,64 @@ class WhisperTranscription:
             self.callbacks.remove(callback)
     
     async def start_transcription(self) -> bool:
-        """Start real-time transcription"""
-        if self.is_transcribing:
-            self.logger.warning("Transcription already running")
+        """Start a worker that waits for decoded audio supplied by the caller."""
+        if self._task is not None and not self._task.done():
             return True
-        
-        if self.model is None:
-            success = await self.load_model()
-            if not success:
-                return False
-        
-        try:
-            self.is_transcribing = True
-            self.audio_buffer = []
-            
-            # Start transcription loop
-            asyncio.create_task(self._transcription_loop())
-            
-            self.logger.info("Started real-time transcription")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Failed to start transcription: {e}")
+        if self.model is None and not await self.load_model():
             return False
-    
+        self.is_transcribing = True
+        self.audio_buffer = []
+        self._task = asyncio.create_task(self._transcription_loop())
+        return True
+
     async def stop_transcription(self):
-        """Stop transcription"""
+        """Stop and await the transcription worker."""
         self.is_transcribing = False
+        task = self._task
+        self._task = None
+        if task is not None and task is not asyncio.current_task() and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
         self.audio_buffer = []
         self.logger.info("Stopped transcription")
-    
-    def add_audio_data(self, audio_data: np.ndarray):
-        """Add audio data for transcription"""
+
+    def add_audio_data(self, audio_data: np.ndarray, sample_rate: int = 16000):
+        """Append decoded audio, converting it to normalized 16 kHz mono PCM."""
         if not self.is_transcribing:
             return
-        
         try:
-            # Convert to 16kHz mono if needed
-            if len(audio_data.shape) > 1:
-                audio_data = np.mean(audio_data, axis=1)  # Convert to mono
-            
-            # Resample to 16kHz if needed (simplified)
-            # In production, use proper resampling
-            
-            self.audio_buffer.extend(audio_data.tolist())
-            
-            # Keep buffer size manageable
+            import numpy as np
+            if isinstance(sample_rate, bool) or not isinstance(sample_rate, int) or sample_rate <= 0:
+                raise ValueError("sample_rate must be a positive integer")
+            samples = np.asarray(audio_data)
+            if samples.ndim == 2:
+                samples = samples.mean(axis=1)
+            elif samples.ndim != 1:
+                raise ValueError("audio_data must be mono or samples-by-channels")
+            if samples.size == 0:
+                return
+            if np.issubdtype(samples.dtype, np.integer):
+                info = np.iinfo(samples.dtype)
+                scale = float(max(abs(info.min), info.max))
+                samples = samples.astype(np.float32) / scale
+            else:
+                samples = samples.astype(np.float32, copy=False)
+            samples = np.nan_to_num(samples, copy=False)
+            if sample_rate != self.sample_rate:
+                output_length = max(1, round(samples.size * self.sample_rate / sample_rate))
+                source_positions = np.arange(samples.size, dtype=np.float64)
+                target_positions = np.linspace(0, samples.size - 1, output_length)
+                samples = np.interp(target_positions, source_positions, samples).astype(np.float32)
+            self.audio_buffer.extend(samples.tolist())
             max_buffer_size = int(self.buffer_duration * self.sample_rate)
             if len(self.audio_buffer) > max_buffer_size:
                 self.audio_buffer = self.audio_buffer[-max_buffer_size:]
-                
-        except Exception as e:
-            self.logger.error(f"Error adding audio data: {e}")
-    
+        except Exception as exc:
+            self.logger.error("Error adding audio data: %s", exc)
+
     async def _transcription_loop(self):
         """Main transcription loop"""
         while self.is_transcribing:
