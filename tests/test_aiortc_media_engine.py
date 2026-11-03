@@ -446,3 +446,45 @@ async def test_close_waits_for_inflight_stream_lifecycle_operation():
     await asyncio.wait_for(close_task, timeout=1)
     assert engine.get_connection_state(778) == "closed"
 
+@pytest.mark.asyncio
+async def test_real_ffmpeg_file_source_decodes_into_engine_pcm(tmp_path):
+    import math
+    import shutil
+    import struct
+    import wave
+
+    if shutil.which("ffmpeg") is None:
+        pytest.skip("ffmpeg executable is not installed")
+
+    source = tmp_path / "tone.wav"
+    sample_rate = 16_000
+    sample_count = sample_rate // 2
+    samples = b"".join(
+        struct.pack("<h", int(12_000 * math.sin(2 * math.pi * 440 * index / sample_rate)))
+        for index in range(sample_count)
+    )
+    with wave.open(str(source), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(samples)
+
+    engine = AiortcTelegramMediaEngine()
+    track = _LifecycleTrack()
+    engine._sessions[991] = SimpleNamespace(
+        pc=SimpleNamespace(connectionState="connected"),
+        track=track,
+    )
+
+    assert await engine.play_stream(991, SimpleNamespace(source=str(source))) is True
+    task = engine._stream_tasks[991]
+    await asyncio.wait_for(task, timeout=10)
+
+    assert 991 not in engine._stream_tasks
+    assert 991 not in engine._stream_processes
+    assert len(track.frames) >= 2
+    assert all(frame and len(frame) % 4 == 0 for frame in track.frames)
+    decoded = b"".join(track.frames)
+    assert len(decoded) >= 48_000 * 2 * 2 // 4
+    assert any(decoded)
+
