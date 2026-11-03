@@ -17,6 +17,7 @@ from .api import CustomAPIServer, on_custom_update
 from .devices import MediaDevices
 from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
 from .mtproto import Connection
+from .plugins import PluginManager
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,7 @@ class TgCaller:
         # Initialize new systems
         self._event_system = EventHandlerSystem()
         self._custom_api_server: Optional[CustomAPIServer] = None
+        self._plugin_manager = PluginManager(self)
         
         # Initialize internal managers
         self._connection_manager = ConnectionManager(self)
@@ -189,6 +191,7 @@ class TgCaller:
                 ("stream handler", self._stream_handler.cleanup_all),
                 ("call handler", self._call_handler.cleanup_all),
                 ("custom API server", self.stop_custom_api),
+                ("plugin manager", self._plugin_manager.cleanup),
                 ("event handler", self._event_handler.cleanup),
             )
             for name, cleanup in cleanup_steps:
@@ -326,10 +329,54 @@ class TgCaller:
                     self._logger.error(f"Error in event handler {handler.__name__}: {e}")
                     await self._emit_event('error', e)
         
-        # Also propagate through new event system
+        # Propagate structured events through the filter event system.
         if args:
             await self._event_system._propagate(args[0], self._client)
+
+        # Bridge stable client events to plugin lifecycle callbacks.
+        plugin_event = {
+            "call_joined": "on_call_start",
+            "call_left": "on_call_end",
+            "stream_start": "on_stream_start",
+            "stream_end": "on_stream_end",
+            "stream_stopped": "on_stream_end",
+        }.get(event_type)
+        if plugin_event and args:
+            update = args[0]
+            chat_id = getattr(update, "chat_id", None)
+            if chat_id is not None:
+                if plugin_event == "on_stream_start":
+                    session = self._active_calls.get(chat_id, {})
+                    stream = session.get("current_stream")
+                    source = getattr(stream, "source", None)
+                    await self._plugin_manager.emit_event(
+                        plugin_event, chat_id, str(source or "unknown")
+                    )
+                else:
+                    await self._plugin_manager.emit_event(plugin_event, chat_id)
     
+    async def register_plugin(self, plugin):
+        """Load and register a TgCaller plugin."""
+        await self._plugin_manager.register_plugin(plugin)
+
+    async def unregister_plugin(self, plugin_name: str) -> bool:
+        """Unload a registered plugin."""
+        return await self._plugin_manager.unregister_plugin(plugin_name)
+
+    def get_plugin(self, plugin_name: str):
+        """Return a registered plugin or None."""
+        return self._plugin_manager.get_plugin(plugin_name)
+
+    def is_plugin_loaded(self, plugin_name: str) -> bool:
+        """Check whether a plugin is registered."""
+        return self._plugin_manager.is_plugin_loaded(plugin_name)
+
+    async def send_plugin_message(self, target_plugin: str, message, sender=None) -> bool:
+        """Send a message to an enabled plugin."""
+        return await self._plugin_manager.send_plugin_message(
+            target_plugin, message, sender
+        )
+
     def enable_custom_api(
         self, 
         host: str = "localhost", 
