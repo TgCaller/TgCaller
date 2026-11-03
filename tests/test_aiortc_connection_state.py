@@ -147,3 +147,49 @@ async def test_send_frame_fails_closed_for_terminal_transport_states(state):
     with pytest.raises(ConnectionError, match=f"state={state}"):
         await engine.send_frame(100, b"must-not-send", "audio")
     assert session.track.frames == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("state", ["disconnected", "failed"])
+async def test_transport_loss_aborts_managed_stream_and_notifies_client(state):
+    engine = AiortcTelegramMediaEngine()
+    session = _session(state)
+    engine._sessions[100] = session
+    stopped = []
+    notifications = []
+
+    async def stop_stream(chat_id):
+        stopped.append(chat_id)
+        return True
+
+    async def on_stream_end(chat_id, error):
+        notifications.append((chat_id, str(error)))
+
+    engine.stop_stream = stop_stream
+    engine.on_stream_end = on_stream_end
+
+    await engine._abort_stream_after_transport_loss(100, session, state)
+
+    assert stopped == [100]
+    assert notifications == [(
+        100,
+        f"Managed media stream stopped because WebRTC state became {state}",
+    )]
+
+
+@pytest.mark.asyncio
+async def test_transport_loss_cleanup_ignores_replaced_session():
+    engine = AiortcTelegramMediaEngine()
+    old_session = _session("disconnected")
+    engine._sessions[100] = _session("connected")
+    stopped = []
+
+    async def stop_stream(chat_id):
+        stopped.append(chat_id)
+        return True
+
+    engine.stop_stream = stop_stream
+
+    await engine._abort_stream_after_transport_loss(100, old_session, "disconnected")
+
+    assert stopped == []
