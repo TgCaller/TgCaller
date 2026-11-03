@@ -61,8 +61,8 @@ Unsupported media modes fail clearly instead of reporting a false successful str
 ### ✦ Audio-First Media Engine  
 The current aiortc transport is audio-only. Video publishing and screen sharing to Telegram are not implemented yet.
 
-### ✦ Plugin-Based Architecture  
-Extend and customize core features effortlessly with a modular plugin system.
+### ✦ Plugin Lifecycle and Events  
+Register plugins, manage dependencies, exchange plugin messages, and receive client lifecycle events. Audio/video plugin processing is not yet connected to the live RTP pipeline.
 
 ### ✦ Fully Documented  
 Complete guides, real-world examples, and full API references to support every stage of development.
