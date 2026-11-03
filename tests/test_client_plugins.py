@@ -29,6 +29,7 @@ async def test_client_exposes_plugin_lifecycle_methods():
 @pytest.mark.asyncio
 async def test_stream_start_event_is_forwarded_to_plugins():
     caller = object.__new__(TgCaller)
+    caller._client = Mock()
     caller._event_handlers = {}
     caller._event_system = Mock()
     caller._event_system._propagate = AsyncMock()
