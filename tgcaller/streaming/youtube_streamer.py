@@ -462,19 +462,13 @@ class YouTubeStreamer:
         """Create async generator for stream chunks"""
         try:
             while self.is_streaming and self.ffmpeg_process:
-                # Check if process is still running
-                if self.ffmpeg_process.poll() is not None:
-                    break
-                
-                # Read chunk from FFmpeg
+                # Drain stdout through EOF even after poll() reports process exit.
+                # FFmpeg may have exited while encoded PCM remains buffered in the pipe.
                 chunk_data = await self._read_ffmpeg_chunk()
-                
-                if chunk_data:
-                    yield chunk_data
-                    self.stream_stats['bytes_streamed'] += len(chunk_data)
-                else:
-                    # No data available, yield control
-                    await asyncio.sleep(0.001)
+                if not chunk_data:
+                    break
+                yield chunk_data
+                self.stream_stats['bytes_streamed'] += len(chunk_data)
                     
         except Exception as e:
             self.logger.error(f"Error in chunk generator: {e}")
