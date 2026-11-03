@@ -175,9 +175,14 @@ class _PCMTrack(MediaStreamTrack):
 
     kind = "audio"
 
-    def __init__(self, queue_size: int = 10):
+    def __init__(self, queue_size: int = 10, push_timeout: float = 1.0):
         super().__init__()
+        if queue_size < 1:
+            raise ValueError("queue_size must be at least 1")
+        if push_timeout <= 0:
+            raise ValueError("push_timeout must be positive")
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=queue_size)
+        self.push_timeout = float(push_timeout)
         self._pts = 0
         self._next_due: Optional[float] = None
 
@@ -189,7 +194,18 @@ class _PCMTrack(MediaStreamTrack):
         samples = len(data) // _BYTES_PER_PCM_FRAME
         if samples / _SAMPLE_RATE > _MAX_FRAME_DURATION_SECONDS:
             raise ValueError("PCM frame duration must not exceed 120 ms")
-        await self.queue.put(data)
+        if self.readyState != "live":
+            raise ConnectionError("Audio track is no longer live")
+        try:
+            # File/URL playback uses backpressure, but a stalled consumer must
+            # not hold a producer forever. Cancellation remains immediate.
+            await asyncio.wait_for(
+                self.queue.put(data), timeout=self.push_timeout
+            )
+        except asyncio.TimeoutError as exc:
+            raise ConnectionError(
+                "Audio queue remained full; media producer was stopped"
+            ) from exc
 
     def clear(self) -> None:
         while not self.queue.empty():
@@ -248,13 +264,21 @@ class AiortcTelegramMediaEngine:
     stream/RTMP responses and unsupported SDP/DTLS shapes.
     """
 
-    def __init__(self, connect_timeout: float = 20.0, queue_size: int = 10):
+    def __init__(
+        self,
+        connect_timeout: float = 20.0,
+        queue_size: int = 10,
+        queue_put_timeout: float = 1.0,
+    ):
         if connect_timeout <= 0:
             raise ValueError("connect_timeout must be positive")
         if queue_size < 1:
             raise ValueError("queue_size must be at least 1")
+        if queue_put_timeout <= 0:
+            raise ValueError("queue_put_timeout must be positive")
         self.connect_timeout = float(connect_timeout)
         self.queue_size = int(queue_size)
+        self.queue_put_timeout = float(queue_put_timeout)
         self._sessions: Dict[int, _Session] = {}
         self._stream_tasks: Dict[int, asyncio.Task] = {}
         self._stream_processes: Dict[int, Any] = {}
@@ -340,7 +364,10 @@ class AiortcTelegramMediaEngine:
                 )
         await self.close(chat_id)
         pc = RTCPeerConnection()
-        track = _PCMTrack(queue_size=self.queue_size)
+        track = _PCMTrack(
+            queue_size=self.queue_size,
+            push_timeout=self.queue_put_timeout,
+        )
         pc.addTrack(track)
         connected_event = asyncio.Event()
         state_changed_event = asyncio.Event()
