@@ -911,7 +911,7 @@ class AiortcTelegramMediaEngine:
                 pass
         if session is not None:
             session.track.clear()
-        return had_stream or session is not None
+        return had_stream
 
     async def send_frame(self, chat_id: int, frame_data: Any, frame_type: str) -> bool:
         session = self._sessions.get(chat_id)
