@@ -2,10 +2,12 @@
 Whisper Transcription - Real-time speech to text
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
-import numpy as np
-from typing import Optional, Callable, List, Dict, Any
+import inspect
+from typing import Optional, Callable, Dict, Any, TYPE_CHECKING
 import tempfile
 import os
 
@@ -15,6 +17,9 @@ try:
 except ImportError:
     whisper = None
     torch = None
+
+if TYPE_CHECKING:
+    import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +33,6 @@ class WhisperTranscription:
         language: Optional[str] = None,
         device: Optional[str] = None
     ):
-        if whisper is None:
-            raise ImportError("openai-whisper is required for transcription")
-        
         self.model_name = model_name
         self.language = language
         self.device = device or ("cuda" if torch and torch.cuda.is_available() else "cpu")
@@ -42,10 +44,13 @@ class WhisperTranscription:
         self.sample_rate = 16000  # Whisper expects 16kHz
         self.callbacks = []
         self.logger = logger
+        self._task: Optional[asyncio.Task] = None
     
     async def load_model(self) -> bool:
         """Load Whisper model"""
         try:
+            if whisper is None:
+                raise ImportError("openai-whisper is required for transcription")
             self.logger.info(f"Loading Whisper model: {self.model_name}")
             
             # Load model in thread to avoid blocking
