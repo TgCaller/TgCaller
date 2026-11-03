@@ -117,7 +117,8 @@ class TestTgCaller:
         await caller.stop()
         assert not caller.is_running
     
-    def test_default_transport_uses_builtin_telegram_audio_engine(self, mock_client):
+    @pytest.mark.asyncio
+    async def test_default_transport_uses_builtin_telegram_audio_engine(self, mock_client):
         caller = TgCaller(mock_client)
 
         assert isinstance(caller._connection.backend, PyrogramGroupCallBackend)
@@ -125,6 +126,17 @@ class TestTgCaller:
             caller._connection.backend.media_engine, AiortcTelegramMediaEngine
         )
         assert caller._owns_connection_backend is True
+        assert caller._connection.backend.media_engine.on_audio_frame == caller._handle_media_audio_frame
+
+        received = []
+
+        @caller.on_audio_frame
+        async def on_audio_frame(client, chat_id, frame):
+            received.append((client, chat_id, frame))
+
+        frame = object()
+        await caller._handle_media_audio_frame(-100123, frame)
+        assert received == [(mock_client, -100123, frame)]
 
     @pytest.mark.asyncio
     async def test_join_call_fails_when_telegram_call_cannot_be_resolved(self, mock_client):
