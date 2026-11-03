@@ -690,7 +690,7 @@ class AiortcTelegramMediaEngine:
         if session is None or session.pc.connectionState != "connected":
             raise ConnectionError(f"No connected Telegram media session for chat {chat_id}")
         # A new source replaces an existing source deterministically.
-        await self.stop_stream(chat_id)
+        await self._stop_stream_unlocked(chat_id)
         command = self._ffmpeg_command(stream)
         process = await asyncio.create_subprocess_exec(
             *command,
