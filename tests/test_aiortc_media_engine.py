@@ -858,3 +858,23 @@ async def test_close_waits_for_pending_transport_loss_cleanup():
 
     assert cleanup.done()
     assert engine.get_connection_state(chat_id) == "closed"
+
+
+@pytest.mark.asyncio
+async def test_stop_stream_does_not_clean_up_ffmpeg_process_twice():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+    engine._stream_processes[909] = process
+
+    task = asyncio.create_task(engine._pump_ffmpeg_process(909, process))
+    engine._stream_tasks[909] = task
+    await asyncio.wait_for(process.stdout.read_started.wait(), timeout=1)
+
+    assert await asyncio.wait_for(engine.stop_stream(909), timeout=2) is True
+
+    assert task.done()
+    assert process.terminate_calls == 1
+    assert process.wait_calls == 1
+    assert process._transport.stdout_pipe.close_calls == 1
+    assert 909 not in engine._stream_processes
+    assert 909 not in engine._stream_tasks
