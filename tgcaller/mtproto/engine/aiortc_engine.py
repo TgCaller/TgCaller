@@ -911,7 +911,10 @@ class AiortcTelegramMediaEngine:
                 pass
             except Exception:
                 pass
-        if process is not None:
+        # The FFmpeg pump owns its process cleanup in its finally block.
+        # After cancelling/awaiting that task, do not terminate and close the
+        # same process a second time here.
+        if process is not None and task is None:
             try:
                 await self._stop_process(process)
             except Exception:
