@@ -649,3 +649,48 @@ async def test_remote_audio_callback_timeout_does_not_stop_receiving():
 def test_audio_callback_timeout_must_be_positive():
     with pytest.raises(ValueError, match="audio_callback_timeout"):
         AiortcTelegramMediaEngine(audio_callback_timeout=0)
+
+
+@pytest.mark.asyncio
+async def test_audio_receive_stats_track_delivery_errors_and_timeouts():
+    engine = AiortcTelegramMediaEngine(audio_callback_timeout=0.01)
+    session = SimpleNamespace(audio_receive_stats={
+        "frames_received": 0,
+        "frames_delivered": 0,
+        "callback_errors": 0,
+        "callback_timeouts": 0,
+    })
+    engine._sessions[901] = session
+    frames = [object(), object(), object()]
+    calls = 0
+
+    async def callback(chat_id, frame):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("consumer failed")
+        if calls == 2:
+            await asyncio.sleep(1)
+
+    engine.on_audio_frame = callback
+    await engine._consume_remote_audio(901, _FiniteAudioTrack(frames))
+
+    assert engine.get_audio_receive_stats(901) == {
+        "frames_received": 3,
+        "frames_delivered": 1,
+        "callback_errors": 1,
+        "callback_timeouts": 1,
+    }
+    snapshot = engine.get_audio_receive_stats(901)
+    snapshot["frames_received"] = 999
+    assert engine.get_audio_receive_stats(901)["frames_received"] == 3
+
+
+def test_audio_receive_stats_return_zeroes_for_missing_session():
+    engine = AiortcTelegramMediaEngine()
+    assert engine.get_audio_receive_stats(902) == {
+        "frames_received": 0,
+        "frames_delivered": 0,
+        "callback_errors": 0,
+        "callback_timeouts": 0,
+    }
