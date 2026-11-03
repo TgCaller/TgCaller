@@ -46,6 +46,16 @@ class Connection:
     async def is_healthy(self, chat_id: int) -> bool:
         return bool(await self._invoke("is_healthy", chat_id))
 
+    def get_audio_receive_stats(self, chat_id):
+        """Return a snapshot of incoming audio counters when supported."""
+        if self.backend is None:
+            return {}
+        method = getattr(self.backend, "get_audio_receive_stats", None)
+        if not callable(method):
+            return {}
+        result = method(chat_id)
+        return dict(result) if isinstance(result, dict) else {}
+
     async def get_participants(self, chat_id: int):
         return await self._invoke("get_participants", chat_id)
 
