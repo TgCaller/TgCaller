@@ -286,3 +286,92 @@ async def test_concurrent_source_replacement_closes_old_async_iterator():
 
     await engine.stop_stream(777)
     assert 777 not in engine._stream_tasks
+
+
+class _BlockingStdout:
+    def __init__(self):
+        self.read_started = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def read(self, size):
+        self.read_started.set()
+        await self.release.wait()
+        return b""
+
+
+class _FakeProcess:
+    def __init__(self, *, hang_after_terminate=False):
+        self.returncode = None
+        self.stdout = _BlockingStdout()
+        self.hang_after_terminate = hang_after_terminate
+        self.exited = asyncio.Event()
+        self.terminate_calls = 0
+        self.kill_calls = 0
+        self.wait_calls = 0
+
+    def terminate(self):
+        self.terminate_calls += 1
+        if not self.hang_after_terminate:
+            self.returncode = -15
+            self.exited.set()
+
+    def kill(self):
+        self.kill_calls += 1
+        self.returncode = -9
+        self.exited.set()
+
+    async def wait(self):
+        self.wait_calls += 1
+        await self.exited.wait()
+        return self.returncode
+
+
+@pytest.mark.asyncio
+async def test_stop_process_terminates_and_reaps_process():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+
+    await engine._stop_process(process)
+
+    assert process.terminate_calls == 1
+    assert process.kill_calls == 0
+    assert process.wait_calls >= 1
+    assert process.returncode == -15
+
+
+@pytest.mark.asyncio
+async def test_stop_process_kills_process_when_terminate_times_out(monkeypatch):
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess(hang_after_terminate=True)
+
+    async def immediate_timeout(awaitable, timeout):
+        raise asyncio.TimeoutError
+
+    monkeypatch.setattr(asyncio, "wait_for", immediate_timeout)
+
+    await engine._stop_process(process)
+
+    assert process.terminate_calls == 1
+    assert process.kill_calls == 1
+    assert process.wait_calls == 2
+    assert process.returncode == -9
+
+
+@pytest.mark.asyncio
+async def test_cancelled_ffmpeg_pump_reaps_process_and_clears_tracking():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+    engine._stream_processes[778] = process
+
+    task = asyncio.create_task(engine._pump_ffmpeg_process(778, process))
+    engine._stream_tasks[778] = task
+    await asyncio.wait_for(process.stdout.read_started.wait(), timeout=1)
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert process.terminate_calls == 1
+    assert process.returncode == -15
+    assert 778 not in engine._stream_processes
+    assert 778 not in engine._stream_tasks
