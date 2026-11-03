@@ -332,3 +332,10 @@ else:
 ```
 
 This API reference provides the foundation for building powerful Telegram call applications with TgCaller.
+
+### Incoming audio receive counters
+
+Use `caller.get_audio_receive_stats(chat_id)` to read a snapshot of local
+incoming audio counters. See [Incoming Audio](incoming-audio.md) for counter
+definitions and limitations. A custom transport may return an empty mapping
+when it does not implement this optional capability.
