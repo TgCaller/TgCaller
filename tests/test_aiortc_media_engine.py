@@ -299,10 +299,27 @@ class _BlockingStdout:
         return b""
 
 
+class _FakePipeTransport:
+    def __init__(self):
+        self.close_calls = 0
+
+    def close(self):
+        self.close_calls += 1
+
+
+class _FakeSubprocessTransport:
+    def __init__(self):
+        self.stdout_pipe = _FakePipeTransport()
+
+    def get_pipe_transport(self, fd):
+        return self.stdout_pipe if fd == 1 else None
+
+
 class _FakeProcess:
     def __init__(self, *, hang_after_terminate=False):
         self.returncode = None
         self.stdout = _BlockingStdout()
+        self._transport = _FakeSubprocessTransport()
         self.hang_after_terminate = hang_after_terminate
         self.exited = asyncio.Event()
         self.terminate_calls = 0
@@ -337,6 +354,7 @@ async def test_stop_process_terminates_and_reaps_process():
     assert process.kill_calls == 0
     assert process.wait_calls >= 1
     assert process.returncode == -15
+    assert process._transport.stdout_pipe.close_calls == 1
 
 
 @pytest.mark.asyncio
@@ -358,6 +376,21 @@ async def test_stop_process_kills_process_when_terminate_times_out(monkeypatch):
     # Only the post-kill reap coroutine is actually awaited by this test double.
     assert process.wait_calls == 1
     assert process.returncode == -9
+    assert process._transport.stdout_pipe.close_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_stop_process_closes_stdout_for_already_exited_process():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+    process.returncode = 0
+    process.exited.set()
+
+    await engine._stop_process(process)
+
+    assert process.terminate_calls == 0
+    assert process.wait_calls == 1
+    assert process._transport.stdout_pipe.close_calls == 1
 
 
 @pytest.mark.asyncio
@@ -376,5 +409,6 @@ async def test_cancelled_ffmpeg_pump_reaps_process_and_clears_tracking():
 
     assert process.terminate_calls == 1
     assert process.returncode == -15
+    assert process._transport.stdout_pipe.close_calls == 1
     assert 778 not in engine._stream_processes
     assert 778 not in engine._stream_tasks
