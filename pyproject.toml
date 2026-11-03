@@ -136,3 +136,4 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
+markers = ["integration: requires a real Telegram account and an active group call"]
