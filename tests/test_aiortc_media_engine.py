@@ -838,3 +838,23 @@ async def test_stop_stream_returns_true_when_managed_source_is_active():
     assert await engine.stop_stream(907) is True
     assert task.done()
     assert 907 not in engine._stream_tasks
+
+
+@pytest.mark.asyncio
+async def test_close_waits_for_pending_transport_loss_cleanup():
+    engine = AiortcTelegramMediaEngine()
+    chat_id = 908
+    await engine.create_join_payload(chat_id)
+    release_cleanup = asyncio.Event()
+    cleanup = asyncio.create_task(release_cleanup.wait())
+    engine._stream_cleanup_tasks[chat_id] = cleanup
+
+    closing = asyncio.create_task(engine.close(chat_id))
+    await asyncio.sleep(0)
+    assert not closing.done()
+
+    release_cleanup.set()
+    await asyncio.wait_for(closing, timeout=2)
+
+    assert cleanup.done()
+    assert engine.get_connection_state(chat_id) == "closed"
