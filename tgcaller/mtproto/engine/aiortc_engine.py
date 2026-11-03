@@ -258,6 +258,7 @@ class AiortcTelegramMediaEngine:
         self._sessions: Dict[int, _Session] = {}
         self._stream_tasks: Dict[int, asyncio.Task] = {}
         self._stream_processes: Dict[int, Any] = {}
+        self._stream_cleanup_tasks: Dict[int, asyncio.Task] = {}
         # Optional callback installed by TgCaller to reconcile public stream state.
         self.on_stream_end = None
 
@@ -274,6 +275,45 @@ class AiortcTelegramMediaEngine:
             logging.getLogger(__name__).exception(
                 "Stream completion callback failed for chat %s", chat_id
             )
+
+    async def _abort_stream_after_transport_loss(
+        self, chat_id: int, session: "_Session", state: str
+    ) -> None:
+        """Stop managed media sources when their transport becomes unavailable."""
+        if self._sessions.get(chat_id) is not session:
+            return
+        had_stream = await self.stop_stream(chat_id)
+        if had_stream:
+            await self._notify_stream_end(
+                chat_id,
+                ConnectionError(
+                    f"Managed media stream stopped because WebRTC state became {state}"
+                ),
+            )
+
+    def _schedule_stream_abort(self, chat_id: int, session: "_Session", state: str) -> None:
+        if chat_id not in self._stream_tasks and chat_id not in self._stream_processes:
+            return
+        existing = self._stream_cleanup_tasks.get(chat_id)
+        if existing is not None and not existing.done():
+            return
+        task = asyncio.create_task(
+            self._abort_stream_after_transport_loss(chat_id, session, state)
+        )
+        self._stream_cleanup_tasks[chat_id] = task
+
+        def clear_task(done: asyncio.Task) -> None:
+            if self._stream_cleanup_tasks.get(chat_id) is done:
+                self._stream_cleanup_tasks.pop(chat_id, None)
+            if not done.cancelled() and done.exception() is not None:
+                import logging
+                logging.getLogger(__name__).error(
+                    "Transport-loss stream cleanup failed for chat %s",
+                    chat_id,
+                    exc_info=done.exception(),
+                )
+
+        task.add_done_callback(clear_task)
 
     async def create_join_payload(
         self, chat_id: int, audio_config: Any = None, video_config: Any = None
@@ -314,8 +354,14 @@ class AiortcTelegramMediaEngine:
             # Discard queued audio on any loss of transport. A transient
             # disconnect may recover, but stale speech/music must not burst
             # into the call after connectivity returns.
-            if state in ("disconnected", "failed", "closed"):
+            if state in ("disconnected", "failed"):
                 track.clear()
+                # A managed source must not keep reading/buffering while the
+                # transport is unavailable. It is stopped, not auto-resumed;
+                # applications may explicitly start it again after recovery.
+                session = self._sessions.get(chat_id)
+                if session is not None:
+                    self._schedule_stream_abort(chat_id, session, state)
 
         try:
             offer = await pc.createOffer()
