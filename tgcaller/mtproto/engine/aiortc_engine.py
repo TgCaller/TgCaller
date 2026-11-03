@@ -236,6 +236,7 @@ class _Session:
     source_id: int
     local_offer_sdp: str
     connected_event: asyncio.Event
+    state_changed_event: asyncio.Event
     state: str = "preparing"
 
 
@@ -302,10 +303,13 @@ class AiortcTelegramMediaEngine:
         track = _PCMTrack(queue_size=self.queue_size)
         pc.addTrack(track)
         connected_event = asyncio.Event()
+        state_changed_event = asyncio.Event()
 
         @pc.on("connectionstatechange")
         def on_connection_state_change() -> None:
-            if pc.connectionState in ("connected", "failed", "closed"):
+            state = pc.connectionState
+            state_changed_event.set()
+            if state in ("connected", "failed", "closed"):
                 connected_event.set()
 
         try:
@@ -323,6 +327,7 @@ class AiortcTelegramMediaEngine:
                 source_id=source_id,
                 local_offer_sdp=local_sdp,
                 connected_event=connected_event,
+                state_changed_event=state_changed_event,
             )
             return {
                 "ssrc": source_id,
@@ -371,9 +376,50 @@ class AiortcTelegramMediaEngine:
             await self.close(chat_id)
             raise
 
-    async def is_connected(self, chat_id: int) -> bool:
+    def get_connection_state(self, chat_id: int) -> str:
+        """Return aiortc's current transport state without guessing recovery."""
         session = self._sessions.get(chat_id)
-        return bool(session and session.pc.connectionState == "connected")
+        if session is None:
+            return "closed"
+        return session.pc.connectionState
+
+    async def wait_for_connection_state(
+        self, chat_id: int, states, timeout: Optional[float] = None
+    ) -> str:
+        """Wait until the peer connection reaches one of the requested states."""
+        accepted = {states} if isinstance(states, str) else set(states)
+        valid = {"new", "connecting", "connected", "disconnected", "failed", "closed"}
+        if not accepted or not accepted.issubset(valid):
+            raise ValueError("states must contain valid aiortc connection states")
+        if timeout is not None and timeout <= 0:
+            raise ValueError("timeout must be positive")
+
+        async def wait() -> str:
+            while True:
+                session = self._sessions.get(chat_id)
+                if session is None:
+                    state = "closed"
+                else:
+                    # Clear before reading the state to avoid losing a transition
+                    # between the state check and Event.wait().
+                    session.state_changed_event.clear()
+                    state = session.pc.connectionState
+                    if state in accepted:
+                        return state
+                    if self._sessions.get(chat_id) is not session:
+                        continue
+                    await session.state_changed_event.wait()
+                    continue
+                if state in accepted:
+                    return state
+                raise ConnectionError(f"No media session exists for chat {chat_id}")
+
+        if timeout is None:
+            return await wait()
+        return await asyncio.wait_for(wait(), timeout=float(timeout))
+
+    async def is_connected(self, chat_id: int) -> bool:
+        return self.get_connection_state(chat_id) == "connected"
 
     async def source_id(self, chat_id: int) -> int:
         session = self._sessions.get(chat_id)
