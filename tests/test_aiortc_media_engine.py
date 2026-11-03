@@ -586,3 +586,66 @@ async def _wait_for_peer_connected(peer, timeout):
                 )
             await asyncio.sleep(0.01)
     await asyncio.wait_for(wait(), timeout=timeout)
+
+
+class _FiniteAudioTrack:
+    kind = "audio"
+
+    def __init__(self, frames):
+        self.frames = iter(frames)
+
+    async def recv(self):
+        try:
+            frame = next(self.frames)
+        except StopIteration:
+            from aiortc.mediastreams import MediaStreamError
+            raise MediaStreamError
+        if isinstance(frame, BaseException):
+            raise frame
+        return frame
+
+
+@pytest.mark.asyncio
+async def test_remote_audio_callback_error_does_not_stop_receiving(caplog):
+    engine = AiortcTelegramMediaEngine()
+    received = []
+    frames = [object(), object()]
+    calls = 0
+
+    async def callback(chat_id, frame):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("application callback failed")
+        received.append((chat_id, frame))
+
+    engine.on_audio_frame = callback
+    await engine._consume_remote_audio(123, _FiniteAudioTrack(frames))
+
+    assert received == [(123, frames[1])]
+    assert "Remote audio callback failed" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_remote_audio_callback_timeout_does_not_stop_receiving():
+    engine = AiortcTelegramMediaEngine(audio_callback_timeout=0.01)
+    received = []
+    frames = [object(), object()]
+    calls = 0
+
+    async def callback(chat_id, frame):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            await asyncio.sleep(1)
+        received.append((chat_id, frame))
+
+    engine.on_audio_frame = callback
+    await engine._consume_remote_audio(456, _FiniteAudioTrack(frames))
+
+    assert received == [(456, frames[1])]
+
+
+def test_audio_callback_timeout_must_be_positive():
+    with pytest.raises(ValueError, match="audio_callback_timeout"):
+        AiortcTelegramMediaEngine(audio_callback_timeout=0)
