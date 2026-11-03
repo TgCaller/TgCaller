@@ -431,3 +431,18 @@ async def test_cancelled_ffmpeg_pump_reaps_process_and_clears_tracking():
     assert process._transport.stdout_pipe.close_calls == 1
     assert 778 not in engine._stream_processes
     assert 778 not in engine._stream_tasks
+
+@pytest.mark.asyncio
+async def test_close_waits_for_inflight_stream_lifecycle_operation():
+    engine = AiortcTelegramMediaEngine()
+    lock = engine._stream_lock(778)
+    await lock.acquire()
+    close_task = asyncio.create_task(engine.close(778))
+    await asyncio.sleep(0)
+
+    assert not close_task.done()
+
+    lock.release()
+    await asyncio.wait_for(close_task, timeout=1)
+    assert engine.get_connection_state(778) == "closed"
+
