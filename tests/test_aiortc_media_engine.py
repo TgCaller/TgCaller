@@ -394,6 +394,25 @@ async def test_stop_process_closes_stdout_for_already_exited_process():
 
 
 @pytest.mark.asyncio
+async def test_natural_ffmpeg_eof_closes_stdout_and_clears_tracking():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+    process.returncode = 0
+    process.exited.set()
+    process.stdout.release.set()
+    engine._stream_processes[779] = process
+
+    task = asyncio.create_task(engine._pump_ffmpeg_process(779, process))
+    engine._stream_tasks[779] = task
+    await task
+
+    assert process.terminate_calls == 0
+    assert process._transport.stdout_pipe.close_calls == 1
+    assert 779 not in engine._stream_processes
+    assert 779 not in engine._stream_tasks
+
+
+@pytest.mark.asyncio
 async def test_cancelled_ffmpeg_pump_reaps_process_and_clears_tracking():
     engine = AiortcTelegramMediaEngine()
     process = _FakeProcess()
