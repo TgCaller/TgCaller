@@ -238,3 +238,30 @@ async def test_ffmpeg_reader_accumulates_short_pipe_reads(streamer):
     assert chunk == b"abcdefgh"
     assert len(chunk) % 4 == 0
 
+
+
+@pytest.mark.asyncio
+async def test_chunk_generator_drains_buffered_stdout_after_ffmpeg_exits(streamer):
+    class BufferedStdout:
+        def __init__(self):
+            self.parts = [b"12345678", b""]
+
+        def read(self, size):
+            part = self.parts.pop(0)
+            return part[:size]
+
+    class ExitedProcess:
+        stdout = BufferedStdout()
+
+        def poll(self):
+            return 0
+
+    streamer.config.chunk_size = 8
+    streamer.ffmpeg_process = ExitedProcess()
+    streamer.is_streaming = True
+
+    chunks = [
+        chunk async for chunk in streamer._create_chunk_generator()
+    ]
+
+    assert chunks == [b"12345678"]
