@@ -495,7 +495,7 @@ async def test_local_aiortc_peer_receives_encoded_pcm_over_opus_rtp():
     """Exercise the engine PCM track through real aiortc/Opus/RTP loopback."""
     import math
     from aiortc import RTCPeerConnection, RTCSessionDescription
-    from aiortc.contrib.media import AudioStreamTrack
+    from aiortc.mediastreams import AudioStreamTrack
 
     engine = AiortcTelegramMediaEngine(connect_timeout=5)
     chat_id = 992
