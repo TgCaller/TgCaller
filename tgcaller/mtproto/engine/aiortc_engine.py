@@ -255,6 +255,7 @@ class _Session:
     state_changed_event: asyncio.Event
     remote_audio_tasks: List[asyncio.Task] = field(default_factory=list)
     audio_receive_queue: Optional[asyncio.Queue] = None
+    audio_dispatch_task: Optional[asyncio.Task] = None
     audio_receive_stats: Dict[str, int] = field(default_factory=lambda: {
         "frames_received": 0,
         "frames_delivered": 0,
@@ -491,10 +492,11 @@ class AiortcTelegramMediaEngine:
                 session.audio_receive_queue = asyncio.Queue(
                     maxsize=self.audio_receive_queue_size
                 )
-                dispatcher = asyncio.create_task(
+            if session.audio_dispatch_task is None or session.audio_dispatch_task.done():
+                session.audio_dispatch_task = asyncio.create_task(
                     self._dispatch_remote_audio(chat_id, session)
                 )
-                session.remote_audio_tasks.append(dispatcher)
+                session.remote_audio_tasks.append(session.audio_dispatch_task)
             task = asyncio.create_task(
                 self._consume_remote_audio(chat_id, remote_track)
             )
