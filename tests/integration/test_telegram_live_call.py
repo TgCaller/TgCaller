@@ -2,8 +2,8 @@
 
 Set TGCALLER_INTEGRATION=1, TG_API_ID, TG_API_HASH, TG_SESSION_STRING and
 TG_CALL_CHAT_ID. The account must be able to join the already-active call.
-This test sends silence, verifies outbound RTP byte counters, and checks the
-server-side SSRC membership before leaving the call.
+This test sends silence, verifies outbound RTP byte counters, observes decoded
+incoming audio when Telegram provides it, and checks server-side SSRC membership.
 """
 import asyncio
 import os
@@ -40,6 +40,10 @@ async def test_real_telegram_group_call_join_rtp_and_server_membership():
     engine = AiortcTelegramMediaEngine(connect_timeout=30, queue_size=10)
     backend = None
     started = False
+    incoming_frames = []
+    engine.on_audio_frame = lambda received_chat_id, frame: incoming_frames.append(
+        (received_chat_id, frame.samples, frame.sample_rate)
+    )
 
     try:
         await client.start()
@@ -72,6 +76,24 @@ async def test_real_telegram_group_call_join_rtp_and_server_membership():
 
         assert bytes_sent > 0, "aiortc did not report outbound audio RTP bytes"
         assert await backend.check_call(chat_id) is True
+
+        # Telegram supplies decoded remote audio when the active call has
+        # remote media. Observe it for a bounded period; deployments that run
+        # this test with a known speaking participant can make it mandatory.
+        receive_deadline = asyncio.get_running_loop().time() + 8.0
+        while (
+            asyncio.get_running_loop().time() < receive_deadline
+            and not incoming_frames
+        ):
+            await asyncio.sleep(0.05)
+
+        if os.getenv("TGCALLER_REQUIRE_INCOMING_AUDIO") == "1":
+            assert incoming_frames, (
+                "No decoded incoming Telegram audio arrived; ensure another "
+                "participant is sending audio in the active group call"
+            )
+        if incoming_frames:
+            assert all(item[0] == chat_id and item[1] > 0 for item in incoming_frames)
 
     finally:
         if backend is not None:
