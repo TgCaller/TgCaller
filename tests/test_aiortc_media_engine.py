@@ -551,7 +551,7 @@ async def test_local_aiortc_peer_receives_encoded_pcm_over_opus_rtp():
             if sender.track is session.track
         )
         outbound_stats = await sender.getStats()
-        inbound_stats = await inbound.getStats()
+        inbound_stats = await remote.getStats()
         sent = [
             stat for stat in outbound_stats.values()
             if stat.type == "outbound-rtp" and stat.kind == "audio"
