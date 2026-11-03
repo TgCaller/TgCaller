@@ -188,8 +188,8 @@ Publishing those frames into a Telegram call is not supported by the current
 audio-only media transport; ScreenShareStreamer.start_streaming() raises
 NotImplementedError rather than claiming that a screen share started.
 
-### ** YouTube Integration**
-Stream YouTube videos directly:
+### **YouTube Audio Integration**
+Stream YouTube audio directly; video output is not supported by the current media transport:
 
 ```python
 from tgcaller.advanced import YouTubeStreamer
