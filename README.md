@@ -180,15 +180,11 @@ await caller.play(chat_id, "video.mp4", video_config=video_config)
 
 ##  **Advanced Features**
 
-### ** Bridged Calls**
-Connect multiple chats for conference calls:
+### **Bridged Calls (not available yet)**
 
-```python
-from tgcaller.advanced import BridgedCallManager
-
-bridge_manager = BridgedCallManager(caller)
-await bridge_manager.create_bridge("conference", [chat1, chat2, chat3])
-```
+The public manager is present for API planning, but inter-call audio forwarding is
+not implemented. `create_bridge(...)` currently returns `False` and does not join
+or alter any Telegram calls. Do not use it for production conferencing.
 
 ### ** Microphone Streaming**
 Stream live microphone input:
@@ -410,14 +406,10 @@ for caller in callers:
     await caller.start()
 ```
 
-### **P2P Calls**
+### **P2P Calls (planned)**
 
-```python
-from tgcaller.advanced import P2PCallManager
-
-p2p = P2PCallManager(caller)
-await p2p.create_direct_call(user1_id, user2_id)
-```
+A public `P2PCallManager` implementation is not included yet. Direct user-to-user
+calls are not currently supported by this group-call engine.
 
 ---
 
