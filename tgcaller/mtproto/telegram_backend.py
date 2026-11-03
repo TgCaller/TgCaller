@@ -113,9 +113,26 @@ class PyrogramGroupCallBackend:
         if chat_id in self._calls:
             if await self.is_healthy(chat_id):
                 return True
-            # A stale local session must be torn down before allocating a new
-            # join payload; otherwise old ICE/DTLS resources can leak or overlap.
-            await self.disconnect_call(chat_id)
+
+            # Telegram's recovery protocol distinguishes a transport failure
+            # from lost server-side membership. Never leave/rejoin blindly:
+            # while Telegram still recognizes this SSRC, the existing WebRTC
+            # connection must be recovered in place.
+            source_is_joined = await self.check_call(chat_id)
+            if source_is_joined:
+                reconnect = getattr(self.media_engine, "reconnect", None)
+                if callable(reconnect):
+                    await _resolve(reconnect(chat_id))
+                    if await self.is_healthy(chat_id):
+                        return True
+                raise ConnectionError(
+                    "Telegram still recognizes this media source, but the media "
+                    "engine cannot recover the existing WebRTC connection in place; "
+                    "refusing to create a duplicate server-side join"
+                )
+            # check_call() clears stale local state and closes the old engine
+            # when Telegram no longer recognizes the source (or the RPC errors).
+            # Only then is it valid to generate a fresh join payload.
 
         JoinGroupCall, _, _, DataJSON, InputPeerSelf = await self._rpc_types()
         call = await _resolve(self.resolve_call(chat_id))
