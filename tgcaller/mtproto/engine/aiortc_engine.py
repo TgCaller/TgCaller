@@ -283,6 +283,8 @@ class AiortcTelegramMediaEngine:
         self._stream_tasks: Dict[int, asyncio.Task] = {}
         self._stream_processes: Dict[int, Any] = {}
         self._stream_cleanup_tasks: Dict[int, asyncio.Task] = {}
+        # Serialize source start/replace/stop per chat without blocking other calls.
+        self._stream_locks: Dict[int, asyncio.Lock] = {}
         # Optional callback installed by TgCaller to reconcile public stream state.
         self.on_stream_end = None
 
@@ -506,7 +508,7 @@ class AiortcTelegramMediaEngine:
         return session.source_id
 
     async def close(self, chat_id: int) -> None:
-        await self.stop_stream(chat_id)
+        await self._stop_stream_unlocked(chat_id)
         session = self._sessions.pop(chat_id, None)
         if session is None:
             return
@@ -643,7 +645,18 @@ class AiortcTelegramMediaEngine:
             if completed or failure is not None:
                 await self._notify_stream_end(chat_id, failure)
 
+    def _stream_lock(self, chat_id: int) -> asyncio.Lock:
+        lock = self._stream_locks.get(chat_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._stream_locks[chat_id] = lock
+        return lock
+
     async def play_stream(self, chat_id: int, stream: Any) -> bool:
+        async with self._stream_lock(chat_id):
+            return await self._play_stream_unlocked(chat_id, stream)
+
+    async def _play_stream_unlocked(self, chat_id: int, stream: Any) -> bool:
         if isinstance(stream, bytes):
             return await self.send_frame(chat_id, stream, "audio")
         if hasattr(stream, "__aiter__") and not hasattr(stream, "source"):
@@ -656,7 +669,7 @@ class AiortcTelegramMediaEngine:
             # A new source replaces any existing source. Pull and enqueue one
             # frame before returning so immediate source failures are reported
             # to the caller; stream the remaining frames in a managed task.
-            await self.stop_stream(chat_id)
+            await self._stop_stream_unlocked(chat_id)
             iterator = stream.__aiter__()
             try:
                 first_chunk = await iterator.__anext__()
@@ -707,6 +720,10 @@ class AiortcTelegramMediaEngine:
         return True
 
     async def stop_stream(self, chat_id: int) -> bool:
+        async with self._stream_lock(chat_id):
+            return await self._stop_stream_unlocked(chat_id)
+
+    async def _stop_stream_unlocked(self, chat_id: int) -> bool:
         session = self._sessions.get(chat_id)
         task = self._stream_tasks.pop(chat_id, None)
         process = self._stream_processes.pop(chat_id, None)
