@@ -235,3 +235,54 @@ async def test_pcm_track_blocked_push_can_be_cancelled_without_adding_a_frame():
 def test_engine_rejects_invalid_queue_put_timeout():
     with pytest.raises(ValueError, match="queue_put_timeout must be positive"):
         AiortcTelegramMediaEngine(queue_put_timeout=0)
+
+
+class _LifecycleTrack:
+    def __init__(self):
+        self.frames = []
+        self.cleared = 0
+
+    async def push(self, frame):
+        self.frames.append(frame)
+
+    def clear(self):
+        self.cleared += 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_source_replacement_closes_old_async_iterator():
+    engine = AiortcTelegramMediaEngine()
+    session = SimpleNamespace(
+        pc=SimpleNamespace(connectionState="connected"),
+        track=_LifecycleTrack(),
+    )
+    engine._sessions[777] = session
+    old_closed = asyncio.Event()
+    release_old = asyncio.Event()
+
+    async def old_source():
+        try:
+            yield bytes(3840)
+            await release_old.wait()
+            yield bytes(3840)
+        finally:
+            old_closed.set()
+
+    async def new_source():
+        yield bytes([1]) * 3840
+        await asyncio.Event().wait()
+
+    first = asyncio.create_task(engine.play_stream(777, old_source()))
+    await asyncio.sleep(0)
+    second = asyncio.create_task(engine.play_stream(777, new_source()))
+
+    assert await asyncio.wait_for(first, timeout=1) is True
+    assert await asyncio.wait_for(second, timeout=1) is True
+    await asyncio.wait_for(old_closed.wait(), timeout=1)
+
+    active = engine._stream_tasks.get(777)
+    assert active is not None and not active.done()
+    assert session.track.frames == [bytes(3840), bytes([1]) * 3840]
+
+    await engine.stop_stream(777)
+    assert 777 not in engine._stream_tasks
