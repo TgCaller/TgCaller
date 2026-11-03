@@ -254,11 +254,13 @@ class _Session:
     connected_event: asyncio.Event
     state_changed_event: asyncio.Event
     remote_audio_tasks: List[asyncio.Task] = field(default_factory=list)
+    audio_receive_queue: Optional[asyncio.Queue] = None
     audio_receive_stats: Dict[str, int] = field(default_factory=lambda: {
         "frames_received": 0,
         "frames_delivered": 0,
         "callback_errors": 0,
         "callback_timeouts": 0,
+        "frames_dropped": 0,
     })
     state: str = "preparing"
 
@@ -277,6 +279,7 @@ class AiortcTelegramMediaEngine:
         queue_size: int = 10,
         queue_put_timeout: float = 1.0,
         audio_callback_timeout: float = 0.25,
+        audio_receive_queue_size: int = 50,
     ):
         if connect_timeout <= 0:
             raise ValueError("connect_timeout must be positive")
@@ -286,6 +289,9 @@ class AiortcTelegramMediaEngine:
             raise ValueError("queue_put_timeout must be positive")
         if audio_callback_timeout <= 0:
             raise ValueError("audio_callback_timeout must be positive")
+        if audio_receive_queue_size < 1:
+            raise ValueError("audio_receive_queue_size must be at least 1")
+        self.audio_receive_queue_size = int(audio_receive_queue_size)
         self.connect_timeout = float(connect_timeout)
         self.queue_size = int(queue_size)
         self.queue_put_timeout = float(queue_put_timeout)
@@ -304,46 +310,23 @@ class AiortcTelegramMediaEngine:
     async def _consume_remote_audio(
         self, chat_id: int, track: MediaStreamTrack
     ) -> None:
-        """Drain decoded remote audio and forward frames to the application."""
+        """Drain the WebRTC track quickly into a bounded, low-latency queue."""
         try:
             while True:
                 frame = await track.recv()
                 session = self._sessions.get(chat_id)
-                if session is not None:
-                    session.audio_receive_stats["frames_received"] += 1
-                callback = self.on_audio_frame
-                if callback is not None:
+                if session is None or session.audio_receive_queue is None:
+                    continue
+                session.audio_receive_stats["frames_received"] += 1
+                queue = session.audio_receive_queue
+                if queue.full():
                     try:
-                        result = callback(chat_id, frame)
-                        if inspect.isawaitable(result):
-                            await asyncio.wait_for(
-                                result, timeout=self.audio_callback_timeout
-                            )
-                    except asyncio.TimeoutError:
-                        if session is not None:
-                            session.audio_receive_stats["callback_timeouts"] += 1
-                        import logging
-                        logging.getLogger(__name__).warning(
-                            "Remote audio callback timed out for chat %s after %.3fs",
-                            chat_id,
-                            self.audio_callback_timeout,
-                        )
-                    except Exception:
-                        if session is not None:
-                            session.audio_receive_stats["callback_errors"] += 1
-                        # A consumer callback is application code. Its failure
-                        # must not terminate the WebRTC track receive loop.
-                        import logging
-                        logging.getLogger(__name__).exception(
-                            "Remote audio callback failed for chat %s", chat_id
-                        )
-                    else:
-                        if session is not None:
-                            session.audio_receive_stats["frames_delivered"] += 1
-                elif session is not None:
-                    # No application callback is installed; received frames
-                    # are intentionally not counted as delivered.
-                    pass
+                        queue.get_nowait()
+                        queue.task_done()
+                    except asyncio.QueueEmpty:
+                        pass
+                    session.audio_receive_stats["frames_dropped"] += 1
+                queue.put_nowait(frame)
         except MediaStreamError:
             return
         except asyncio.CancelledError:
@@ -353,6 +336,45 @@ class AiortcTelegramMediaEngine:
             logging.getLogger(__name__).exception(
                 "Remote audio receive failed for chat %s", chat_id
             )
+
+    async def _dispatch_remote_audio(self, chat_id: int, session: _Session) -> None:
+        """Deliver queued frames without blocking the WebRTC receive task."""
+        queue = session.audio_receive_queue
+        if queue is None:
+            return
+        try:
+            while True:
+                frame = await queue.get()
+                try:
+                    callback = self.on_audio_frame
+                    if callback is None:
+                        continue
+                    try:
+                        result = callback(chat_id, frame)
+                        if inspect.isawaitable(result):
+                            await asyncio.wait_for(
+                                result, timeout=self.audio_callback_timeout
+                            )
+                    except asyncio.TimeoutError:
+                        session.audio_receive_stats["callback_timeouts"] += 1
+                        import logging
+                        logging.getLogger(__name__).warning(
+                            "Remote audio callback timed out for chat %s after %.3fs",
+                            chat_id,
+                            self.audio_callback_timeout,
+                        )
+                    except Exception:
+                        session.audio_receive_stats["callback_errors"] += 1
+                        import logging
+                        logging.getLogger(__name__).exception(
+                            "Remote audio callback failed for chat %s", chat_id
+                        )
+                    else:
+                        session.audio_receive_stats["frames_delivered"] += 1
+                finally:
+                    queue.task_done()
+        except asyncio.CancelledError:
+            raise
 
     async def _notify_stream_end(self, chat_id: int, error: Optional[Exception] = None) -> None:
         callback = self.on_stream_end
@@ -465,6 +487,14 @@ class AiortcTelegramMediaEngine:
             session = self._sessions.get(chat_id)
             if session is None:
                 return
+            if session.audio_receive_queue is None:
+                session.audio_receive_queue = asyncio.Queue(
+                    maxsize=self.audio_receive_queue_size
+                )
+                dispatcher = asyncio.create_task(
+                    self._dispatch_remote_audio(chat_id, session)
+                )
+                session.remote_audio_tasks.append(dispatcher)
             task = asyncio.create_task(
                 self._consume_remote_audio(chat_id, remote_track)
             )
@@ -487,6 +517,9 @@ class AiortcTelegramMediaEngine:
                 connected_event=connected_event,
                 state_changed_event=state_changed_event,
                 remote_audio_tasks=[],
+                audio_receive_queue=asyncio.Queue(
+                    maxsize=self.audio_receive_queue_size
+                ),
             )
             return {
                 "ssrc": source_id,
@@ -551,6 +584,7 @@ class AiortcTelegramMediaEngine:
                 "frames_delivered": 0,
                 "callback_errors": 0,
                 "callback_timeouts": 0,
+                "frames_dropped": 0,
             }
         return dict(session.audio_receive_stats)
 
@@ -615,6 +649,13 @@ class AiortcTelegramMediaEngine:
         if session.remote_audio_tasks:
             await asyncio.gather(*session.remote_audio_tasks, return_exceptions=True)
         session.remote_audio_tasks.clear()
+        if session.audio_receive_queue is not None:
+            while not session.audio_receive_queue.empty():
+                try:
+                    session.audio_receive_queue.get_nowait()
+                    session.audio_receive_queue.task_done()
+                except asyncio.QueueEmpty:
+                    break
         session.track.stop()
         session.track.clear()
         try:
