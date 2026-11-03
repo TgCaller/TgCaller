@@ -345,6 +345,8 @@ async def test_stop_process_kills_process_when_terminate_times_out(monkeypatch):
     process = _FakeProcess(hang_after_terminate=True)
 
     async def immediate_timeout(awaitable, timeout):
+        # Close the timed-out coroutine to avoid an un-awaited coroutine warning.
+        awaitable.close()
         raise asyncio.TimeoutError
 
     monkeypatch.setattr(asyncio, "wait_for", immediate_timeout)
@@ -353,7 +355,8 @@ async def test_stop_process_kills_process_when_terminate_times_out(monkeypatch):
 
     assert process.terminate_calls == 1
     assert process.kill_calls == 1
-    assert process.wait_calls == 2
+    # Only the post-kill reap coroutine is actually awaited by this test double.
+    assert process.wait_calls == 1
     assert process.returncode == -9
 
 
