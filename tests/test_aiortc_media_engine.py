@@ -199,3 +199,38 @@ async def test_stream_mode_fails_closed_and_closes_prepared_session():
         await engine.handle_join_updates(-100124, update)
     with pytest.raises(ConnectionError, match="No media session"):
         await engine.source_id(-100124)
+
+
+@pytest.mark.asyncio
+async def test_pcm_track_queue_full_fails_after_configured_timeout():
+    track = _PCMTrack(queue_size=1, push_timeout=0.01)
+    frame = b"\\x00" * 3840
+
+    await track.push(frame)
+    with pytest.raises(ConnectionError, match="queue remained full"):
+        await track.push(frame)
+
+    assert track.queue.qsize() == 1
+    track.stop()
+
+
+@pytest.mark.asyncio
+async def test_pcm_track_blocked_push_can_be_cancelled_without_adding_a_frame():
+    track = _PCMTrack(queue_size=1, push_timeout=1.0)
+    frame = b"\\x00" * 3840
+
+    await track.push(frame)
+    pending = __import__("asyncio").create_task(track.push(frame))
+    await __import__("asyncio").sleep(0)
+    pending.cancel()
+
+    with pytest.raises(__import__("asyncio").CancelledError):
+        await pending
+
+    assert track.queue.qsize() == 1
+    track.stop()
+
+
+def test_engine_rejects_invalid_queue_put_timeout():
+    with pytest.raises(ValueError, match="queue_put_timeout must be positive"):
+        AiortcTelegramMediaEngine(queue_put_timeout=0)
