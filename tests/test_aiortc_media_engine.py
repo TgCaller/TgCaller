@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -220,11 +221,11 @@ async def test_pcm_track_blocked_push_can_be_cancelled_without_adding_a_frame():
     frame = b"\\x00" * 3840
 
     await track.push(frame)
-    pending = __import__("asyncio").create_task(track.push(frame))
-    await __import__("asyncio").sleep(0)
+    pending = asyncio.create_task(track.push(frame))
+    await asyncio.sleep(0)
     pending.cancel()
 
-    with pytest.raises(__import__("asyncio").CancelledError):
+    with pytest.raises(asyncio.CancelledError):
         await pending
 
     assert track.queue.qsize() == 1
