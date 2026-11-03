@@ -311,6 +311,11 @@ class AiortcTelegramMediaEngine:
             state_changed_event.set()
             if state in ("connected", "failed", "closed"):
                 connected_event.set()
+            # Discard queued audio on any loss of transport. A transient
+            # disconnect may recover, but stale speech/music must not burst
+            # into the call after connectivity returns.
+            if state in ("disconnected", "failed", "closed"):
+                track.clear()
 
         try:
             offer = await pc.createOffer()
@@ -652,10 +657,26 @@ class AiortcTelegramMediaEngine:
 
     async def send_frame(self, chat_id: int, frame_data: Any, frame_type: str) -> bool:
         session = self._sessions.get(chat_id)
-        if session is None or session.pc.connectionState != "connected":
-            raise ConnectionError(f"No connected Telegram media session for chat {chat_id}")
+        if session is None:
+            raise ConnectionError(f"No media session exists for chat {chat_id}")
         if frame_type != "audio":
             raise NotImplementedError("This media engine currently supports audio frames only")
+
+        state = session.pc.connectionState
+        if state == "disconnected":
+            # Treat disconnected as potentially transient: stop feeding audio
+            # into the bounded queue until the same peer connection recovers.
+            # Failed/closed are terminal here; reconnect is a separate,
+            # explicitly negotiated operation and is not simulated.
+            state = await self.wait_for_connection_state(
+                chat_id, {"connected", "failed", "closed"}
+            )
+        if state != "connected" or self._sessions.get(chat_id) is not session:
+            raise ConnectionError(
+                "Telegram media transport is not connected "
+                f"(state={state})"
+            )
+
         await session.track.push(frame_data)
         return True
 
