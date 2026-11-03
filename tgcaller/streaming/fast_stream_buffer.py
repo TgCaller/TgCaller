@@ -324,7 +324,17 @@ class FastStreamBuffer:
                     await self._process_chunk(chunk)
                     self.stats['chunks_consumed'] += 1
                 else:
-                    # No chunks available
+                    # A finite source is complete only after the producer has
+                    # exited AND every buffered chunk has been consumed. Stop
+                    # the consumer instead of leaving it polling forever.
+                    producer_finished = (
+                        self.producer_task is not None and self.producer_task.done()
+                    )
+                    with self._get_lock():
+                        buffer_empty = not self.buffer
+                    if producer_finished and buffer_empty:
+                        self._set_state(BufferState.IDLE)
+                        break
                     await asyncio.sleep(0.001)  # 1ms
                 
         except asyncio.CancelledError:
