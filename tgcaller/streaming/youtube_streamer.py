@@ -125,6 +125,7 @@ class YouTubeStreamer:
         self._send_lock = asyncio.Lock()
         self._completion_task: Optional[asyncio.Task] = None
         self._managed_stream: Optional[MediaStream] = None
+        self._lifecycle_started = False
         
         # Statistics
         self.stream_stats = {
@@ -199,6 +200,7 @@ class YouTubeStreamer:
                     video_config=None,
                 )
                 self._set_caller_stream_state(chat_id, self._managed_stream, CallStatus.PLAYING)
+                self._lifecycle_started = True
                 await self._emit_caller_event(
                     "stream_start",
                     CallUpdate(
@@ -276,7 +278,7 @@ class YouTubeStreamer:
     async def stop_streaming(self):
         """Stop YouTube streaming and emit a manual-stop lifecycle event."""
         chat_id = self.current_chat_id
-        was_active = self.is_streaming or self.buffer is not None or self.ffmpeg_process is not None
+        was_active = self._lifecycle_started
         self.is_streaming = False
 
         watcher = self._completion_task
@@ -302,6 +304,7 @@ class YouTubeStreamer:
         self.current_chat_id = None
         self.stream_url = None
         self._managed_stream = None
+        self._lifecycle_started = False
         self.logger.info("YouTube streaming stopped")
 
     async def _watch_stream_completion(self, chat_id: int, buffer: FastStreamBuffer):
@@ -351,6 +354,7 @@ class YouTubeStreamer:
         self.current_chat_id = None
         self.stream_url = None
         self._managed_stream = None
+        self._lifecycle_started = False
         self._completion_task = None
 
     async def _cleanup_stream_resources(self):
