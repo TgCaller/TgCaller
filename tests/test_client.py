@@ -426,3 +426,33 @@ class TestTgCaller:
         assert caller.get_active_calls() == []
         await caller.stop()
 
+
+
+def test_get_audio_receive_stats_is_exposed_by_public_client(mock_client):
+    class StatsTransport(FakeTransport):
+        def get_audio_receive_stats(self, chat_id):
+            assert chat_id == -100123
+            return {
+                "frames_received": 12,
+                "frames_delivered": 10,
+                "callback_errors": 1,
+                "callback_timeouts": 0,
+                "frames_dropped": 2,
+            }
+
+    caller = TgCaller(mock_client, connection_backend=StatsTransport())
+    stats = caller.get_audio_receive_stats(-100123)
+    assert stats == {
+        "frames_received": 12,
+        "frames_delivered": 10,
+        "callback_errors": 1,
+        "callback_timeouts": 0,
+        "frames_dropped": 2,
+    }
+    stats["frames_received"] = 999
+    assert caller.get_audio_receive_stats(-100123)["frames_received"] == 12
+
+
+def test_get_audio_receive_stats_returns_empty_mapping_when_transport_unsupported(mock_client):
+    caller = TgCaller(mock_client, connection_backend=FakeTransport())
+    assert caller.get_audio_receive_stats(-100123) == {}
