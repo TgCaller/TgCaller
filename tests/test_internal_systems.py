@@ -52,6 +52,46 @@ class TestConnectionManager:
         assert success is True
         assert connection_manager.is_connected(chat_id) is False
 
+    @pytest.mark.asyncio
+    async def test_reconnect_does_not_duplicate_a_still_registered_telegram_call(
+        self, connection_manager, mock_caller
+    ):
+        chat_id = -1001234567890
+        connection_manager.retry_delay = 0
+        connection_manager.connections[chat_id] = ConnectionState.CONNECTED
+        connection_manager.retry_counts[chat_id] = 0
+        mock_caller._connection.check_call = AsyncMock(return_value=True)
+
+        success = await connection_manager.reconnect_call(chat_id)
+
+        assert success is False
+        assert connection_manager.connections[chat_id] == ConnectionState.FAILED
+        mock_caller._connection.check_call.assert_awaited_once_with(chat_id)
+        mock_caller._connection.connect_call.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_reconnect_joins_again_only_after_telegram_forgets_old_source(
+        self, connection_manager, mock_caller
+    ):
+        chat_id = -1001234567890
+        connection_manager.retry_delay = 0
+        connection_manager.connections[chat_id] = ConnectionState.CONNECTED
+        connection_manager.retry_counts[chat_id] = 0
+        mock_caller._connection.check_call = AsyncMock(return_value=False)
+
+        success = await connection_manager.reconnect_call(chat_id)
+
+        assert success is True
+        assert connection_manager.connections[chat_id] == ConnectionState.CONNECTED
+        mock_caller._connection.check_call.assert_awaited_once_with(chat_id)
+        mock_caller._connection.connect_call.assert_awaited_once_with(
+            chat_id, None, None
+        )
+        monitor = connection_manager.connection_tasks.pop(chat_id)
+        monitor.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await monitor
+
 
 class TestCacheManager:
     """Test Cache Manager"""
