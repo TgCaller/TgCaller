@@ -128,11 +128,39 @@ class ConnectionManager:
         await asyncio.sleep(self.retry_delay * (retry_count + 1))
         
         try:
-            # Get previous config
+            # Telegram may still recognize the old SSRC after the local
+            # transport becomes unhealthy. Never issue a fresh JoinGroupCall
+            # while that source is still registered: doing so can create a
+            # duplicate server-side participant. The backend returns False
+            # only when the old source is no longer recognized and a fresh
+            # join is safe.
+            connection = getattr(self.caller, "_connection", None)
+            check_call = getattr(connection, "check_call", None)
+            if callable(check_call):
+                try:
+                    still_registered = bool(await check_call(chat_id))
+                except Exception as exc:
+                    self.logger.error(
+                        "Telegram call membership check failed for chat %s: %s",
+                        chat_id, exc,
+                    )
+                    self.connections[chat_id] = ConnectionState.FAILED
+                    return False
+                if still_registered:
+                    self.logger.error(
+                        "Cannot safely rejoin chat %s: Telegram still recognizes "
+                        "the existing media source and in-place recovery is unavailable",
+                        chat_id,
+                    )
+                    self.connections[chat_id] = ConnectionState.FAILED
+                    return False
+
+            # The old source is no longer registered (or this is a custom
+            # transport without the optional membership-check capability).
             call_session = self.caller._active_calls.get(chat_id, {})
             audio_config = call_session.get('audio_config')
             video_config = call_session.get('video_config')
-            
+
             success = await self._attempt_connection(chat_id, audio_config, video_config)
             
             if success:

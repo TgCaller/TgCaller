@@ -35,6 +35,13 @@ theme:
   language: en
 
 nav:
+  - Home: index.md
+  - API Reference: api.md
+  - Incoming Audio: incoming-audio.md
+  - Advanced: advanced.md
+  - Changelog: changelog.md
+
+nav:
   # (same as before...)
 
 markdown_extensions:

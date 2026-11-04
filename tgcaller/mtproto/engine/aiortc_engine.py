@@ -10,9 +10,10 @@ ready.
 """
 
 import asyncio
+import inspect
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from typing import Any, Dict, List, Optional
 from pathlib import Path
@@ -174,9 +175,14 @@ class _PCMTrack(MediaStreamTrack):
 
     kind = "audio"
 
-    def __init__(self, queue_size: int = 10):
+    def __init__(self, queue_size: int = 10, push_timeout: float = 1.0):
         super().__init__()
+        if queue_size < 1:
+            raise ValueError("queue_size must be at least 1")
+        if push_timeout <= 0:
+            raise ValueError("push_timeout must be positive")
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=queue_size)
+        self.push_timeout = float(push_timeout)
         self._pts = 0
         self._next_due: Optional[float] = None
 
@@ -188,7 +194,18 @@ class _PCMTrack(MediaStreamTrack):
         samples = len(data) // _BYTES_PER_PCM_FRAME
         if samples / _SAMPLE_RATE > _MAX_FRAME_DURATION_SECONDS:
             raise ValueError("PCM frame duration must not exceed 120 ms")
-        await self.queue.put(data)
+        if self.readyState != "live":
+            raise ConnectionError("Audio track is no longer live")
+        try:
+            # File/URL playback uses backpressure, but a stalled consumer must
+            # not hold a producer forever. Cancellation remains immediate.
+            await asyncio.wait_for(
+                self.queue.put(data), timeout=self.push_timeout
+            )
+        except asyncio.TimeoutError as exc:
+            raise ConnectionError(
+                "Audio queue remained full; media producer was stopped"
+            ) from exc
 
     def clear(self) -> None:
         while not self.queue.empty():
@@ -235,6 +252,17 @@ class _Session:
     source_id: int
     local_offer_sdp: str
     connected_event: asyncio.Event
+    state_changed_event: asyncio.Event
+    remote_audio_tasks: List[asyncio.Task] = field(default_factory=list)
+    audio_receive_queue: Optional[asyncio.Queue] = None
+    audio_dispatch_task: Optional[asyncio.Task] = None
+    audio_receive_stats: Dict[str, int] = field(default_factory=lambda: {
+        "frames_received": 0,
+        "frames_delivered": 0,
+        "callback_errors": 0,
+        "callback_timeouts": 0,
+        "frames_dropped": 0,
+    })
     state: str = "preparing"
 
 
@@ -246,16 +274,161 @@ class AiortcTelegramMediaEngine:
     stream/RTMP responses and unsupported SDP/DTLS shapes.
     """
 
-    def __init__(self, connect_timeout: float = 20.0, queue_size: int = 10):
+    def __init__(
+        self,
+        connect_timeout: float = 20.0,
+        queue_size: int = 10,
+        queue_put_timeout: float = 1.0,
+        audio_callback_timeout: float = 0.25,
+        audio_receive_queue_size: int = 50,
+    ):
         if connect_timeout <= 0:
             raise ValueError("connect_timeout must be positive")
         if queue_size < 1:
             raise ValueError("queue_size must be at least 1")
+        if queue_put_timeout <= 0:
+            raise ValueError("queue_put_timeout must be positive")
+        if audio_callback_timeout <= 0:
+            raise ValueError("audio_callback_timeout must be positive")
+        if audio_receive_queue_size < 1:
+            raise ValueError("audio_receive_queue_size must be at least 1")
+        self.audio_receive_queue_size = int(audio_receive_queue_size)
         self.connect_timeout = float(connect_timeout)
         self.queue_size = int(queue_size)
+        self.queue_put_timeout = float(queue_put_timeout)
+        self.audio_callback_timeout = float(audio_callback_timeout)
         self._sessions: Dict[int, _Session] = {}
         self._stream_tasks: Dict[int, asyncio.Task] = {}
         self._stream_processes: Dict[int, Any] = {}
+        self._stream_cleanup_tasks: Dict[int, asyncio.Task] = {}
+        # Serialize source start/replace/stop per chat without blocking other calls.
+        self._stream_locks: Dict[int, asyncio.Lock] = {}
+        # Optional callback installed by TgCaller to reconcile public stream state.
+        self.on_stream_end = None
+        # Optional sync/async callback: (chat_id, decoded aiortc AudioFrame).
+        self.on_audio_frame = None
+
+    async def _consume_remote_audio(
+        self, chat_id: int, track: MediaStreamTrack
+    ) -> None:
+        """Drain the WebRTC track quickly into a bounded, low-latency queue."""
+        try:
+            while True:
+                frame = await track.recv()
+                session = self._sessions.get(chat_id)
+                if session is None or session.audio_receive_queue is None:
+                    continue
+                session.audio_receive_stats["frames_received"] += 1
+                queue = session.audio_receive_queue
+                if queue.full():
+                    try:
+                        queue.get_nowait()
+                        queue.task_done()
+                    except asyncio.QueueEmpty:
+                        pass
+                    session.audio_receive_stats["frames_dropped"] += 1
+                queue.put_nowait(frame)
+        except MediaStreamError:
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Remote audio receive failed for chat %s", chat_id
+            )
+
+    async def _dispatch_remote_audio(self, chat_id: int, session: _Session) -> None:
+        """Deliver queued frames without blocking the WebRTC receive task."""
+        queue = session.audio_receive_queue
+        if queue is None:
+            return
+        try:
+            while True:
+                frame = await queue.get()
+                try:
+                    callback = self.on_audio_frame
+                    if callback is None:
+                        continue
+                    try:
+                        result = callback(chat_id, frame)
+                        if inspect.isawaitable(result):
+                            await asyncio.wait_for(
+                                result, timeout=self.audio_callback_timeout
+                            )
+                    except asyncio.TimeoutError:
+                        session.audio_receive_stats["callback_timeouts"] += 1
+                        import logging
+                        logging.getLogger(__name__).warning(
+                            "Remote audio callback timed out for chat %s after %.3fs",
+                            chat_id,
+                            self.audio_callback_timeout,
+                        )
+                    except Exception:
+                        session.audio_receive_stats["callback_errors"] += 1
+                        import logging
+                        logging.getLogger(__name__).exception(
+                            "Remote audio callback failed for chat %s", chat_id
+                        )
+                    else:
+                        session.audio_receive_stats["frames_delivered"] += 1
+                finally:
+                    queue.task_done()
+        except asyncio.CancelledError:
+            raise
+
+    async def _notify_stream_end(self, chat_id: int, error: Optional[Exception] = None) -> None:
+        callback = self.on_stream_end
+        if callback is None:
+            return
+        try:
+            result = callback(chat_id, error)
+            if inspect.isawaitable(result):
+                await result
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "Stream completion callback failed for chat %s", chat_id
+            )
+
+    async def _abort_stream_after_transport_loss(
+        self, chat_id: int, session: "_Session", state: str
+    ) -> None:
+        """Stop managed media sources when their transport becomes unavailable."""
+        if self._sessions.get(chat_id) is not session:
+            return
+        had_stream = await self.stop_stream(chat_id)
+        if had_stream:
+            await self._notify_stream_end(
+                chat_id,
+                ConnectionError(
+                    f"Managed media stream stopped because WebRTC state became {state}"
+                ),
+            )
+
+    def _schedule_stream_abort(self, chat_id: int, session: "_Session", state: str) -> None:
+        if chat_id not in self._stream_tasks and chat_id not in self._stream_processes:
+            return
+        existing = self._stream_cleanup_tasks.get(chat_id)
+        if existing is not None and not existing.done():
+            return
+        task = asyncio.create_task(
+            self._abort_stream_after_transport_loss(chat_id, session, state)
+        )
+        self._stream_cleanup_tasks[chat_id] = task
+
+        def clear_task(done: asyncio.Task) -> None:
+            if self._stream_cleanup_tasks.get(chat_id) is done:
+                self._stream_cleanup_tasks.pop(chat_id, None)
+            if not done.cancelled() and done.exception() is not None:
+                import logging
+                logging.getLogger(__name__).error(
+                    "Transport-loss stream cleanup failed for chat %s",
+                    chat_id,
+                    exc_info=done.exception(),
+                )
+
+        task.add_done_callback(clear_task)
 
     async def create_join_payload(
         self, chat_id: int, audio_config: Any = None, video_config: Any = None
@@ -282,14 +455,52 @@ class AiortcTelegramMediaEngine:
                 )
         await self.close(chat_id)
         pc = RTCPeerConnection()
-        track = _PCMTrack(queue_size=self.queue_size)
+        track = _PCMTrack(
+            queue_size=self.queue_size,
+            push_timeout=self.queue_put_timeout,
+        )
         pc.addTrack(track)
         connected_event = asyncio.Event()
+        state_changed_event = asyncio.Event()
 
         @pc.on("connectionstatechange")
         def on_connection_state_change() -> None:
-            if pc.connectionState in ("connected", "failed", "closed"):
+            state = pc.connectionState
+            state_changed_event.set()
+            if state in ("connected", "failed", "closed"):
                 connected_event.set()
+            # Discard queued audio on any loss of transport. A transient
+            # disconnect may recover, but stale speech/music must not burst
+            # into the call after connectivity returns.
+            if state in ("disconnected", "failed"):
+                track.clear()
+                # A managed source must not keep reading/buffering while the
+                # transport is unavailable. It is stopped, not auto-resumed;
+                # applications may explicitly start it again after recovery.
+                session = self._sessions.get(chat_id)
+                if session is not None:
+                    self._schedule_stream_abort(chat_id, session, state)
+
+        @pc.on("track")
+        def on_remote_track(remote_track: MediaStreamTrack) -> None:
+            if remote_track.kind != "audio":
+                return
+            session = self._sessions.get(chat_id)
+            if session is None:
+                return
+            if session.audio_receive_queue is None:
+                session.audio_receive_queue = asyncio.Queue(
+                    maxsize=self.audio_receive_queue_size
+                )
+            if session.audio_dispatch_task is None or session.audio_dispatch_task.done():
+                session.audio_dispatch_task = asyncio.create_task(
+                    self._dispatch_remote_audio(chat_id, session)
+                )
+                session.remote_audio_tasks.append(session.audio_dispatch_task)
+            task = asyncio.create_task(
+                self._consume_remote_audio(chat_id, remote_track)
+            )
+            session.remote_audio_tasks.append(task)
 
         try:
             offer = await pc.createOffer()
@@ -306,6 +517,11 @@ class AiortcTelegramMediaEngine:
                 source_id=source_id,
                 local_offer_sdp=local_sdp,
                 connected_event=connected_event,
+                state_changed_event=state_changed_event,
+                remote_audio_tasks=[],
+                audio_receive_queue=asyncio.Queue(
+                    maxsize=self.audio_receive_queue_size
+                ),
             )
             return {
                 "ssrc": source_id,
@@ -354,9 +570,63 @@ class AiortcTelegramMediaEngine:
             await self.close(chat_id)
             raise
 
-    async def is_connected(self, chat_id: int) -> bool:
+    def get_connection_state(self, chat_id: int) -> str:
+        """Return aiortc's current transport state without guessing recovery."""
         session = self._sessions.get(chat_id)
-        return bool(session and session.pc.connectionState == "connected")
+        if session is None:
+            return "closed"
+        return session.pc.connectionState
+
+    def get_audio_receive_stats(self, chat_id: int) -> Dict[str, int]:
+        """Return a snapshot of incoming decoded-audio callback counters."""
+        session = self._sessions.get(chat_id)
+        if session is None:
+            return {
+                "frames_received": 0,
+                "frames_delivered": 0,
+                "callback_errors": 0,
+                "callback_timeouts": 0,
+                "frames_dropped": 0,
+            }
+        return dict(session.audio_receive_stats)
+
+    async def wait_for_connection_state(
+        self, chat_id: int, states, timeout: Optional[float] = None
+    ) -> str:
+        """Wait until the peer connection reaches one of the requested states."""
+        accepted = {states} if isinstance(states, str) else set(states)
+        valid = {"new", "connecting", "connected", "disconnected", "failed", "closed"}
+        if not accepted or not accepted.issubset(valid):
+            raise ValueError("states must contain valid aiortc connection states")
+        if timeout is not None and timeout <= 0:
+            raise ValueError("timeout must be positive")
+
+        async def wait() -> str:
+            while True:
+                session = self._sessions.get(chat_id)
+                if session is None:
+                    state = "closed"
+                else:
+                    # Clear before reading the state to avoid losing a transition
+                    # between the state check and Event.wait().
+                    session.state_changed_event.clear()
+                    state = session.pc.connectionState
+                    if state in accepted:
+                        return state
+                    if self._sessions.get(chat_id) is not session:
+                        continue
+                    await session.state_changed_event.wait()
+                    continue
+                if state in accepted:
+                    return state
+                raise ConnectionError(f"No media session exists for chat {chat_id}")
+
+        if timeout is None:
+            return await wait()
+        return await asyncio.wait_for(wait(), timeout=float(timeout))
+
+    async def is_connected(self, chat_id: int) -> bool:
+        return self.get_connection_state(chat_id) == "connected"
 
     async def source_id(self, chat_id: int) -> int:
         session = self._sessions.get(chat_id)
@@ -365,11 +635,36 @@ class AiortcTelegramMediaEngine:
         return session.source_id
 
     async def close(self, chat_id: int) -> None:
-        await self.stop_stream(chat_id)
+        """Close a chat's media session and await transport-loss cleanup."""
+        async with self._stream_lock(chat_id):
+            await self._close_unlocked(chat_id)
+
+        # A connection-state callback may have scheduled stream cleanup just
+        # before close acquired the lock. Let that task observe the closed
+        # session and finish before close() returns. Never await ourselves.
+        cleanup_task = self._stream_cleanup_tasks.get(chat_id)
+        if cleanup_task is not None and cleanup_task is not asyncio.current_task():
+            await asyncio.gather(cleanup_task, return_exceptions=True)
+
+    async def _close_unlocked(self, chat_id: int) -> None:
+        """Close a chat's media session while its stream lock is held."""
+        await self._stop_stream_unlocked(chat_id)
         session = self._sessions.pop(chat_id, None)
         if session is None:
             return
         session.state = "closing"
+        for task in session.remote_audio_tasks:
+            task.cancel()
+        if session.remote_audio_tasks:
+            await asyncio.gather(*session.remote_audio_tasks, return_exceptions=True)
+        session.remote_audio_tasks.clear()
+        if session.audio_receive_queue is not None:
+            while not session.audio_receive_queue.empty():
+                try:
+                    session.audio_receive_queue.get_nowait()
+                    session.audio_receive_queue.task_done()
+                except asyncio.QueueEmpty:
+                    break
         session.track.stop()
         session.track.clear()
         try:
@@ -422,20 +717,41 @@ class AiortcTelegramMediaEngine:
             raise ConnectionError("FFmpeg produced a partial stereo PCM sample frame")
         return bytes(data)
 
+    @staticmethod
+    def _close_process_stdout(process: Any) -> None:
+        """Close the subprocess stdout pipe transport after its producer stops.
+
+        asyncio.subprocess.Process has no public stdout-close method. Its
+        subprocess transport owns the pipe transport; closing that descriptor
+        releases the reader even when playback was cancelled before EOF.
+        """
+        transport = getattr(process, "_transport", None)
+        get_pipe_transport = getattr(transport, "get_pipe_transport", None)
+        if get_pipe_transport is None:
+            return
+        pipe_transport = get_pipe_transport(1)
+        if pipe_transport is not None:
+            pipe_transport.close()
+
     async def _stop_process(self, process: Any) -> None:
-        """Terminate and reap an FFmpeg subprocess without leaking it."""
-        if process.returncode is None:
-            process.terminate()
-            try:
-                await asyncio.wait_for(process.wait(), timeout=3.0)
-            except asyncio.TimeoutError:
-                process.kill()
+        """Terminate, reap, and release an FFmpeg subprocess stdout pipe."""
+        try:
+            if process.returncode is None:
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=3.0)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.wait()
+            else:
                 await process.wait()
-        else:
-            await process.wait()
+        finally:
+            self._close_process_stdout(process)
 
     async def _pump_ffmpeg_process(self, chat_id: int, process: Any) -> None:
         """Feed FFmpeg PCM output into the paced audio track until EOF."""
+        completed = False
+        failure = None
         try:
             while True:
                 chunk = await self._read_pcm_chunk(process)
@@ -445,10 +761,12 @@ class AiortcTelegramMediaEngine:
             return_code = await process.wait()
             if return_code != 0:
                 raise ConnectionError(f"FFmpeg audio process exited with status {return_code}")
+            completed = True
         except asyncio.CancelledError:
             raise
         except Exception as exc:
             # Playback already started; report late decode/transport errors clearly.
+            failure = exc
             import logging
             logging.getLogger(__name__).error("FFmpeg playback failed for chat %s: %s", chat_id, exc)
         finally:
@@ -457,11 +775,17 @@ class AiortcTelegramMediaEngine:
                     await self._stop_process(process)
                 except Exception:
                     pass
+            else:
+                # Natural EOF has already reaped the child, but explicitly
+                # release the pipe transport as well.
+                self._close_process_stdout(process)
             if self._stream_processes.get(chat_id) is process:
                 self._stream_processes.pop(chat_id, None)
             current = asyncio.current_task()
             if self._stream_tasks.get(chat_id) is current:
                 self._stream_tasks.pop(chat_id, None)
+            if completed or failure is not None:
+                await self._notify_stream_end(chat_id, failure)
 
     async def _close_async_iterator(self, iterator: Any) -> None:
         """Close an async media source when it finishes or is stopped."""
@@ -474,12 +798,16 @@ class AiortcTelegramMediaEngine:
 
     async def _pump_async_iterable(self, chat_id: int, iterator: Any) -> None:
         """Deliver the remainder of an async source in a managed background task."""
+        completed = False
+        failure = None
         try:
             async for chunk in iterator:
                 await self.send_frame(chat_id, chunk, "audio")
+            completed = True
         except asyncio.CancelledError:
             raise
         except Exception as exc:
+            failure = exc
             import logging
             logging.getLogger(__name__).error(
                 "Async media playback failed for chat %s: %s", chat_id, exc
@@ -489,8 +817,21 @@ class AiortcTelegramMediaEngine:
             current = asyncio.current_task()
             if self._stream_tasks.get(chat_id) is current:
                 self._stream_tasks.pop(chat_id, None)
+            if completed or failure is not None:
+                await self._notify_stream_end(chat_id, failure)
+
+    def _stream_lock(self, chat_id: int) -> asyncio.Lock:
+        lock = self._stream_locks.get(chat_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._stream_locks[chat_id] = lock
+        return lock
 
     async def play_stream(self, chat_id: int, stream: Any) -> bool:
+        async with self._stream_lock(chat_id):
+            return await self._play_stream_unlocked(chat_id, stream)
+
+    async def _play_stream_unlocked(self, chat_id: int, stream: Any) -> bool:
         if isinstance(stream, bytes):
             return await self.send_frame(chat_id, stream, "audio")
         if hasattr(stream, "__aiter__") and not hasattr(stream, "source"):
@@ -503,7 +844,7 @@ class AiortcTelegramMediaEngine:
             # A new source replaces any existing source. Pull and enqueue one
             # frame before returning so immediate source failures are reported
             # to the caller; stream the remaining frames in a managed task.
-            await self.stop_stream(chat_id)
+            await self._stop_stream_unlocked(chat_id)
             iterator = stream.__aiter__()
             try:
                 first_chunk = await iterator.__anext__()
@@ -524,7 +865,7 @@ class AiortcTelegramMediaEngine:
         if session is None or session.pc.connectionState != "connected":
             raise ConnectionError(f"No connected Telegram media session for chat {chat_id}")
         # A new source replaces an existing source deterministically.
-        await self.stop_stream(chat_id)
+        await self._stop_stream_unlocked(chat_id)
         command = self._ffmpeg_command(stream)
         process = await asyncio.create_subprocess_exec(
             *command,
@@ -554,6 +895,10 @@ class AiortcTelegramMediaEngine:
         return True
 
     async def stop_stream(self, chat_id: int) -> bool:
+        async with self._stream_lock(chat_id):
+            return await self._stop_stream_unlocked(chat_id)
+
+    async def _stop_stream_unlocked(self, chat_id: int) -> bool:
         session = self._sessions.get(chat_id)
         task = self._stream_tasks.pop(chat_id, None)
         process = self._stream_processes.pop(chat_id, None)
@@ -566,21 +911,40 @@ class AiortcTelegramMediaEngine:
                 pass
             except Exception:
                 pass
-        if process is not None:
+        # The FFmpeg pump owns its process cleanup in its finally block.
+        # After cancelling/awaiting that task, do not terminate and close the
+        # same process a second time here.
+        if process is not None and task is None:
             try:
                 await self._stop_process(process)
             except Exception:
                 pass
         if session is not None:
             session.track.clear()
-        return had_stream or session is not None
+        return had_stream
 
     async def send_frame(self, chat_id: int, frame_data: Any, frame_type: str) -> bool:
         session = self._sessions.get(chat_id)
-        if session is None or session.pc.connectionState != "connected":
-            raise ConnectionError(f"No connected Telegram media session for chat {chat_id}")
+        if session is None:
+            raise ConnectionError(f"No media session exists for chat {chat_id}")
         if frame_type != "audio":
             raise NotImplementedError("This media engine currently supports audio frames only")
+
+        state = session.pc.connectionState
+        if state == "disconnected":
+            # Treat disconnected as potentially transient: stop feeding audio
+            # into the bounded queue until the same peer connection recovers.
+            # Failed/closed are terminal here; reconnect is a separate,
+            # explicitly negotiated operation and is not simulated.
+            state = await self.wait_for_connection_state(
+                chat_id, {"connected", "failed", "closed"}
+            )
+        if state != "connected" or self._sessions.get(chat_id) is not session:
+            raise ConnectionError(
+                "Telegram media transport is not connected "
+                f"(state={state})"
+            )
+
         await session.track.push(frame_data)
         return True
 

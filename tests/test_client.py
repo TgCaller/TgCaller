@@ -117,7 +117,8 @@ class TestTgCaller:
         await caller.stop()
         assert not caller.is_running
     
-    def test_default_transport_uses_builtin_telegram_audio_engine(self, mock_client):
+    @pytest.mark.asyncio
+    async def test_default_transport_uses_builtin_telegram_audio_engine(self, mock_client):
         caller = TgCaller(mock_client)
 
         assert isinstance(caller._connection.backend, PyrogramGroupCallBackend)
@@ -125,6 +126,17 @@ class TestTgCaller:
             caller._connection.backend.media_engine, AiortcTelegramMediaEngine
         )
         assert caller._owns_connection_backend is True
+        assert caller._connection.backend.media_engine.on_audio_frame == caller._handle_media_audio_frame
+
+        received = []
+
+        @caller.on_audio_frame
+        async def on_audio_frame(client, chat_id, frame):
+            received.append((client, chat_id, frame))
+
+        frame = object()
+        await caller._handle_media_audio_frame(-100123, frame)
+        assert received == [(mock_client, -100123, frame)]
 
     @pytest.mark.asyncio
     async def test_join_call_fails_when_telegram_call_cannot_be_resolved(self, mock_client):
@@ -414,3 +426,33 @@ class TestTgCaller:
         assert caller.get_active_calls() == []
         await caller.stop()
 
+
+
+def test_get_audio_receive_stats_is_exposed_by_public_client(mock_pyrogram_client):
+    class StatsTransport(FakeTransport):
+        def get_audio_receive_stats(self, chat_id):
+            assert chat_id == -100123
+            return {
+                "frames_received": 12,
+                "frames_delivered": 10,
+                "callback_errors": 1,
+                "callback_timeouts": 0,
+                "frames_dropped": 2,
+            }
+
+    caller = TgCaller(Mock(spec=pyrogram.Client), connection_backend=StatsTransport())
+    stats = caller.get_audio_receive_stats(-100123)
+    assert stats == {
+        "frames_received": 12,
+        "frames_delivered": 10,
+        "callback_errors": 1,
+        "callback_timeouts": 0,
+        "frames_dropped": 2,
+    }
+    stats["frames_received"] = 999
+    assert caller.get_audio_receive_stats(-100123)["frames_received"] == 12
+
+
+def test_get_audio_receive_stats_returns_empty_mapping_when_transport_unsupported(mock_pyrogram_client):
+    caller = TgCaller(Mock(spec=pyrogram.Client), connection_backend=FakeTransport())
+    assert caller.get_audio_receive_stats(-100123) == {}

@@ -2,10 +2,15 @@
 Microphone Capture - Real-time microphone input
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
-import numpy as np
-from typing import Optional, Callable
+import threading
+from typing import Optional, Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import numpy as np
 try:
     import pyaudio
 except ImportError:
@@ -104,6 +109,7 @@ class MicrophoneCapture:
     def _audio_callback(self, in_data, frame_count, time_info, status):
         """Audio stream callback"""
         try:
+            import numpy as np
             # Convert to numpy array
             audio_data = np.frombuffer(in_data, dtype=np.int16)
             
@@ -118,11 +124,11 @@ class MicrophoneCapture:
                 except Exception as e:
                     self.logger.error(f"Error in audio callback: {e}")
             
-            return (in_data, pyaudio.paContinue)
+            return (None, pyaudio.paContinue)
             
         except Exception as e:
             self.logger.error(f"Error in audio callback: {e}")
-            return (in_data, pyaudio.paAbort)
+            return (None, pyaudio.paAbort)
     
     def list_devices(self) -> list:
         """List available audio devices"""
@@ -157,6 +163,9 @@ class MicrophoneStreamer:
         self.chat_id = chat_id
         self.mic_capture = None
         self.is_streaming = False
+        self._loop = None
+        self._pending_send = None
+        self._pending_send_lock = threading.Lock()
     
     async def start_streaming(
         self, 
@@ -165,12 +174,18 @@ class MicrophoneStreamer:
     ) -> bool:
         """Start streaming microphone to call"""
         try:
+            config = audio_config or AudioConfig()
+            if config.sample_rate != 48000 or config.channels != 2 or config.codec.lower() != "opus":
+                raise ValueError(
+                    "Microphone streaming currently requires 48 kHz stereo Opus audio"
+                )
+            self._loop = asyncio.get_running_loop()
             # Join call if not already joined
             if not self.caller.is_connected(self.chat_id):
                 await self.caller.join_call(self.chat_id, audio_config=audio_config)
             
             # Setup microphone capture
-            self.mic_capture = MicrophoneCapture(audio_config)
+            self.mic_capture = MicrophoneCapture(config)
             self.mic_capture.add_callback(self._stream_audio)
             
             # Start capture
@@ -189,6 +204,11 @@ class MicrophoneStreamer:
         """Stop microphone streaming"""
         try:
             self.is_streaming = False
+            with self._pending_send_lock:
+                pending_send = self._pending_send
+                self._pending_send = None
+            if pending_send is not None:
+                pending_send.cancel()
             
             if self.mic_capture:
                 await self.mic_capture.stop_capture()
@@ -200,8 +220,39 @@ class MicrophoneStreamer:
             logger.error(f"Error stopping microphone streaming: {e}")
     
     def _stream_audio(self, audio_data: np.ndarray):
-        """Stream audio data to call"""
-        if self.is_streaming:
-            # This would send audio_data to the call
-            # Implementation depends on actual streaming protocol
-            pass
+        """Forward captured PCM to the caller loop without blocking PyAudio."""
+        if not self.is_streaming or self._loop is None or self._loop.is_closed():
+            return
+        try:
+            pcm_data = audio_data.astype("int16", copy=False).tobytes()
+            # Keep at most one send coroutine in flight. A real-time microphone
+            # must drop a stale frame under backpressure instead of building an
+            # unbounded queue of delayed audio in the event loop.
+            with self._pending_send_lock:
+                if self._pending_send is not None and not self._pending_send.done():
+                    return
+                future = asyncio.run_coroutine_threadsafe(
+                    self.caller.send_frame(self.chat_id, pcm_data, "audio"),
+                    self._loop,
+                )
+                self._pending_send = future
+
+            def report_result(done):
+                with self._pending_send_lock:
+                    if self._pending_send is done:
+                        self._pending_send = None
+                try:
+                    if not done.result():
+                        logger.warning(
+                            "TgCaller rejected microphone audio for chat %s", self.chat_id
+                        )
+                except Exception as exc:
+                    logger.error(
+                        "Microphone transport failed for chat %s: %s", self.chat_id, exc
+                    )
+
+            future.add_done_callback(report_result)
+        except Exception as exc:
+            logger.error(
+                "Could not enqueue microphone audio for chat %s: %s", self.chat_id, exc
+            )

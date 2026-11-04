@@ -16,7 +16,7 @@ except ImportError:
     yt_dlp = None
 
 from .fast_stream_buffer import FastStreamBuffer, BufferConfig, StreamChunk
-from ..types import AudioConfig, VideoConfig
+from ..types import AudioConfig, VideoConfig, MediaStream, CallUpdate, CallStatus
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +123,9 @@ class YouTubeStreamer:
         # Serialize frame delivery so concurrent callback tasks cannot reorder
         # consecutive PCM chunks when the transport is slower than the producer.
         self._send_lock = asyncio.Lock()
+        self._completion_task: Optional[asyncio.Task] = None
+        self._managed_stream: Optional[MediaStream] = None
+        self._lifecycle_started = False
         
         # Statistics
         self.stream_stats = {
@@ -191,6 +194,25 @@ class YouTubeStreamer:
             
             if success:
                 self.stream_stats['start_time'] = time.time()
+                self._managed_stream = MediaStream(
+                    source=url,
+                    audio_config=audio_config,
+                    video_config=None,
+                )
+                self._set_caller_stream_state(chat_id, self._managed_stream, CallStatus.PLAYING)
+                self._lifecycle_started = True
+                await self._emit_caller_event(
+                    "stream_start",
+                    CallUpdate(
+                        chat_id=chat_id,
+                        status=CallStatus.PLAYING,
+                        message=f"Playing YouTube audio: {url}",
+                    ),
+                )
+                active_buffer = self.buffer
+                self._completion_task = asyncio.create_task(
+                    self._watch_stream_completion(chat_id, active_buffer)
+                )
                 self.logger.info(f"Started YouTube audio streaming to chat {chat_id}")
             else:
                 await self.stop_streaming()
@@ -254,44 +276,132 @@ class YouTubeStreamer:
             return False
 
     async def stop_streaming(self):
-        """Stop YouTube streaming"""
+        """Stop YouTube streaming and emit a manual-stop lifecycle event."""
+        chat_id = self.current_chat_id
+        was_active = self._lifecycle_started
+        self.is_streaming = False
+
+        watcher = self._completion_task
+        self._completion_task = None
+        if watcher and watcher is not asyncio.current_task() and not watcher.done():
+            watcher.cancel()
+            try:
+                await watcher
+            except asyncio.CancelledError:
+                pass
+
+        await self._cleanup_stream_resources()
+        if was_active and chat_id is not None:
+            self._clear_caller_stream_state(chat_id)
+            await self._emit_caller_event(
+                "stream_stopped",
+                CallUpdate(
+                    chat_id=chat_id,
+                    status=CallStatus.CONNECTED,
+                    message="YouTube stream stopped",
+                ),
+            )
+        self.current_chat_id = None
+        self.stream_url = None
+        self._managed_stream = None
+        self._lifecycle_started = False
+        self.logger.info("YouTube streaming stopped")
+
+    async def _watch_stream_completion(self, chat_id: int, buffer: FastStreamBuffer):
+        """Finalize a finite YouTube source after its buffered audio is delivered."""
         try:
-            self.is_streaming = False
-            
-            # Stop buffer
-            if self.buffer:
-                await self.buffer.stop_buffering()
-                self.buffer = None
-            
-            # Stop FFmpeg process and always reap it before dropping the handle.
+            consumer = buffer.consumer_task
+            if consumer is not None:
+                await consumer
+            if not self.is_streaming or self.buffer is not buffer:
+                return
+
             process = self.ffmpeg_process
-            if process:
+            return_code = None
+            if process is not None:
+                return_code = await asyncio.get_running_loop().run_in_executor(
+                    None, process.wait
+                )
+            if return_code not in (None, 0):
+                error = RuntimeError(f"FFmpeg exited with status {return_code}")
+                await self._finish_natural_stream(chat_id, error)
+            else:
+                await self._finish_natural_stream(chat_id, None)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            self.logger.exception("YouTube stream completion watcher failed")
+            if self.is_streaming and self.buffer is buffer:
+                await self._finish_natural_stream(chat_id, exc)
+
+    async def _finish_natural_stream(self, chat_id: int, error: Optional[Exception]):
+        """Release resources and reconcile the caller after natural EOF/error."""
+        if not self.is_streaming:
+            return
+        self.is_streaming = False
+        await self._cleanup_stream_resources()
+        self._clear_caller_stream_state(chat_id)
+        status_message = "YouTube stream ended" if error is None else f"YouTube stream failed: {error}"
+        update = CallUpdate(
+            chat_id=chat_id,
+            status=CallStatus.CONNECTED,
+            message=status_message,
+            error=error,
+        )
+        if error is not None:
+            await self._emit_caller_event("error", error)
+        await self._emit_caller_event("stream_end", update)
+        self.current_chat_id = None
+        self.stream_url = None
+        self._managed_stream = None
+        self._lifecycle_started = False
+        self._completion_task = None
+
+    async def _cleanup_stream_resources(self):
+        """Stop buffer tasks and terminate/reap FFmpeg without emitting events."""
+        buffer, self.buffer = self.buffer, None
+        if buffer is not None:
+            await buffer.stop_buffering()
+
+        process, self.ffmpeg_process = self.ffmpeg_process, None
+        if process is not None:
+            try:
                 if process.poll() is None:
                     process.terminate()
                     try:
                         await asyncio.wait_for(
-                            asyncio.get_running_loop().run_in_executor(
-                                None, process.wait
-                            ),
+                            asyncio.get_running_loop().run_in_executor(None, process.wait),
                             timeout=5.0,
                         )
                     except asyncio.TimeoutError:
                         process.kill()
-                        await asyncio.get_running_loop().run_in_executor(
-                            None, process.wait
-                        )
+                        await asyncio.get_running_loop().run_in_executor(None, process.wait)
                 if process.stdout and not process.stdout.closed:
                     process.stdout.close()
-                self.ffmpeg_process = None
-            
-            # Reset state
-            self.current_chat_id = None
-            self.stream_url = None
-            
-            self.logger.info("YouTube streaming stopped")
-            
-        except Exception as e:
-            self.logger.error(f"Error stopping streaming: {e}")
+            except Exception:
+                self.logger.exception("Failed to clean up FFmpeg process")
+
+    def _set_caller_stream_state(self, chat_id: int, stream: MediaStream, status: CallStatus):
+        sessions = getattr(self.caller, "_active_calls", None)
+        if isinstance(sessions, dict) and chat_id in sessions:
+            sessions[chat_id]["current_stream"] = stream
+            sessions[chat_id]["status"] = status
+
+    def _clear_caller_stream_state(self, chat_id: int):
+        sessions = getattr(self.caller, "_active_calls", None)
+        if not isinstance(sessions, dict) or chat_id not in sessions:
+            return
+        session = sessions[chat_id]
+        if session.get("current_stream") is self._managed_stream:
+            session.pop("current_stream", None)
+            session["status"] = CallStatus.CONNECTED
+
+    async def _emit_caller_event(self, event_name: str, *args):
+        emit = getattr(self.caller, "_emit_event", None)
+        if emit is not None:
+            result = emit(event_name, *args)
+            if asyncio.iscoroutine(result):
+                await result
     
     async def _get_stream_url(self, url: str) -> Optional[str]:
         """Get direct stream URL from YouTube"""
@@ -462,19 +572,13 @@ class YouTubeStreamer:
         """Create async generator for stream chunks"""
         try:
             while self.is_streaming and self.ffmpeg_process:
-                # Check if process is still running
-                if self.ffmpeg_process.poll() is not None:
-                    break
-                
-                # Read chunk from FFmpeg
+                # Drain stdout through EOF even after poll() reports process exit.
+                # FFmpeg may have exited while encoded PCM remains buffered in the pipe.
                 chunk_data = await self._read_ffmpeg_chunk()
-                
-                if chunk_data:
-                    yield chunk_data
-                    self.stream_stats['bytes_streamed'] += len(chunk_data)
-                else:
-                    # No data available, yield control
-                    await asyncio.sleep(0.001)
+                if not chunk_data:
+                    break
+                yield chunk_data
+                self.stream_stats['bytes_streamed'] += len(chunk_data)
                     
         except Exception as e:
             self.logger.error(f"Error in chunk generator: {e}")

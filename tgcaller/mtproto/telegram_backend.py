@@ -4,6 +4,7 @@ This adapter requires a separately implemented Telegram-compatible media engine.
 It does not generate fake WebRTC parameters and cannot work with a generic
 aiortc peer connection unless that engine implements Telegram group-call negotiation.
 """
+import asyncio
 import inspect
 import json
 from typing import Any, Callable, Dict
@@ -98,6 +99,16 @@ class PyrogramGroupCallBackend:
         self.resolve_call = resolve_call
         self.media_engine = media_engine
         self._calls: Dict[int, Any] = {}
+        # Serialize join/leave transitions per chat. Telegram accepts only one
+        # active source per participant, so concurrent joins must not race.
+        self._call_locks: Dict[int, asyncio.Lock] = {}
+
+    def _call_lock(self, chat_id):
+        lock = self._call_locks.get(chat_id)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._call_locks[chat_id] = lock
+        return lock
 
     async def _rpc_types(self):
         try:
@@ -110,12 +121,35 @@ class PyrogramGroupCallBackend:
         return JoinGroupCall, LeaveGroupCall, GetGroupCall, DataJSON, InputPeerSelf
 
     async def connect_call(self, chat_id, audio_config=None, video_config=None):
+        async with self._call_lock(chat_id):
+            return await self._connect_call_unlocked(
+                chat_id, audio_config=audio_config, video_config=video_config
+            )
+
+    async def _connect_call_unlocked(self, chat_id, audio_config=None, video_config=None):
         if chat_id in self._calls:
             if await self.is_healthy(chat_id):
                 return True
-            # A stale local session must be torn down before allocating a new
-            # join payload; otherwise old ICE/DTLS resources can leak or overlap.
-            await self.disconnect_call(chat_id)
+
+            # Telegram's recovery protocol distinguishes a transport failure
+            # from lost server-side membership. Never leave/rejoin blindly:
+            # while Telegram still recognizes this SSRC, the existing WebRTC
+            # connection must be recovered in place.
+            source_is_joined = await self.check_call(chat_id)
+            if source_is_joined:
+                reconnect = getattr(self.media_engine, "reconnect", None)
+                if callable(reconnect):
+                    await _resolve(reconnect(chat_id))
+                    if await self.is_healthy(chat_id):
+                        return True
+                raise ConnectionError(
+                    "Telegram still recognizes this media source, but the media "
+                    "engine cannot recover the existing WebRTC connection in place; "
+                    "refusing to create a duplicate server-side join"
+                )
+            # check_call() clears stale local state and closes the old engine
+            # when Telegram no longer recognizes the source (or the RPC errors).
+            # Only then is it valid to generate a fresh join payload.
 
         JoinGroupCall, _, _, DataJSON, InputPeerSelf = await self._rpc_types()
         call = await _resolve(self.resolve_call(chat_id))
@@ -185,6 +219,10 @@ class PyrogramGroupCallBackend:
             raise
 
     async def disconnect_call(self, chat_id):
+        async with self._call_lock(chat_id):
+            return await self._disconnect_call_unlocked(chat_id)
+
+    async def _disconnect_call_unlocked(self, chat_id):
         call = self._calls.get(chat_id)
         if call is None:
             # Local call state can be missing after a partial failure while the
@@ -260,6 +298,14 @@ class PyrogramGroupCallBackend:
         except Exception:
             pass
         return False
+
+    def get_audio_receive_stats(self, chat_id):
+        """Return local decoded-audio dispatch counters for a call."""
+        getter = getattr(self.media_engine, "get_audio_receive_stats", None)
+        if not callable(getter):
+            return {}
+        result = getter(chat_id)
+        return dict(result) if isinstance(result, dict) else {}
 
     async def get_participants(self, chat_id):
         call = self._calls.get(chat_id)

@@ -30,9 +30,9 @@
 </div>
 
 
-**Modern, Fast, and Reliable Telegram Group Calls Library**
+**Telegram Group-Call Audio Engine and Python Library**
 
-*Built for developers who need a simple yet powerful solution for Telegram voice and video calls*
+*Built for developers who need a Python interface for Telegram group-call audio streaming*
 
 [**Documentation**](https://tgcaller.github.io/TgCaller/) • [**Examples**](https://github.com/tgcaller/tgcaller/tree/main/examples) • [**Community**](https://t.me/TgCallerOfficial) • [**Issues**](https://github.com/TgCaller/TgCaller/issues) • [**License**](https://github.com/TgCaller/TgCaller/blob/main/LICENSE)
 
@@ -55,20 +55,20 @@ Engineered for optimal performance with minimal system usage. No bloat. No overh
 ### ✦ Easy to Use  
 A developer-friendly API that feels intuitive from the very first line of code.
 
-### ✦ Stable by Default  
-Automatic reconnection, intelligent error handling, and smooth session management — all built-in.
+### ✦ Explicit Transport Boundaries  
+Unsupported media modes fail clearly instead of reporting a false successful stream.
 
-### ✦ High-Quality Streaming  
-Stream crystal-clear audio and HD video seamlessly in Telegram group calls.
+### ✦ Audio-First Media Engine  
+The current aiortc transport is audio-only. Video publishing and screen sharing to Telegram are not implemented yet.
 
-### ✦ Plugin-Based Architecture  
-Extend and customize core features effortlessly with a modular plugin system.
+### ✦ Plugin Lifecycle and Events  
+Register plugins, manage dependencies, exchange plugin messages, and receive client lifecycle events. Audio/video plugin processing is not yet connected to the live RTP pipeline.
 
 ### ✦ Fully Documented  
 Complete guides, real-world examples, and full API references to support every stage of development.
 
-### ✦ Built-In Power Tools  
-Includes advanced capabilities like YouTube streaming, Whisper transcription, and media filters — ready to go.
+### ✦ Extensible Media Tools  
+Includes audio streaming utilities, YouTube audio streaming, optional transcription tools, and media filters. Some tools require application-supplied audio input.
 
 ---
 
@@ -133,8 +133,7 @@ async def main():
     # Play audio
     await caller.play(-1001234567890, "song.mp3")
     
-    # Play video
-    await caller.play(-1001234567890, "video.mp4")
+    # Video publishing is not supported by the current audio-only transport.
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -159,36 +158,18 @@ audio_config = AudioConfig(
 await caller.play(chat_id, "audio.mp3", audio_config=audio_config)
 ```
 
-##  **Video Features**
+##  **Video Features (planned)**
 
-```python
-from tgcaller import VideoConfig
-
-# HD video streaming
-video_config = VideoConfig(
-    width=1920,
-    height=1080,
-    fps=30,
-    bitrate=2000000,          # 2 Mbps
-    codec="h264"
-)
-
-await caller.play(chat_id, "video.mp4", video_config=video_config)
-```
-
+VideoConfig is a configuration model, not proof of an active video RTP path. The current Telegram media engine supports audio RTP only. Requests to publish video are rejected until video negotiation, encoding, transport, and live-call integration tests are implemented.
 ---
 
 ##  **Advanced Features**
 
-### ** Bridged Calls**
-Connect multiple chats for conference calls:
+### **Bridged Calls (not available yet)**
 
-```python
-from tgcaller.advanced import BridgedCallManager
-
-bridge_manager = BridgedCallManager(caller)
-await bridge_manager.create_bridge("conference", [chat1, chat2, chat3])
-```
+The public manager is present for API planning, but inter-call audio forwarding is
+not implemented. `create_bridge(...)` currently returns `False` and does not join
+or alter any Telegram calls. Do not use it for production conferencing.
 
 ### ** Microphone Streaming**
 Stream live microphone input:
@@ -200,18 +181,15 @@ mic_streamer = MicrophoneStreamer(caller, chat_id)
 await mic_streamer.start_streaming()
 ```
 
-### ** Screen Sharing**
-Share your screen in video calls:
+### **Screen Capture (local only)**
 
-```python
-from tgcaller.advanced import ScreenShareStreamer
+The ScreenShare capture class can capture frames for application callbacks.
+Publishing those frames into a Telegram call is not supported by the current
+audio-only media transport; ScreenShareStreamer.start_streaming() raises
+NotImplementedError rather than claiming that a screen share started.
 
-screen_streamer = ScreenShareStreamer(caller, chat_id)
-await screen_streamer.start_streaming(monitor_index=1)
-```
-
-### ** YouTube Integration**
-Stream YouTube videos directly:
+### **YouTube Audio Integration**
+Stream YouTube audio directly; video output is not supported by the current media transport:
 
 ```python
 from tgcaller.advanced import YouTubeStreamer
@@ -220,14 +198,22 @@ youtube = YouTubeStreamer(caller)
 await youtube.play_youtube_url(chat_id, "https://youtube.com/watch?v=...")
 ```
 
-### ** Speech Transcription**
-Real-time speech-to-text with Whisper:
+### **Speech Transcription (audio input required)**
+
+Whisper transcription runs on decoded audio supplied by your application. Starting
+the worker does not automatically tap a Telegram call: your media receive pipeline
+must pass mono/stereo PCM samples to `add_audio_data(samples, sample_rate=48000)`.
+The call-to-transcriber audio tap is not integrated yet.
 
 ```python
 from tgcaller.advanced import WhisperTranscription
 
 transcriber = WhisperTranscription("base")
 await transcriber.start_transcription()
+# Feed decoded PCM from your own receive pipeline:
+# transcriber.add_audio_data(pcm_samples, sample_rate=48000)
+# ...
+await transcriber.stop_transcription()
 ```
 
 ### ** Audio/Video Filters**
@@ -375,14 +361,7 @@ services:
 
 ##  **Performance**
 
-| Feature | TgCaller | pytgcalls | Improvement |
-|---------|----------|-----------|-------------|
-| **Connection Time** | ~1s | ~3s | 3x faster |
-| **Memory Usage** | 80MB | 150MB | 47% less |
-| **CPU Usage** | Low | High | 60% less |
-| **Error Rate** | <2% | ~8% | 4x more reliable |
-| **Features** | 25+ | 10 | 2.5x more |
-
+Reliable comparative benchmarks have not yet been published. Connection time, memory, CPU, and error-rate figures should be added only after reproducible tests on documented hardware and Telegram live calls.
 ---
 
 ##  **Advanced Configuration**
@@ -410,14 +389,10 @@ for caller in callers:
     await caller.start()
 ```
 
-### **P2P Calls**
+### **P2P Calls (planned)**
 
-```python
-from tgcaller.advanced import P2PCallManager
-
-p2p = P2PCallManager(caller)
-await p2p.create_direct_call(user1_id, user2_id)
-```
+A public `P2PCallManager` implementation is not included yet. Direct user-to-user
+calls are not currently supported by this group-call engine.
 
 ---
 

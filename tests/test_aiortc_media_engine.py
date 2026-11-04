@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -199,3 +200,681 @@ async def test_stream_mode_fails_closed_and_closes_prepared_session():
         await engine.handle_join_updates(-100124, update)
     with pytest.raises(ConnectionError, match="No media session"):
         await engine.source_id(-100124)
+
+
+@pytest.mark.asyncio
+async def test_pcm_track_queue_full_fails_after_configured_timeout():
+    track = _PCMTrack(queue_size=1, push_timeout=0.01)
+    frame = bytes(3840)
+
+    await track.push(frame)
+    with pytest.raises(ConnectionError, match="queue remained full"):
+        await track.push(frame)
+
+    assert track.queue.qsize() == 1
+    track.stop()
+
+
+@pytest.mark.asyncio
+async def test_pcm_track_blocked_push_can_be_cancelled_without_adding_a_frame():
+    track = _PCMTrack(queue_size=1, push_timeout=1.0)
+    frame = bytes(3840)
+
+    await track.push(frame)
+    pending = asyncio.create_task(track.push(frame))
+    await asyncio.sleep(0)
+    pending.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await pending
+
+    assert track.queue.qsize() == 1
+    track.stop()
+
+
+def test_engine_rejects_invalid_queue_put_timeout():
+    with pytest.raises(ValueError, match="queue_put_timeout must be positive"):
+        AiortcTelegramMediaEngine(queue_put_timeout=0)
+
+
+class _LifecycleTrack:
+    def __init__(self):
+        self.frames = []
+        self.cleared = 0
+
+    async def push(self, frame):
+        self.frames.append(frame)
+
+    def clear(self):
+        self.cleared += 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_source_replacement_closes_old_async_iterator():
+    engine = AiortcTelegramMediaEngine()
+    session = SimpleNamespace(
+        pc=SimpleNamespace(connectionState="connected"),
+        track=_LifecycleTrack(),
+    )
+    engine._sessions[777] = session
+    old_closed = asyncio.Event()
+    release_old = asyncio.Event()
+
+    async def old_source():
+        try:
+            yield bytes(3840)
+            await release_old.wait()
+            yield bytes(3840)
+        finally:
+            old_closed.set()
+
+    async def new_source():
+        yield bytes([1]) * 3840
+        await asyncio.Event().wait()
+
+    first = asyncio.create_task(engine.play_stream(777, old_source()))
+    await asyncio.sleep(0)
+    second = asyncio.create_task(engine.play_stream(777, new_source()))
+
+    assert await asyncio.wait_for(first, timeout=1) is True
+    assert await asyncio.wait_for(second, timeout=1) is True
+    await asyncio.wait_for(old_closed.wait(), timeout=1)
+
+    active = engine._stream_tasks.get(777)
+    assert active is not None and not active.done()
+    assert session.track.frames == [bytes(3840), bytes([1]) * 3840]
+
+    await engine.stop_stream(777)
+    assert 777 not in engine._stream_tasks
+
+
+class _BlockingStdout:
+    def __init__(self):
+        self.read_started = asyncio.Event()
+        self.release = asyncio.Event()
+
+    async def read(self, size):
+        self.read_started.set()
+        await self.release.wait()
+        return b""
+
+
+class _FakePipeTransport:
+    def __init__(self):
+        self.close_calls = 0
+
+    def close(self):
+        self.close_calls += 1
+
+
+class _FakeSubprocessTransport:
+    def __init__(self):
+        self.stdout_pipe = _FakePipeTransport()
+
+    def get_pipe_transport(self, fd):
+        return self.stdout_pipe if fd == 1 else None
+
+
+class _FakeProcess:
+    def __init__(self, *, hang_after_terminate=False):
+        self.returncode = None
+        self.stdout = _BlockingStdout()
+        self._transport = _FakeSubprocessTransport()
+        self.hang_after_terminate = hang_after_terminate
+        self.exited = asyncio.Event()
+        self.terminate_calls = 0
+        self.kill_calls = 0
+        self.wait_calls = 0
+
+    def terminate(self):
+        self.terminate_calls += 1
+        if not self.hang_after_terminate:
+            self.returncode = -15
+            self.exited.set()
+
+    def kill(self):
+        self.kill_calls += 1
+        self.returncode = -9
+        self.exited.set()
+
+    async def wait(self):
+        self.wait_calls += 1
+        await self.exited.wait()
+        return self.returncode
+
+
+@pytest.mark.asyncio
+async def test_stop_process_terminates_and_reaps_process():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+
+    await engine._stop_process(process)
+
+    assert process.terminate_calls == 1
+    assert process.kill_calls == 0
+    assert process.wait_calls >= 1
+    assert process.returncode == -15
+    assert process._transport.stdout_pipe.close_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_stop_process_kills_process_when_terminate_times_out(monkeypatch):
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess(hang_after_terminate=True)
+
+    async def immediate_timeout(awaitable, timeout):
+        # Close the timed-out coroutine to avoid an un-awaited coroutine warning.
+        awaitable.close()
+        raise asyncio.TimeoutError
+
+    monkeypatch.setattr(asyncio, "wait_for", immediate_timeout)
+
+    await engine._stop_process(process)
+
+    assert process.terminate_calls == 1
+    assert process.kill_calls == 1
+    # Only the post-kill reap coroutine is actually awaited by this test double.
+    assert process.wait_calls == 1
+    assert process.returncode == -9
+    assert process._transport.stdout_pipe.close_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_stop_process_closes_stdout_for_already_exited_process():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+    process.returncode = 0
+    process.exited.set()
+
+    await engine._stop_process(process)
+
+    assert process.terminate_calls == 0
+    assert process.wait_calls == 1
+    assert process._transport.stdout_pipe.close_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_natural_ffmpeg_eof_closes_stdout_and_clears_tracking():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+    process.returncode = 0
+    process.exited.set()
+    process.stdout.release.set()
+    engine._stream_processes[779] = process
+
+    task = asyncio.create_task(engine._pump_ffmpeg_process(779, process))
+    engine._stream_tasks[779] = task
+    await task
+
+    assert process.terminate_calls == 0
+    assert process._transport.stdout_pipe.close_calls == 1
+    assert 779 not in engine._stream_processes
+    assert 779 not in engine._stream_tasks
+
+
+@pytest.mark.asyncio
+async def test_cancelled_ffmpeg_pump_reaps_process_and_clears_tracking():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+    engine._stream_processes[778] = process
+
+    task = asyncio.create_task(engine._pump_ffmpeg_process(778, process))
+    engine._stream_tasks[778] = task
+    await asyncio.wait_for(process.stdout.read_started.wait(), timeout=1)
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert process.terminate_calls == 1
+    assert process.returncode == -15
+    assert process._transport.stdout_pipe.close_calls == 1
+    assert 778 not in engine._stream_processes
+    assert 778 not in engine._stream_tasks
+
+@pytest.mark.asyncio
+async def test_close_waits_for_inflight_stream_lifecycle_operation():
+    engine = AiortcTelegramMediaEngine()
+    lock = engine._stream_lock(778)
+    await lock.acquire()
+    close_task = asyncio.create_task(engine.close(778))
+    await asyncio.sleep(0)
+
+    assert not close_task.done()
+
+    lock.release()
+    await asyncio.wait_for(close_task, timeout=1)
+    assert engine.get_connection_state(778) == "closed"
+
+@pytest.mark.asyncio
+async def test_real_ffmpeg_file_source_decodes_into_engine_pcm(tmp_path):
+    import math
+    import shutil
+    import struct
+    import wave
+
+    if shutil.which("ffmpeg") is None:
+        pytest.skip("ffmpeg executable is not installed")
+
+    source = tmp_path / "tone.wav"
+    sample_rate = 16_000
+    sample_count = sample_rate // 2
+    samples = b"".join(
+        struct.pack("<h", int(12_000 * math.sin(2 * math.pi * 440 * index / sample_rate)))
+        for index in range(sample_count)
+    )
+    with wave.open(str(source), "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(samples)
+
+    engine = AiortcTelegramMediaEngine()
+    track = _LifecycleTrack()
+    engine._sessions[991] = SimpleNamespace(
+        pc=SimpleNamespace(connectionState="connected"),
+        track=track,
+    )
+
+    assert await engine.play_stream(991, SimpleNamespace(source=str(source))) is True
+    task = engine._stream_tasks[991]
+    await asyncio.wait_for(task, timeout=10)
+
+    assert 991 not in engine._stream_tasks
+    assert 991 not in engine._stream_processes
+    assert len(track.frames) >= 2
+    assert all(frame and len(frame) % 4 == 0 for frame in track.frames)
+    decoded = b"".join(track.frames)
+    assert len(decoded) >= 48_000 * 2 * 2 // 4
+    assert any(decoded)
+
+
+
+@pytest.mark.asyncio
+async def test_local_aiortc_peer_receives_encoded_pcm_over_opus_rtp():
+    """Exercise the engine PCM track through real aiortc/Opus/RTP loopback."""
+    import math
+    from aiortc import RTCPeerConnection, RTCSessionDescription
+    from aiortc.mediastreams import AudioStreamTrack
+
+    engine = AiortcTelegramMediaEngine(connect_timeout=5)
+    chat_id = 992
+    payload = await engine.create_join_payload(chat_id)
+    session = engine._sessions[chat_id]
+    remote = RTCPeerConnection()
+    remote.addTrack(AudioStreamTrack())
+    received_tracks = asyncio.Queue()
+    received_remote_frames = asyncio.Queue()
+    engine.on_audio_frame = lambda cid, frame: received_remote_frames.put_nowait((cid, frame))
+
+    @remote.on("track")
+    def on_track(track):
+        if track.kind == "audio":
+            received_tracks.put_nowait(track)
+
+    try:
+        offer = RTCSessionDescription(sdp=session.local_offer_sdp, type="offer")
+        await remote.setRemoteDescription(offer)
+        answer = await remote.createAnswer()
+        await remote.setLocalDescription(answer)
+        await session.pc.setRemoteDescription(
+            RTCSessionDescription(
+                sdp=remote.localDescription.sdp,
+                type=remote.localDescription.type,
+            )
+        )
+
+        await asyncio.wait_for(
+            asyncio.gather(
+                engine.wait_for_connection_state(chat_id, "connected", timeout=5),
+                _wait_for_peer_connected(remote, timeout=5),
+            ),
+            timeout=6,
+        )
+        inbound = await asyncio.wait_for(received_tracks.get(), timeout=2)
+        incoming_chat_id, incoming_frame = await asyncio.wait_for(
+            received_remote_frames.get(), timeout=3
+        )
+        assert incoming_chat_id == chat_id
+        assert incoming_frame.samples > 0
+
+        # Non-silent samples prove that the encoded RTP payload carries source
+        # audio, rather than merely establishing ICE/DTLS successfully.
+        pcm = b"".join(
+            int(8_000 * math.sin(2 * math.pi * 440 * index / 48_000)).to_bytes(
+                2, "little", signed=True
+            ) * 2
+            for index in range(960)
+        )
+        await engine.send_frame(chat_id, pcm, "audio")
+        decoded = await asyncio.wait_for(inbound.recv(), timeout=3)
+        assert decoded.samples > 0
+        assert decoded.sample_rate == 48_000
+        assert any(bytes(plane) for plane in decoded.planes)
+        assert payload["ssrc"] == session.source_id
+
+        # Confirm that both ends accounted for actual RTP media bytes. This
+        # catches a connection that reaches ICE/DTLS but never sends audio.
+        sender = next(
+            sender for sender in session.pc.getSenders()
+            if sender.track is session.track
+        )
+        outbound_stats = await sender.getStats()
+        inbound_stats = await remote.getStats()
+        sent = [
+            stat for stat in outbound_stats.values()
+            if stat.type == "outbound-rtp" and stat.kind == "audio"
+        ]
+        received = [
+            stat for stat in inbound_stats.values()
+            if stat.type == "inbound-rtp" and stat.kind == "audio"
+        ]
+        assert sent and sent[0].bytesSent > 0
+        # aiortc exposes packet counts (not bytesReceived) for inbound RTP stats.
+        assert received and received[0].packetsReceived > 0
+    finally:
+        await remote.close()
+        await engine.close(chat_id)
+
+
+async def _wait_for_peer_connected(peer, timeout):
+    async def wait():
+        while peer.connectionState != "connected":
+            if peer.connectionState in {"failed", "closed"}:
+                raise AssertionError(
+                    f"Local RTP loopback peer entered {peer.connectionState}"
+                )
+            await asyncio.sleep(0.01)
+    await asyncio.wait_for(wait(), timeout=timeout)
+
+
+class _FiniteAudioTrack:
+    kind = "audio"
+
+    def __init__(self, frames):
+        self.frames = iter(frames)
+
+    async def recv(self):
+        try:
+            frame = next(self.frames)
+        except StopIteration:
+            from aiortc.mediastreams import MediaStreamError
+            raise MediaStreamError
+        if isinstance(frame, BaseException):
+            raise frame
+        return frame
+
+
+async def _run_remote_audio_test(engine, chat_id, frames):
+    session = SimpleNamespace(
+        audio_receive_stats={
+            "frames_received": 0,
+            "frames_delivered": 0,
+            "callback_errors": 0,
+            "callback_timeouts": 0,
+            "frames_dropped": 0,
+        },
+        audio_receive_queue=asyncio.Queue(maxsize=engine.audio_receive_queue_size),
+    )
+    engine._sessions[chat_id] = session
+    dispatcher = asyncio.create_task(engine._dispatch_remote_audio(chat_id, session))
+    await engine._consume_remote_audio(chat_id, _FiniteAudioTrack(frames))
+    await session.audio_receive_queue.join()
+    dispatcher.cancel()
+    await asyncio.gather(dispatcher, return_exceptions=True)
+    return session
+
+
+@pytest.mark.asyncio
+async def test_remote_audio_callback_error_does_not_stop_receiving(caplog):
+    engine = AiortcTelegramMediaEngine()
+    received = []
+    frames = [object(), object()]
+    calls = 0
+
+    async def callback(chat_id, frame):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("application callback failed")
+        received.append((chat_id, frame))
+
+    engine.on_audio_frame = callback
+    await _run_remote_audio_test(engine, 123, frames)
+
+    assert received == [(123, frames[1])]
+    assert "Remote audio callback failed" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_remote_audio_callback_timeout_does_not_stop_receiving():
+    engine = AiortcTelegramMediaEngine(audio_callback_timeout=0.01)
+    received = []
+    frames = [object(), object()]
+    calls = 0
+
+    async def callback(chat_id, frame):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            await asyncio.sleep(1)
+        received.append((chat_id, frame))
+
+    engine.on_audio_frame = callback
+    await _run_remote_audio_test(engine, 456, frames)
+    assert received == [(456, frames[1])]
+
+
+def test_audio_callback_timeout_must_be_positive():
+    with pytest.raises(ValueError, match="audio_callback_timeout"):
+        AiortcTelegramMediaEngine(audio_callback_timeout=0)
+
+
+def test_audio_receive_queue_size_must_be_positive():
+    with pytest.raises(ValueError, match="audio_receive_queue_size"):
+        AiortcTelegramMediaEngine(audio_receive_queue_size=0)
+
+
+@pytest.mark.asyncio
+async def test_audio_receive_stats_track_delivery_errors_and_timeouts():
+    engine = AiortcTelegramMediaEngine(audio_callback_timeout=0.01)
+    frames = [object(), object(), object()]
+    calls = 0
+
+    async def callback(chat_id, frame):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("consumer failed")
+        if calls == 2:
+            await asyncio.sleep(1)
+
+    engine.on_audio_frame = callback
+    session = await _run_remote_audio_test(engine, 901, frames)
+
+    assert engine.get_audio_receive_stats(901) == {
+        "frames_received": 3,
+        "frames_delivered": 1,
+        "callback_errors": 1,
+        "callback_timeouts": 1,
+        "frames_dropped": 0,
+    }
+    snapshot = engine.get_audio_receive_stats(901)
+    snapshot["frames_received"] = 999
+    assert engine.get_audio_receive_stats(901)["frames_received"] == 3
+
+
+@pytest.mark.asyncio
+async def test_bounded_audio_queue_drops_oldest_frame_when_consumer_is_slow():
+    engine = AiortcTelegramMediaEngine(audio_receive_queue_size=2)
+    frames = [object(), object(), object(), object()]
+    session = SimpleNamespace(
+        audio_receive_stats={
+            "frames_received": 0,
+            "frames_delivered": 0,
+            "callback_errors": 0,
+            "callback_timeouts": 0,
+            "frames_dropped": 0,
+        },
+        audio_receive_queue=asyncio.Queue(maxsize=2),
+    )
+    engine._sessions[903] = session
+    await engine._consume_remote_audio(903, _FiniteAudioTrack(frames))
+
+    assert session.audio_receive_stats["frames_received"] == 4
+    assert session.audio_receive_stats["frames_dropped"] == 2
+    assert session.audio_receive_queue.qsize() == 2
+    assert session.audio_receive_queue.get_nowait() is frames[2]
+    session.audio_receive_queue.task_done()
+    assert session.audio_receive_queue.get_nowait() is frames[3]
+    session.audio_receive_queue.task_done()
+
+
+@pytest.mark.asyncio
+async def test_multiple_remote_audio_tracks_share_dispatcher_without_frame_loss():
+    engine = AiortcTelegramMediaEngine(audio_receive_queue_size=8)
+    frames_a = [object(), object()]
+    frames_b = [object(), object()]
+    received = []
+
+    async def callback(chat_id, frame):
+        received.append((chat_id, frame))
+
+    engine.on_audio_frame = callback
+    session = SimpleNamespace(
+        audio_receive_stats={
+            "frames_received": 0,
+            "frames_delivered": 0,
+            "callback_errors": 0,
+            "callback_timeouts": 0,
+            "frames_dropped": 0,
+        },
+        audio_receive_queue=asyncio.Queue(maxsize=8),
+    )
+    engine._sessions[904] = session
+    dispatcher = asyncio.create_task(engine._dispatch_remote_audio(904, session))
+    await asyncio.gather(
+        engine._consume_remote_audio(904, _FiniteAudioTrack(frames_a)),
+        engine._consume_remote_audio(904, _FiniteAudioTrack(frames_b)),
+    )
+    await asyncio.wait_for(session.audio_receive_queue.join(), timeout=1)
+    dispatcher.cancel()
+    await asyncio.gather(dispatcher, return_exceptions=True)
+
+    assert len(received) == 4
+    assert {id(frame) for _, frame in received} == {
+        id(frame) for frame in frames_a + frames_b
+    }
+    assert session.audio_receive_stats["frames_received"] == 4
+    assert session.audio_receive_stats["frames_delivered"] == 4
+
+
+class _WaitingAudioTrack:
+    kind = "audio"
+
+    def __init__(self):
+        self.waiting = asyncio.Event()
+
+    async def recv(self):
+        self.waiting.set()
+        await asyncio.Event().wait()
+
+
+@pytest.mark.asyncio
+async def test_close_cancels_all_remote_audio_tasks_and_clears_queue():
+    engine = AiortcTelegramMediaEngine()
+    chat_id = 905
+    await engine.create_join_payload(chat_id)
+    session = engine._sessions[chat_id]
+    session.audio_receive_queue.put_nowait(object())
+
+    tracks = [_WaitingAudioTrack(), _WaitingAudioTrack()]
+    tasks = [
+        asyncio.create_task(engine._consume_remote_audio(chat_id, track))
+        for track in tracks
+    ]
+    dispatcher = asyncio.create_task(
+        engine._dispatch_remote_audio(chat_id, session)
+    )
+    session.remote_audio_tasks.extend([*tasks, dispatcher])
+    await asyncio.gather(*(track.waiting.wait() for track in tracks))
+
+    await asyncio.wait_for(engine.close(chat_id), timeout=2)
+
+    assert all(task.done() for task in [*tasks, dispatcher])
+    assert session.audio_receive_queue.empty()
+    assert session.state == "closed"
+
+
+def test_audio_receive_stats_return_zeroes_for_missing_session():
+    engine = AiortcTelegramMediaEngine()
+    assert engine.get_audio_receive_stats(902) == {
+        "frames_received": 0,
+        "frames_delivered": 0,
+        "callback_errors": 0,
+        "callback_timeouts": 0,
+        "frames_dropped": 0,
+    }
+
+
+@pytest.mark.asyncio
+async def test_stop_stream_returns_false_when_session_has_no_active_stream():
+    engine = AiortcTelegramMediaEngine()
+    await engine.create_join_payload(906)
+
+    assert await engine.stop_stream(906) is False
+
+    await engine.close(906)
+
+
+@pytest.mark.asyncio
+async def test_stop_stream_returns_true_when_managed_source_is_active():
+    engine = AiortcTelegramMediaEngine()
+    session = SimpleNamespace(track=_LifecycleTrack())
+    engine._sessions[907] = session
+    task = asyncio.create_task(asyncio.Event().wait())
+    engine._stream_tasks[907] = task
+
+    assert await engine.stop_stream(907) is True
+    assert task.done()
+    assert 907 not in engine._stream_tasks
+
+
+@pytest.mark.asyncio
+async def test_close_waits_for_pending_transport_loss_cleanup():
+    engine = AiortcTelegramMediaEngine()
+    chat_id = 908
+    await engine.create_join_payload(chat_id)
+    release_cleanup = asyncio.Event()
+    cleanup = asyncio.create_task(release_cleanup.wait())
+    engine._stream_cleanup_tasks[chat_id] = cleanup
+
+    closing = asyncio.create_task(engine.close(chat_id))
+    await asyncio.sleep(0)
+    assert not closing.done()
+
+    release_cleanup.set()
+    await asyncio.wait_for(closing, timeout=2)
+
+    assert cleanup.done()
+    assert engine.get_connection_state(chat_id) == "closed"
+
+
+@pytest.mark.asyncio
+async def test_stop_stream_does_not_clean_up_ffmpeg_process_twice():
+    engine = AiortcTelegramMediaEngine()
+    process = _FakeProcess()
+    engine._stream_processes[909] = process
+
+    task = asyncio.create_task(engine._pump_ffmpeg_process(909, process))
+    engine._stream_tasks[909] = task
+    await asyncio.wait_for(process.stdout.read_started.wait(), timeout=1)
+
+    assert await asyncio.wait_for(engine.stop_stream(909), timeout=2) is True
+
+    assert task.done()
+    assert process.terminate_calls == 1
+    assert process.wait_calls == 1
+    assert process._transport.stdout_pipe.close_calls == 1
+    assert 909 not in engine._stream_processes
+    assert 909 not in engine._stream_tasks

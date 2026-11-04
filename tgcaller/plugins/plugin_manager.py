@@ -142,6 +142,16 @@ class PluginManager:
         return False
     
     async def cleanup(self):
-        """Cleanup all plugins"""
-        for plugin_name in list(self.plugins.keys()):
-            await self.unregister_plugin(plugin_name)
+        """Unload plugins in reverse registration order (dependents first)."""
+        errors = []
+        for plugin_name in reversed(list(self.plugins.keys())):
+            try:
+                await self.unregister_plugin(plugin_name)
+            except Exception as exc:
+                errors.append((plugin_name, exc))
+                self.logger.exception(
+                    "Failed to unload plugin %s during cleanup", plugin_name
+                )
+        if errors:
+            names = ", ".join(name for name, _ in errors)
+            raise RuntimeError(f"Failed to unload plugins: {names}")

@@ -54,6 +54,25 @@ async def test_connection_delegates_to_backend():
 
 
 @pytest.mark.asyncio
+async def test_connection_exposes_optional_server_membership_check():
+    class BackendWithMembershipCheck(AsyncBackend):
+        async def check_call(self, chat_id):
+            return chat_id == -100123
+
+    connection = Connection(
+        client=object(), backend=BackendWithMembershipCheck()
+    )
+    assert await connection.check_call(-100123) is True
+    assert await connection.check_call(-100999) is False
+
+
+@pytest.mark.asyncio
+async def test_connection_returns_none_when_membership_check_is_unsupported():
+    connection = Connection(client=object(), backend=AsyncBackend())
+    assert await connection.check_call(-100123) is None
+
+
+@pytest.mark.asyncio
 async def test_connection_rejects_incomplete_backend():
     class IncompleteBackend:
         async def connect_call(self, chat_id, audio_config, video_config):
