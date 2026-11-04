@@ -7,6 +7,7 @@ import asyncio
 from unittest.mock import Mock, AsyncMock
 
 from tgcaller.internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
+from tgcaller.internal.connection_manager import ConnectionState
 from tgcaller.types import CallUpdate, CallStatus, MediaStream, AudioConfig
 
 
