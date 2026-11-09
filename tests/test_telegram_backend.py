@@ -744,12 +744,11 @@ async def test_connect_releases_unhealthy_stale_session_before_rejoining(monkeyp
     )
     old_call = object()
     backend._calls[-100123] = old_call
-    disconnects = []
-
-    async def disconnect_stale(chat_id):
-        disconnects.append(chat_id)
+    async def check_missing_source(chat_id):
+        # Telegram no longer recognizes the old SSRC; backend cleanup happens
+        # inside the real check_call() implementation.
         backend._calls.pop(chat_id, None)
-        return True
+        return False
 
     health_results = iter([False, True])
 
@@ -759,12 +758,11 @@ async def test_connect_releases_unhealthy_stale_session_before_rejoining(monkeyp
     async def rpc_types():
         return Request, Request, Request, DataJSON, InputPeerSelf
 
-    monkeypatch.setattr(backend, "disconnect_call", disconnect_stale)
+    monkeypatch.setattr(backend, "check_call", check_missing_source)
     monkeypatch.setattr(backend, "is_healthy", healthy)
     monkeypatch.setattr(backend, "_rpc_types", rpc_types)
 
     assert await backend.connect_call(-100123) is True
-    assert disconnects == [-100123]
     assert -100123 in backend._calls
     assert backend._calls[-100123] is not old_call
     assert len(client.requests) == 1
@@ -1019,3 +1017,184 @@ async def test_cancelled_join_negotiation_rolls_back_server_join_and_closes_engi
     assert engine.closed is True
     assert -100123 not in backend._calls
 
+
+
+
+@pytest.mark.asyncio
+async def test_unhealthy_connection_does_not_duplicate_join_when_telegram_still_recognizes_source(monkeypatch):
+    import sys
+    import types
+
+    class CheckGroupCall:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+
+    pyrogram = types.ModuleType("pyrogram")
+    raw = types.ModuleType("pyrogram.raw")
+    functions = types.ModuleType("pyrogram.raw.functions")
+    phone = types.ModuleType("pyrogram.raw.functions.phone")
+    phone.CheckGroupCall = CheckGroupCall
+    for name, module in [
+        ("pyrogram", pyrogram),
+        ("pyrogram.raw", raw),
+        ("pyrogram.raw.functions", functions),
+        ("pyrogram.raw.functions.phone", phone),
+    ]:
+        monkeypatch.setitem(sys.modules, name, module)
+
+    class Engine:
+        async def is_connected(self, chat_id):
+            return False
+
+        async def source_id(self, chat_id):
+            return 123
+
+        async def close(self, chat_id):
+            raise AssertionError("recognized source must not be torn down")
+
+    class Client:
+        def __init__(self):
+            self.requests = []
+
+        async def invoke(self, request):
+            self.requests.append(request)
+            return [123]
+
+    client = Client()
+    backend = PyrogramGroupCallBackend(
+        client,
+        resolve_call=lambda chat_id: (_ for _ in ()).throw(
+            AssertionError("must not resolve a new call for a recognized source")
+        ),
+        media_engine=Engine(),
+    )
+    backend._calls[-100123] = object()
+
+    with pytest.raises(ConnectionError, match="refusing to create a duplicate"):
+        await backend.connect_call(-100123)
+
+    assert len(client.requests) == 1
+    assert isinstance(client.requests[0], CheckGroupCall)
+    assert client.requests[0].kwargs == {"call": backend._calls[-100123], "sources": [123]}
+    assert -100123 in backend._calls
+
+@pytest.mark.asyncio
+async def test_concurrent_connect_call_requests_are_serialized():
+    import asyncio
+
+    backend = PyrogramGroupCallBackend(
+        object(), lambda chat_id: None, media_engine=object()
+    )
+    first_entered = asyncio.Event()
+    release_first = asyncio.Event()
+    active = 0
+    max_active = 0
+    calls = 0
+
+    async def connect_unlocked(chat_id, audio_config=None, video_config=None):
+        nonlocal active, max_active, calls
+        calls += 1
+        active += 1
+        max_active = max(max_active, active)
+        if calls == 1:
+            first_entered.set()
+            await release_first.wait()
+        active -= 1
+        return True
+
+    backend._connect_call_unlocked = connect_unlocked
+    first = asyncio.create_task(backend.connect_call(-100123))
+    await asyncio.wait_for(first_entered.wait(), timeout=1)
+    second = asyncio.create_task(backend.connect_call(-100123))
+    await asyncio.sleep(0)
+
+    assert calls == 1
+    release_first.set()
+    assert await asyncio.wait_for(first, timeout=1) is True
+    assert await asyncio.wait_for(second, timeout=1) is True
+    assert calls == 2
+    assert max_active == 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_disconnect_call_requests_are_serialized():
+    import asyncio
+
+    backend = PyrogramGroupCallBackend(
+        object(), lambda chat_id: None, media_engine=object()
+    )
+    first_entered = asyncio.Event()
+    release_first = asyncio.Event()
+    active = 0
+    max_active = 0
+    calls = 0
+
+    async def disconnect_unlocked(chat_id):
+        nonlocal active, max_active, calls
+        calls += 1
+        active += 1
+        max_active = max(max_active, active)
+        if calls == 1:
+            first_entered.set()
+            await release_first.wait()
+        active -= 1
+        return True
+
+    backend._disconnect_call_unlocked = disconnect_unlocked
+    first = asyncio.create_task(backend.disconnect_call(-100123))
+    await asyncio.wait_for(first_entered.wait(), timeout=1)
+    second = asyncio.create_task(backend.disconnect_call(-100123))
+    await asyncio.sleep(0)
+
+    assert calls == 1
+    release_first.set()
+    assert await asyncio.wait_for(first, timeout=1) is True
+    assert await asyncio.wait_for(second, timeout=1) is True
+    assert calls == 2
+    assert max_active == 1
+
+
+
+@pytest.mark.asyncio
+async def test_recognized_unhealthy_source_never_triggers_duplicate_join(monkeypatch):
+    """A server-recognized SSRC must not be replaced by a second join."""
+    class Engine:
+        payload_calls = 0
+
+        async def create_join_payload(self, chat_id, audio_config, video_config):
+            self.payload_calls += 1
+            raise AssertionError("fresh join payload must not be created")
+
+    class Client:
+        def __init__(self):
+            self.requests = []
+
+        async def invoke(self, request):
+            self.requests.append(request)
+            raise AssertionError("JoinGroupCall must not be invoked")
+
+    engine = Engine()
+    client = Client()
+    backend = PyrogramGroupCallBackend(
+        client,
+        resolve_call=lambda chat_id: object(),
+        media_engine=engine,
+    )
+    chat_id = -100123
+    backend._calls[chat_id] = object()
+
+    async def unhealthy(_chat_id):
+        return False
+
+    async def telegram_still_recognizes_source(_chat_id):
+        return True
+
+    monkeypatch.setattr(backend, "is_healthy", unhealthy)
+    monkeypatch.setattr(backend, "check_call", telegram_still_recognizes_source)
+
+    with pytest.raises(ConnectionError, match="refusing to create a duplicate"):
+        await backend.connect_call(chat_id)
+
+    assert engine.payload_calls == 0
+    assert client.requests == []
+    assert chat_id in backend._calls

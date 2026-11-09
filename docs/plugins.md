@@ -1,6 +1,6 @@
 # 🔌 Plugin Development Guide
 
-TgCaller supports a powerful plugin system that allows you to extend functionality with custom features.
+TgCaller provides plugin lifecycle hooks, dependency ordering, event callbacks, and plugin-to-plugin messaging. Audio/video transformation hooks exist, but they are not yet wired into the live Telegram media transport.
 
 ## Creating a Plugin
 
@@ -27,7 +27,7 @@ class MyPlugin(BasePlugin):
         print(f"Unloading {self.name} plugin...")
 ```
 
-### Audio Processing Plugin
+### Audio Processing Plugin (hook only; not connected to live RTP)
 
 ```python
 from tgcaller.plugins import BasePlugin
@@ -68,7 +68,7 @@ class VoiceEffectsPlugin(BasePlugin):
         return audio_frame
 ```
 
-### Video Processing Plugin
+### Video Processing Plugin (hook only; not connected to live RTP)
 
 ```python
 import cv2
@@ -143,16 +143,16 @@ caller = TgCaller(app)
 voice_effects = VoiceEffectsPlugin({
     'effects': ['robot', 'echo']
 })
-caller.register_plugin(voice_effects)
+await caller.register_plugin(voice_effects)
 
 video_filters = VideoFiltersPlugin({
     'blur': True,
     'sepia': False
 })
-caller.register_plugin(video_filters)
+await caller.register_plugin(video_filters)
 
 logging_plugin = LoggingPlugin()
-caller.register_plugin(logging_plugin)
+await caller.register_plugin(logging_plugin)
 ```
 
 ### Plugin Configuration
@@ -169,7 +169,7 @@ plugin_config = {
 }
 
 plugin = MyPlugin(plugin_config)
-caller.register_plugin(plugin)
+await caller.register_plugin(plugin)
 ```
 
 ## Advanced Plugin Features
@@ -214,11 +214,11 @@ class DataPlugin(BasePlugin):
     
     async def save_data(self, key, value):
         """Save plugin data"""
-        await self.storage.set(key, value)
+        self.storage[key] = value
     
     async def load_data(self, key):
         """Load plugin data"""
-        return await self.storage.get(key)
+        return self.storage.get(key)
     
     async def on_stream_start(self, chat_id, source):
         # Save stream history

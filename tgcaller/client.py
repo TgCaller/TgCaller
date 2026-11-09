@@ -17,6 +17,7 @@ from .api import CustomAPIServer, on_custom_update
 from .devices import MediaDevices
 from .internal import ConnectionManager, CacheManager, StreamHandler, CallHandler, RetryManager
 from .mtproto import Connection
+from .plugins import PluginManager
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,8 @@ class TgCaller:
             )
 
             media_engine = AiortcTelegramMediaEngine()
+            media_engine.on_stream_end = self._handle_media_stream_end
+            media_engine.on_audio_frame = self._handle_media_audio_frame
             connection_backend = PyrogramGroupCallBackend(
                 client=client,
                 resolve_call=lambda chat_id: resolve_active_group_call(client, chat_id),
@@ -91,6 +94,7 @@ class TgCaller:
             'call_left': [],
             'kicked': [],
             'error': [],
+            'audio_frame': [],
         }
         
         # Setup logging
@@ -103,6 +107,7 @@ class TgCaller:
         # Initialize new systems
         self._event_system = EventHandlerSystem()
         self._custom_api_server: Optional[CustomAPIServer] = None
+        self._plugin_manager = PluginManager(self)
         
         # Initialize internal managers
         self._connection_manager = ConnectionManager(self)
@@ -117,6 +122,33 @@ class TgCaller:
         # Connection state
         self._is_connected = False
         
+    async def _handle_media_audio_frame(self, chat_id: int, frame: Any) -> None:
+        """Forward decoded incoming call audio to registered application handlers."""
+        await self._emit_event('audio_frame', chat_id, frame)
+
+    async def _handle_media_stream_end(
+        self, chat_id: int, error: Optional[Exception] = None
+    ) -> None:
+        """Reconcile client state when the media engine finishes a stream."""
+        # Let StreamMethods.play() finish storing current_stream after the
+        # transport's background task is scheduled, including very short files.
+        await asyncio.sleep(0)
+        call_session = self._active_calls.get(chat_id)
+        if call_session is None or "current_stream" not in call_session:
+            return
+
+        call_session["status"] = CallStatus.CONNECTED
+        call_session.pop("current_stream", None)
+        message = "Stream ended" if error is None else f"Stream failed: {error}"
+        update = CallUpdate(
+            chat_id=chat_id,
+            status=CallStatus.CONNECTED,
+            message=message,
+        )
+        if error is not None:
+            await self._emit_event("error", error)
+        await self._emit_event("stream_end", update)
+
     def _setup_methods(self):
         """Setup method mixins"""
         # Add call methods
@@ -168,6 +200,9 @@ class TgCaller:
         """Stop TgCaller and attempt every cleanup step, even if one fails."""
         if not self._is_connected:
             self._logger.warning("TgCaller is not running")
+            # API servers and plugins can be initialized before start().
+            await self.stop_custom_api()
+            await self._plugin_manager.cleanup()
             return
 
         errors = []
@@ -186,6 +221,8 @@ class TgCaller:
                 ("cache manager", self._cache_manager.cleanup),
                 ("stream handler", self._stream_handler.cleanup_all),
                 ("call handler", self._call_handler.cleanup_all),
+                ("custom API server", self.stop_custom_api),
+                ("plugin manager", self._plugin_manager.cleanup),
                 ("event handler", self._event_handler.cleanup),
             )
             for name, cleanup in cleanup_steps:
@@ -221,6 +258,13 @@ class TgCaller:
             return f
         return decorator(func) if func else decorator
     
+    def on_audio_frame(self, func: Callable = None):
+        """Decorator for decoded incoming audio frames: (client, chat_id, frame)."""
+        def decorator(f):
+            self._add_handler('audio_frame', f)
+            return f
+        return decorator(func) if func else decorator
+
     def on_stream_start(self, func: Callable = None):
         """Decorator for stream start events"""
         def decorator(f):
@@ -323,10 +367,54 @@ class TgCaller:
                     self._logger.error(f"Error in event handler {handler.__name__}: {e}")
                     await self._emit_event('error', e)
         
-        # Also propagate through new event system
+        # Propagate structured events through the filter event system.
         if args:
             await self._event_system._propagate(args[0], self._client)
+
+        # Bridge stable client events to plugin lifecycle callbacks.
+        plugin_event = {
+            "call_joined": "on_call_start",
+            "call_left": "on_call_end",
+            "stream_start": "on_stream_start",
+            "stream_end": "on_stream_end",
+            "stream_stopped": "on_stream_end",
+        }.get(event_type)
+        if plugin_event and args:
+            update = args[0]
+            chat_id = getattr(update, "chat_id", None)
+            if chat_id is not None:
+                if plugin_event == "on_stream_start":
+                    session = self._active_calls.get(chat_id, {})
+                    stream = session.get("current_stream")
+                    source = getattr(stream, "source", None)
+                    await self._plugin_manager.emit_event(
+                        plugin_event, chat_id, str(source or "unknown")
+                    )
+                else:
+                    await self._plugin_manager.emit_event(plugin_event, chat_id)
     
+    async def register_plugin(self, plugin):
+        """Load and register a TgCaller plugin."""
+        await self._plugin_manager.register_plugin(plugin)
+
+    async def unregister_plugin(self, plugin_name: str) -> bool:
+        """Unload a registered plugin."""
+        return await self._plugin_manager.unregister_plugin(plugin_name)
+
+    def get_plugin(self, plugin_name: str):
+        """Return a registered plugin or None."""
+        return self._plugin_manager.get_plugin(plugin_name)
+
+    def is_plugin_loaded(self, plugin_name: str) -> bool:
+        """Check whether a plugin is registered."""
+        return self._plugin_manager.is_plugin_loaded(plugin_name)
+
+    async def send_plugin_message(self, target_plugin: str, message, sender=None) -> bool:
+        """Send a message to an enabled plugin."""
+        return await self._plugin_manager.send_plugin_message(
+            target_plugin, message, sender
+        )
+
     def enable_custom_api(
         self, 
         host: str = "localhost", 
@@ -381,6 +469,15 @@ class TgCaller:
         """Get Pyrogram client instance"""
         return self._client
     
+    def get_audio_receive_stats(self, chat_id: int) -> Dict[str, int]:
+        """Return a snapshot of local incoming-audio receive counters.
+
+        These counters describe local decoded frames and callback dispatch;
+        they are not a Telegram server-side delivery or quality guarantee.
+        Custom transports may return an empty mapping when unsupported.
+        """
+        return self._connection.get_audio_receive_stats(chat_id)
+
     def get_active_calls(self) -> List[int]:
         """
         Get list of active call chat IDs

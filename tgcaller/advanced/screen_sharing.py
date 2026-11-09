@@ -2,9 +2,11 @@
 Screen Sharing - Capture and stream screen
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
-import numpy as np
+import inspect
 from typing import Optional, Tuple
 try:
     import cv2
@@ -31,6 +33,7 @@ class ScreenShare:
         self.callbacks = []
         self.logger = logger
         self.monitor = None
+        self._capture_task: Optional[asyncio.Task] = None
     
     def add_callback(self, callback):
         """Add callback for screen frames"""
@@ -96,7 +99,7 @@ class ScreenShare:
             self.is_sharing = True
             
             # Start capture loop
-            asyncio.create_task(self._capture_loop())
+            self._capture_task = asyncio.create_task(self._capture_loop())
             
             self.logger.info(f"Screen sharing started on monitor {monitor_index}")
             return True
@@ -106,10 +109,17 @@ class ScreenShare:
             return False
     
     async def stop_sharing(self):
-        """Stop screen sharing"""
+        """Stop and await the local screen-capture worker."""
         self.is_sharing = False
+        task = self._capture_task
+        self._capture_task = None
+        if task is not None and task is not asyncio.current_task() and not task.done():
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
         self.logger.info("Screen sharing stopped")
-    
+
     async def _capture_loop(self):
         """Main capture loop"""
         fps = self.video_config.fps
@@ -117,6 +127,7 @@ class ScreenShare:
         
         while self.is_sharing:
             try:
+                import numpy as np
                 # Capture screen
                 screenshot = self.sct.grab(self.monitor)
                 
@@ -132,14 +143,18 @@ class ScreenShare:
                     frame = cv2.resize(frame, target_size)
                 
                 # Call callbacks
-                for callback in self.callbacks:
+                for callback in list(self.callbacks):
                     try:
-                        callback(frame)
+                        result = callback(frame)
+                        if inspect.isawaitable(result):
+                            await result
                     except Exception as e:
                         self.logger.error(f"Error in screen share callback: {e}")
                 
                 await asyncio.sleep(frame_delay)
                 
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
                 self.logger.error(f"Error in screen capture: {e}")
                 await asyncio.sleep(1)
@@ -160,28 +175,12 @@ class ScreenShareStreamer:
         monitor_index: int = 1,
         region: Optional[Tuple[int, int, int, int]] = None
     ) -> bool:
-        """Start streaming screen to call"""
-        try:
-            # Join call if not already joined
-            if not self.caller.is_connected(self.chat_id):
-                await self.caller.join_call(self.chat_id, video_config=video_config)
-            
-            # Setup screen sharing
-            self.screen_share = ScreenShare(video_config)
-            self.screen_share.add_callback(self._stream_frame)
-            
-            # Start sharing
-            success = await self.screen_share.start_sharing(monitor_index, region)
-            if success:
-                self.is_streaming = True
-                logger.info(f"Started screen sharing to chat {self.chat_id}")
-            
-            return success
-            
-        except Exception as e:
-            logger.error(f"Failed to start screen streaming: {e}")
-            return False
-    
+        """Reject video publishing until the media engine supports video RTP."""
+        raise NotImplementedError(
+            "ScreenShareStreamer is capture-only for now: TgCaller media transport "
+            "currently supports audio RTP, not video publishing."
+        )
+
     async def stop_streaming(self):
         """Stop screen streaming"""
         try:
@@ -196,13 +195,6 @@ class ScreenShareStreamer:
         except Exception as e:
             logger.error(f"Error stopping screen streaming: {e}")
     
-    def _stream_frame(self, frame: np.ndarray):
-        """Stream frame to call"""
-        if self.is_streaming:
-            # This would send frame to the call
-            # Implementation depends on actual streaming protocol
-            pass
-
 
 class WindowCapture:
     """Capture specific application window"""
@@ -238,6 +230,7 @@ class WindowCapture:
         """Capture specific window"""
         try:
             import pygetwindow as gw
+            import numpy as np
             
             windows = gw.getWindowsWithTitle(window_title)
             if not windows:
