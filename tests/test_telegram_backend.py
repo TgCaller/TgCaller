@@ -1153,3 +1153,48 @@ async def test_concurrent_disconnect_call_requests_are_serialized():
     assert calls == 2
     assert max_active == 1
 
+
+
+@pytest.mark.asyncio
+async def test_recognized_unhealthy_source_never_triggers_duplicate_join(monkeypatch):
+    """A server-recognized SSRC must not be replaced by a second join."""
+    class Engine:
+        payload_calls = 0
+
+        async def create_join_payload(self, chat_id, audio_config, video_config):
+            self.payload_calls += 1
+            raise AssertionError("fresh join payload must not be created")
+
+    class Client:
+        def __init__(self):
+            self.requests = []
+
+        async def invoke(self, request):
+            self.requests.append(request)
+            raise AssertionError("JoinGroupCall must not be invoked")
+
+    engine = Engine()
+    client = Client()
+    backend = PyrogramGroupCallBackend(
+        client,
+        resolve_call=lambda chat_id: object(),
+        media_engine=engine,
+    )
+    chat_id = -100123
+    backend._calls[chat_id] = object()
+
+    async def unhealthy(_chat_id):
+        return False
+
+    async def telegram_still_recognizes_source(_chat_id):
+        return True
+
+    monkeypatch.setattr(backend, "is_healthy", unhealthy)
+    monkeypatch.setattr(backend, "check_call", telegram_still_recognizes_source)
+
+    with pytest.raises(ConnectionError, match="refusing to create a duplicate"):
+        await backend.connect_call(chat_id)
+
+    assert engine.payload_calls == 0
+    assert client.requests == []
+    assert chat_id in backend._calls
